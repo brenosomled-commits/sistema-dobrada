@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Gerenciar Usuários - Sistema OS</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+h1, h2 {
+    text-align: center;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+select {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+button {
+    padding: 10px 15px;
+    margin: 5px 3px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background: #007bff;
+    color: white;
+    font-size: 14px;
+}
+
+button:hover {
+    opacity: 0.85;
+}
+
+.voltar {
+    background: #666;
+}
+
+.excluir {
+    background: #dc3545;
+}
+
+.usuario {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-top: 10px;
+    border-radius: 5px;
+}
+
+.usuario strong {
+    font-size: 18px;
+}
+
+.navegacao{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+}
+
+.navegacao button{
+    margin:0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="navegacao" aria-label="Navegação principal">
+    <button class="voltar" onclick="window.location.href='/'">INÍCIO</button>
+    <button onclick="window.location.href='/dashboard'">DASHBOARD</button>
+    <button onclick="window.location.href='/nota_dobrada'">NOVA VENDA</button>
+</div>
+
+<h1>GERENCIAR USUÁRIOS</h1>
+
+<h2>Novo Usuário</h2>
+
+<label>Usuário</label>
+<input type="text" id="novoUsuario" placeholder="Digite o nome do usuário">
+
+<label>Senha</label>
+<input type="password" id="novaSenha" placeholder="Digite a senha">
+
+<label>Perfil de acesso</label>
+<select id="novoPapel">
+    <option value="VENDEDOR">Vendedor/Triagem — atende e opera ordens/vendas</option>
+    <option value="FINANCEIRO">Financeiro — acompanha e fecha vendas</option>
+    <option value="GERENTE">Gerente — acesso total da operação</option>
+    <option value="DONO">Dono — controle total do sistema</option>
+</select>
+
+<button onclick="criarUsuario()">
+CRIAR USUÁRIO
+</button>
+
+<hr>
+
+<h2>Usuários Cadastrados</h2>
+
+<div id="listaUsuarios"></div>
+
+</div>
+
+<script>
+
+async function carregarUsuarios() {
+
+    const resposta = await fetch("/api/usuarios");
+
+    const usuarios = await resposta.json();
+
+    const lista =
+    document.getElementById("listaUsuarios");
+
+    lista.innerHTML = "";
+
+    usuarios.forEach(function(usuario) {
+
+        const div = document.createElement("div");
+
+        div.className = "usuario";
+
+        div.innerHTML = `
+            <strong>${usuario.usuario}</strong>
+
+            <br>
+            <span>Perfil: <b>${usuario.papel}</b></span>
+
+            <br><br>
+
+            <select onchange="alterarPapel(${usuario.id}, this.value)"
+                ${usuario.usuario === "admin" ? "disabled" : ""}>
+                <option value="VENDEDOR" ${usuario.papel === "VENDEDOR" ? "selected" : ""}>Vendedor/Triagem</option>
+                <option value="FINANCEIRO" ${usuario.papel === "FINANCEIRO" ? "selected" : ""}>Financeiro</option>
+                <option value="GERENTE" ${usuario.papel === "GERENTE" ? "selected" : ""}>Gerente</option>
+                <option value="DONO" ${usuario.papel === "DONO" ? "selected" : ""}>Dono</option>
+            </select>
+
+            <button onclick="alterarSenha(${usuario.id}, '${usuario.usuario}')">
+            ALTERAR SENHA
+            </button>
+
+            ${
+                usuario.usuario !== "admin"
+                ?
+                `<button class="excluir"
+                onclick="excluirUsuario(${usuario.id}, '${usuario.usuario}')">
+                EXCLUIR
+                </button>`
+                :
+                `<span>Administrador principal</span>`
+            }
+        `;
+
+        lista.appendChild(div);
+    });
+}
+
+
+async function criarUsuario() {
+
+    const usuario =
+    document.getElementById("novoUsuario").value.trim();
+
+    const senha =
+    document.getElementById("novaSenha").value.trim();
+
+    const papel = document.getElementById("novoPapel").value;
+
+    if (!usuario || !senha) {
+        alert("Preencha o usuário e a senha.");
+        return;
+    }
+
+    const resposta = await fetch("/api/usuarios", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            usuario: usuario,
+            senha: senha,
+            papel: papel
+        })
+    });
+
+    const resultado = await resposta.json();
+
+    if (!resposta.ok) {
+        alert(resultado.erro);
+        return;
+    }
+
+    alert(resultado.mensagem);
+
+    document.getElementById("novoUsuario").value = "";
+    document.getElementById("novaSenha").value = "";
+    document.getElementById("novoPapel").value = "VENDEDOR";
+
+    carregarUsuarios();
+}
+
+
+async function alterarPapel(id, papel) {
+
+    const resposta = await fetch("/api/usuarios/" + id + "/papel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ papel: papel })
+    });
+    const resultado = await resposta.json();
+
+    if (!resposta.ok) {
+        alert(resultado.erro);
+        carregarUsuarios();
+        return;
+    }
+
+    alert(resultado.mensagem);
+    carregarUsuarios();
+}
+
+
+async function alterarSenha(id, usuario) {
+
+    const senha = prompt(
+        "Digite a nova senha para o usuário: " + usuario
+    );
+
+    if (!senha) return;
+
+    const resposta = await fetch(
+        "/api/usuarios/" + id + "/senha",
+        {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                senha: senha
+            })
+        }
+    );
+
+    const resultado = await resposta.json();
+
+    if (!resposta.ok) {
+        alert(resultado.erro);
+        return;
+    }
+
+    alert(resultado.mensagem);
+}
+
+
+async function excluirUsuario(id, usuario) {
+
+    const confirmar = confirm(
+        "Tem certeza que deseja excluir o usuário " +
+        usuario + "?"
+    );
+
+    if (!confirmar) return;
+
+    const resposta = await fetch(
+        "/api/usuarios/" + id,
+        {
+            method: "DELETE"
+        }
+    );
+
+    const resultado = await resposta.json();
+
+    if (!resposta.ok) {
+        alert(resultado.erro);
+        return;
+    }
+
+    alert(resultado.mensagem);
+
+    carregarUsuarios();
+}
+
+
+carregarUsuarios();
+
+</script>
+
+</body>
+</html>

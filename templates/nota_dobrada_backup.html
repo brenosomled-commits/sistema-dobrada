@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Nota Dobrada</title>
+
+<style>
+
+*{box-sizing:border-box}
+
+body{
+    font-family:Arial,sans-serif;
+    margin:20px;
+    background:#f2f2f2;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+}
+
+h1{text-align:center}
+
+.nota-via{
+    background:#fff;
+    padding:15px;
+    border:1px solid #000;
+    font-size:12px;
+}
+
+.nota-cabecalho{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.nota-cabecalho b{font-size:18px}
+
+.nota-linha{
+    border-top:1px solid #000;
+    margin:8px 0;
+}
+
+.nota-dados-linha{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:15px;
+    margin-bottom:6px;
+}
+
+.nota-dados-venda{
+    display:grid;
+    grid-template-columns:1fr 1.4fr 1.4fr 1fr;
+    gap:10px;
+    margin-bottom:6px;
+}
+
+.campo-nota{
+    display:flex;
+    align-items:center;
+    min-width:0;
+}
+
+.campo-nota b{
+    white-space:nowrap;
+    margin-right:5px;
+}
+
+.campo-nota input,
+.campo-nota select{
+    width:100%;
+    border:none;
+    border-bottom:1px solid #777;
+    outline:none;
+    padding:3px;
+    background:transparent;
+}
+
+.linha-inteira{margin-bottom:6px}
+
+.nota-tabela-cabecalho,
+.nota-item{
+    display:grid;
+    grid-template-columns:55px 1fr 100px 100px 40px;
+    gap:8px;
+    align-items:center;
+}
+
+.nota-tabela-cabecalho{
+    font-weight:bold;
+    border-bottom:1px solid #000;
+    padding:5px 0;
+}
+
+.nota-item{margin-top:5px}
+
+.nota-item input{
+    width:100%;
+    border:1px solid #777;
+    padding:5px;
+}
+
+.btn-remover{
+    border:none;
+    background:transparent;
+    cursor:pointer;
+    font-size:18px;
+}
+
+.area-botoes{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin:15px 0;
+    flex-wrap:wrap;
+}
+
+.botao{
+    padding:10px 20px;
+    cursor:pointer;
+}
+
+.resumo-financeiro{
+    width:350px;
+    max-width:100%;
+    margin-left:auto;
+    margin-top:15px;
+}
+
+.linha-resumo{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:6px;
+    align-items:center;
+}
+
+.linha-resumo input{
+    width:65px;
+    padding:4px;
+}
+
+.total-final{
+    border-top:2px solid #000;
+    padding-top:8px;
+    font-size:16px;
+}
+
+.aviso-desconto{
+    color:red;
+    font-size:11px;
+    text-align:right;
+    display:none;
+}
+
+#areaImpressao{display:none}
+
+.pagina-impressao{
+    width:210mm;
+    height:297mm;
+    page-break-after:always;
+}
+
+.via-impressao{
+    width:210mm;
+    height:148.5mm;
+    padding:8mm;
+    border:1px solid #000;
+    overflow:hidden;
+}
+
+.via-impressao .nota-tabela-cabecalho,
+.via-impressao .nota-item{
+    grid-template-columns:55px 1fr 100px 100px;
+}
+
+.assinatura{
+    margin-top:20px;
+    text-align:center;
+}
+
+.assinatura-linha{
+    width:250px;
+    border-top:1px solid #000;
+    margin:auto;
+}
+
+@media print{
+
+    @page{
+        size:A4 portrait;
+        margin:0;
+    }
+
+    body{
+        margin:0;
+        background:#fff;
+    }
+
+    body > *:not(#areaImpressao){
+        display:none!important;
+    }
+
+    #areaImpressao{
+        display:block!important;
+    }
+
+    .pagina-impressao:last-child{
+        page-break-after:auto;
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>NOTA DOBRADA</h1>
+
+<div class="nota-via">
+
+<div class="nota-cabecalho">
+    <b>SOMLED</b>
+    <span>NOTA DE VENDA</span>
+</div>
+
+<div class="nota-linha"></div>
+
+<div class="nota-dados-linha">
+
+    <div class="campo-nota">
+        <b>CLIENTE:</b>
+        <input type="text" id="cliente">
+    </div>
+
+    <div class="campo-nota">
+        <b>FANTASIA:</b>
+        <input type="text" id="fantasia">
+    </div>
+
+</div>
+
+<div class="nota-dados-venda">
+
+    <div class="campo-nota">
+        <b>VENDA:</b>
+        <input type="text" id="venda" readonly>
+    </div>
+
+    <div class="campo-nota">
+
+        <b>CONDIÇÃO:</b>
+
+        <select id="condicao" onchange="atualizarVencimento()">
+            <option value="avista">À VISTA</option>
+            <option value="aprazo">A PRAZO</option>
+        </select>
+
+    </div>
+
+    <div class="campo-nota">
+
+        <b>VENDEDOR:</b>
+
+        <select id="vendedor">
+            <option value="">SELECIONE</option>
+        </select>
+
+    </div>
+
+    <div class="campo-nota">
+        <b>DATA:</b>
+        <input type="date" id="data" onchange="atualizarVencimento()">
+    </div>
+
+</div>
+
+<div class="campo-nota linha-inteira"
+     id="campoVencimento"
+     style="display:none">
+
+    <b>VENCIMENTO:</b>
+
+    <input type="date"
+           id="vencimento"
+           readonly>
+
+</div>
+
+<div class="campo-nota linha-inteira">
+    <b>OBS:</b>
+    <input type="text" id="obs">
+</div>
+
+<div class="nota-linha"></div>
+
+<div class="nota-tabela-cabecalho">
+    <span>QTD.</span>
+    <span>DESCRIÇÃO</span>
+    <span>VALOR UNIT.</span>
+    <span>SUBTOTAL</span>
+    <span></span>
+</div>
+
+<div id="itens"></div>
+
+<div class="area-botoes">
+
+<button type="button"
+        class="botao"
+        onclick="adicionarItem(true)">
+    + ADICIONAR PRODUTO
+</button>
+
+</div>
+
+<div class="resumo-financeiro">
+
+<div class="linha-resumo">
+
+    <b>TOTAL DOS ITENS:</b>
+
+    <span>
+        R$ <span id="totalItens">0,00</span>
+    </span>
+
+</div>
+
+<div class="linha-resumo">
+
+    <b>DESCONTO:</b>
+
+    <div>
+
+        <input type="number"
+               id="desconto"
+               value="0"
+               min="0"
+               step="0.01"
+               oninput="calcularTotal()">
+
+        %
+
+    </div>
+
+</div>
+
+<div id="avisoDesconto"
+     class="aviso-desconto">
+    Desconto acima do limite permitido.
+</div>
+
+<div class="linha-resumo">
+
+    <b>VALOR DO DESCONTO:</b>
+
+    <span>
+        R$ <span id="valorDesconto">0,00</span>
+    </span>
+
+</div>
+
+<div class="linha-resumo total-final">
+
+    <b>TOTAL FINAL:</b>
+
+    <b>
+        R$ <span id="totalFinal">0,00</span>
+    </b>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="area-botoes">
+
+<button type="button"
+        class="botao"
+        onclick="salvarVendaManual()">
+    💾 SALVAR VENDA
+</button>
+
+<button type="button"
+        class="botao"
+        onclick="novaVenda()">
+    + NOVA VENDA
+</button>
+
+<button type="button"
+        class="botao"
+        onclick="prepararImpressao()">
+    IMPRIMIR NOTA
+</button>
+
+</div>
+
+</div>
+
+<div id="areaImpressao"></div>
+
+<script>
+
+let descontoMaximo = 10;
+let vendaSalva = false;
+
+
+/* DATA */
+
+function definirDataHoje(){
+
+    const hoje = new Date();
+
+    const ano = hoje.getFullYear();
+
+    const mes = String(
+        hoje.getMonth() + 1
+    ).padStart(2,"0");
+
+    const dia = String(
+        hoje.getDate()
+    ).padStart(2,"0");
+
+    document.getElementById("data").value =
+        ano + "-" + mes + "-" + dia;
+
+}
+
+
+/* NUMERO DA VENDA */
+
+async function gerarNumeroVenda(){
+
+    try{
+
+        const resposta =
+            await fetch("/api/proxima_venda");
+
+        const resultado =
+            await resposta.json();
+
+        document
+        .getElementById("venda")
+        .value =
+           "SL" + resultado.numero;
+
+    }
+    catch(erro){
+
+        console.error(
+            "Erro ao gerar número:",
+            erro
+        );
+
+        document
+        .getElementById("venda")
+        .value = "";
+
+    }
+
+}
+
+
+/* VENCIMENTO */
+
+function atualizarVencimento(){
+
+    const condicao =
+        document.getElementById("condicao").value;
+
+    const data =
+        document.getElementById("data").value;
+
+    const campo =
+        document.getElementById("campoVencimento");
+
+    const vencimento =
+        document.getElementById("vencimento");
+
+    if(condicao === "aprazo" && data){
+
+        const novaData =
+            new Date(data + "T12:00:00");
+
+        novaData.setDate(
+            novaData.getDate() + 30
+        );
+
+        vencimento.value =
+            novaData
+            .toISOString()
+            .split("T")[0];
+
+        campo.style.display = "flex";
+
+    }else{
+
+        campo.style.display = "none";
+        vencimento.value = "";
+
+    }
+
+}
+
+
+/* ADICIONAR PRODUTO */
+
+function adicionarItem(focarDescricao=false){
+
+    const item =
+        document.createElement("div");
+
+    item.className = "nota-item";
+
+    item.innerHTML = `
+
+        <input type="number"
+               class="quantidade"
+               min="1"
+               value="1"
+               oninput="calcularTotal()">
+
+        <input type="text"
+               class="descricao"
+               placeholder="Descrição do produto"
+               onkeydown="irParaPreco(event)">
+
+        <input type="number"
+               class="valor"
+               min="0"
+               step="0.01"
+               value="0"
+               oninput="calcularTotal()"
+               onkeydown="verificarEnter(event)">
+
+        <input type="text"
+               class="subtotal"
+               value="0,00"
+               readonly>
+
+        <button type="button"
+                class="btn-remover"
+                onclick="removerItem(this)">
+            🗑
+        </button>
+
+    `;
+
+    document
+    .getElementById("itens")
+    .appendChild(item);
+
+    calcularTotal();
+
+    if(focarDescricao){
+
+        item
+        .querySelector(".descricao")
+        .focus();
+
+    }
+
+}
+
+
+/* ENTER */
+
+function irParaPreco(event){
+
+    if(event.key === "Enter"){
+
+        event.preventDefault();
+
+        event.target
+        .parentElement
+        .querySelector(".valor")
+        .focus();
+
+    }
+
+}
+
+
+function verificarEnter(event){
+
+    if(event.key === "Enter"){
+
+        event.preventDefault();
+
+        adicionarItem(true);
+
+    }
+
+}
+
+
+/* REMOVER */
+
+function removerItem(botao){
+
+    botao.parentElement.remove();
+
+    calcularTotal();
+
+}
+
+
+/* CALCULAR */
+
+function calcularTotal(){
+
+    let totalItens = 0;
+
+    document
+    .querySelectorAll(".nota-item")
+    .forEach(function(item){
+
+        const quantidade =
+            Number(
+                item
+                .querySelector(".quantidade")
+                .value
+            ) || 0;
+
+        const valor =
+            Number(
+                item
+                .querySelector(".valor")
+                .value
+            ) || 0;
+
+        const subtotal =
+            quantidade * valor;
+
+        item
+        .querySelector(".subtotal")
+        .value =
+            subtotal
+            .toFixed(2)
+            .replace(".",",");
+
+        totalItens += subtotal;
+
+    });
+
+    let desconto =
+        Number(
+            document
+            .getElementById("desconto")
+            .value
+        ) || 0;
+
+    if(desconto > descontoMaximo){
+
+        desconto = descontoMaximo;
+
+        document
+        .getElementById("desconto")
+        .value = descontoMaximo;
+
+        document
+        .getElementById("avisoDesconto")
+        .style.display = "block";
+
+    }else{
+
+        document
+        .getElementById("avisoDesconto")
+        .style.display = "none";
+
+    }
+
+    const valorDesconto =
+        totalItens * desconto / 100;
+
+    const totalFinal =
+        totalItens - valorDesconto;
+
+    document
+    .getElementById("totalItens")
+    .innerText =
+        totalItens
+        .toFixed(2)
+        .replace(".",",");
+
+    document
+    .getElementById("valorDesconto")
+    .innerText =
+        valorDesconto
+        .toFixed(2)
+        .replace(".",",");
+
+    document
+    .getElementById("totalFinal")
+    .innerText =
+        totalFinal
+        .toFixed(2)
+        .replace(".",",");
+
+}
+
+
+/* SALVAR VENDA */
+
+async function salvarVendaNota(){
+
+    calcularTotal();
+
+    const itens = [];
+
+    document
+    .querySelectorAll(".nota-item")
+    .forEach(function(item){
+
+        const descricao =
+            item
+            .querySelector(".descricao")
+            .value
+            .trim();
+
+        if(descricao !== ""){
+
+            itens.push({
+
+                quantidade:
+                    Number(
+                        item
+                        .querySelector(".quantidade")
+                        .value
+                    ) || 1,
+
+                descricao: descricao,
+
+                valor:
+                    Number(
+                        item
+                        .querySelector(".valor")
+                        .value
+                    ) || 0
+
+            });
+
+        }
+
+    });
+
+    const totalTexto =
+        document
+        .getElementById("totalFinal")
+        .innerText;
+
+    const total =
+        Number(
+            totalTexto
+            .replace(/\./g,"")
+            .replace(",",".")
+            .trim()
+        ) || 0;
+
+    const dadosVenda = {
+
+        cliente:
+            document
+            .getElementById("cliente")
+            .value
+            .trim(),
+
+        fantasia:
+            document
+            .getElementById("fantasia")
+            .value
+            .trim(),
+
+        vendedor:
+            document
+            .getElementById("vendedor")
+            .value,
+
+        data:
+            document
+            .getElementById("data")
+            .value,
+
+        condicao:
+            document
+            .getElementById("condicao")
+            .value,
+
+        vencimento:
+            document
+            .getElementById("vencimento")
+            .value,
+
+        desconto:
+            Number(
+                document
+                .getElementById("desconto")
+                .value
+            ) || 0,
+
+        observacao:
+            document
+            .getElementById("obs")
+            .value
+            .trim(),
+
+        total: total,
+
+        itens: itens
+
+    };
+
+    try{
+
+        const resposta =
+            await fetch("/api/vendas", {
+
+                method: "POST",
+
+                headers:{
+                    "Content-Type":"application/json"
+                },
+
+                body:
+                    JSON.stringify(dadosVenda)
+
+            });
+
+        const resultado =
+            await resposta.json();
+
+        if(!resposta.ok){
+
+            throw new Error(
+                resultado.erro ||
+                "Erro ao salvar venda"
+            );
+
+        }
+
+        vendaSalva = true;
+
+        alert(
+            "Venda Nº " +
+            resultado.numero +
+            " salva com sucesso!"
+        );
+
+        return resultado;
+
+    }
+    catch(erro){
+
+        console.error(erro);
+
+        alert(
+            "Erro ao salvar venda: " +
+            erro.message
+        );
+
+        return null;
+
+    }
+
+}
+
+
+/* BOTÃO SALVAR */
+
+async function salvarVendaManual(){
+
+    const cliente =
+        document
+        .getElementById("cliente")
+        .value
+        .trim();
+
+    const itens =
+        Array.from(
+            document
+            .querySelectorAll(".nota-item")
+        )
+        .filter(function(item){
+
+            return item
+            .querySelector(".descricao")
+            .value
+            .trim() !== "";
+
+        });
+
+    if(!cliente){
+
+        alert("Informe o cliente.");
+        return;
+
+    }
+
+    if(itens.length === 0){
+
+        alert("Adicione pelo menos um produto.");
+        return;
+
+    }
+
+    if(vendaSalva){
+
+        alert("Esta venda já foi salva.");
+        return;
+
+    }
+
+    await salvarVendaNota();
+
+}
+
+
+/* NOVA VENDA */
+
+async function novaVenda(){
+
+    const cliente =
+        document
+        .getElementById("cliente")
+        .value
+        .trim();
+
+    const itensValidos =
+        Array.from(
+            document
+            .querySelectorAll(".nota-item")
+        )
+        .some(function(item){
+
+            return item
+            .querySelector(".descricao")
+            .value
+            .trim() !== "";
+
+        });
+
+    if(
+        cliente !== "" &&
+        itensValidos &&
+        !vendaSalva
+    ){
+
+        const confirmar =
+            confirm(
+                "Esta venda ainda não foi salva. Deseja descartá-la?"
+            );
+
+        if(!confirmar){
+
+            return;
+
+        }
+
+    }
+
+    document.getElementById("cliente").value = "";
+    document.getElementById("fantasia").value = "";
+    document.getElementById("vendedor").value = "";
+    document.getElementById("obs").value = "";
+    document.getElementById("condicao").value = "avista";
+    document.getElementById("desconto").value = "0";
+    document.getElementById("vencimento").value = "";
+    document.getElementById("campoVencimento").style.display = "none";
+    document.getElementById("itens").innerHTML = "";
+
+    definirDataHoje();
+
+    await gerarNumeroVenda();
+
+    adicionarItem();
+
+    calcularTotal();
+
+    vendaSalva = false;
+
+    document
+    .getElementById("cliente")
+    .focus();
+
+}
+
+
+/* IMPRESSÃO */
+
+function gerarCabecalho(){
+
+    const cliente =
+        document.getElementById("cliente").value;
+
+    const fantasia =
+        document.getElementById("fantasia").value;
+
+    const venda =
+        document.getElementById("venda").value;
+
+    const vendedor =
+        document.getElementById("vendedor").value;
+
+    const data =
+        document.getElementById("data").value;
+
+    const obs =
+        document.getElementById("obs").value;
+
+    const condicao =
+        document
+        .getElementById("condicao")
+        .selectedOptions[0]
+        .text;
+
+    return `
+
+        <div class="nota-cabecalho">
+            <b>SOMLED</b>
+            <span>NOTA DE VENDA</span>
+        </div>
+
+        <div class="nota-linha"></div>
+
+        <div class="nota-dados-linha">
+            <div><b>CLIENTE:</b> ${cliente}</div>
+            <div><b>FANTASIA:</b> ${fantasia}</div>
+        </div>
+
+        <div class="nota-dados-venda">
+            <div><b>VENDA:</b> ${venda}</div>
+            <div><b>CONDIÇÃO:</b> ${condicao}</div>
+            <div><b>VENDEDOR:</b> ${vendedor}</div>
+            <div><b>DATA:</b> ${data}</div>
+        </div>
+
+        <div><b>OBS:</b> ${obs}</div>
+
+        <div class="nota-linha"></div>
+
+        <div class="nota-tabela-cabecalho">
+            <span>QTD.</span>
+            <span>DESCRIÇÃO</span>
+            <span>VALOR UNIT.</span>
+            <span>SUBTOTAL</span>
+        </div>
+
+    `;
+
+}
+
+
+function gerarLinhaProduto(item){
+
+    const quantidade =
+        item.querySelector(".quantidade").value;
+
+    const descricao =
+        item.querySelector(".descricao").value;
+
+    const valor =
+        Number(
+            item.querySelector(".valor").value
+        ) || 0;
+
+    const subtotal =
+        item.querySelector(".subtotal").value;
+
+    return `
+
+        <div class="nota-item">
+            <span>${quantidade}</span>
+            <span>${descricao}</span>
+            <span>R$ ${valor.toFixed(2).replace(".",",")}</span>
+            <span>R$ ${subtotal}</span>
+        </div>
+
+    `;
+
+}
+
+
+function gerarResumo(){
+
+    return `
+
+        <div class="resumo-financeiro">
+
+            <div class="linha-resumo">
+                <b>TOTAL DOS ITENS:</b>
+                <span>R$ ${document.getElementById("totalItens").innerText}</span>
+            </div>
+
+            <div class="linha-resumo">
+                <b>DESCONTO:</b>
+                <span>${document.getElementById("desconto").value}%</span>
+            </div>
+
+            <div class="linha-resumo">
+                <b>VALOR DO DESCONTO:</b>
+                <span>R$ ${document.getElementById("valorDesconto").innerText}</span>
+            </div>
+
+            <div class="linha-resumo total-final">
+                <b>TOTAL FINAL:</b>
+                <b>R$ ${document.getElementById("totalFinal").innerText}</b>
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+function prepararImpressao(){
+
+    calcularTotal();
+
+    const itens =
+        Array.from(
+            document.querySelectorAll(".nota-item")
+        )
+        .filter(item =>
+            item.querySelector(".descricao").value.trim() !== ""
+        );
+
+    if(itens.length === 0){
+
+        alert("Adicione pelo menos um produto.");
+        return;
+
+    }
+
+    const area =
+        document.getElementById("areaImpressao");
+
+    area.innerHTML = "";
+
+    const itensPorVia = 8;
+
+    for(
+        let i = 0;
+        i < itens.length;
+        i += itensPorVia
+    ){
+
+        const grupo =
+            itens.slice(
+                i,
+                i + itensPorVia
+            );
+
+        const pagina =
+            document.createElement("div");
+
+        pagina.className =
+            "pagina-impressao";
+
+        const primeiraVia =
+            document.createElement("div");
+
+        primeiraVia.className =
+            "via-impressao";
+
+        primeiraVia.innerHTML =
+            gerarCabecalho();
+
+        grupo.forEach(item => {
+
+            primeiraVia.innerHTML +=
+                gerarLinhaProduto(item);
+
+        });
+
+        if(
+            i + itensPorVia >= itens.length
+        ){
+
+            primeiraVia.innerHTML +=
+                gerarResumo();
+
+        }
+
+        const segundaVia =
+            primeiraVia.cloneNode(true);
+
+        segundaVia.className =
+            "via-impressao";
+
+        segundaVia.innerHTML += `
+
+            <div class="assinatura">
+
+                <div class="assinatura-linha"></div>
+
+                <span>
+                    ASSINATURA DO CLIENTE
+                </span>
+
+            </div>
+
+        `;
+
+        pagina.appendChild(primeiraVia);
+
+        pagina.appendChild(segundaVia);
+
+        area.appendChild(pagina);
+
+    }
+
+    window.print();
+
+}
+
+
+/* CARREGAR VENDEDORES */
+
+async function carregarVendedores(){
+
+    try{
+
+        const resposta =
+            await fetch("/api/usuarios");
+
+        const usuarios =
+            await resposta.json();
+
+        const select =
+            document.getElementById("vendedor");
+
+        select.innerHTML =
+            '<option value="">SELECIONE</option>';
+
+        usuarios.forEach(function(usuario){
+
+            const nome =
+                usuario.usuario ||
+                usuario.nome ||
+                "";
+
+            if(nome){
+
+                const option =
+                    document.createElement("option");
+
+                option.value = nome;
+
+                option.textContent = nome;
+
+                select.appendChild(option);
+
+            }
+
+        });
+
+    }
+    catch(erro){
+
+        console.error(
+            "Erro ao carregar vendedores:",
+            erro
+        );
+
+    }
+
+}
+
+
+/* INICIAR */
+
+async function iniciar(){
+
+    definirDataHoje();
+
+    await carregarVendedores();
+
+    await gerarNumeroVenda();
+
+    adicionarItem();
+
+    calcularTotal();
+
+}
+
+iniciar();
+
+</script>
+
+</body>
+</html>

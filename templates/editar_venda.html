@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Editar Venda</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial,sans-serif;
+    background:#f2f2f2;
+    margin:20px;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+}
+
+.painel{
+    background:white;
+    border:1px solid #ccc;
+    padding:20px;
+}
+
+.busca{
+    margin-bottom:20px;
+}
+
+.busca input{
+    width:100%;
+    padding:10px;
+    font-size:16px;
+}
+
+.venda-card{
+    border:1px solid #ccc;
+    padding:12px;
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+#formulario{
+    display:none;
+    margin-top:20px;
+}
+
+.linha{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:15px;
+    margin-bottom:10px;
+}
+
+.campo{
+    display:flex;
+    flex-direction:column;
+}
+
+input,
+select{
+    padding:8px;
+}
+
+.tabela-cabecalho,
+.item{
+    display:grid;
+    grid-template-columns:80px 1fr 120px 120px 50px;
+    gap:8px;
+    margin-bottom:5px;
+    align-items:center;
+}
+
+.tabela-cabecalho{
+    font-weight:bold;
+    border-bottom:1px solid #000;
+    padding-bottom:5px;
+}
+
+.item input{
+    width:100%;
+}
+
+.resumo{
+    width:350px;
+    max-width:100%;
+    margin-left:auto;
+    margin-top:20px;
+}
+
+.resumo-linha{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:10px;
+}
+
+.total{
+    border-top:2px solid #000;
+    padding-top:10px;
+    font-size:18px;
+}
+
+.botoes{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+}
+
+.navegacao{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+}
+
+.navegacao button{
+    margin:0;
+}
+
+button{
+    padding:10px 18px;
+    cursor:pointer;
+}
+
+@media(max-width:700px){
+
+    .linha{
+        grid-template-columns:1fr;
+    }
+
+    .tabela-cabecalho,
+    .item{
+        grid-template-columns:60px 1fr 90px 50px;
+    }
+
+    .subtotal{
+        display:none;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>EDITAR VENDA</h1>
+
+<nav class="navegacao" aria-label="Navegação principal">
+    <button type="button" onclick="window.location.href='/'">INÍCIO</button>
+    <button type="button" onclick="window.location.href='/nota_dobrada'">NOVA VENDA</button>
+    <button type="button" onclick="window.location.href='/acompanhamento_notas'">ACOMPANHAR NOTAS</button>
+    <button type="button" onclick="window.location.href='/dashboard'">DASHBOARD</button>
+</nav>
+
+<div class="painel">
+
+    <div class="busca">
+        <input
+            type="text"
+            id="buscar"
+            placeholder="Digite o número da venda ou cliente"
+            oninput="buscarVendas()"
+        >
+    </div>
+
+    <div id="resultado"></div>
+
+    <div id="formulario">
+
+        <h2>Dados da Venda</h2>
+
+        <div class="linha">
+
+            <div class="campo">
+                <label>Venda</label>
+                <input
+                    type="text"
+                    id="numero"
+                    readonly
+                >
+            </div>
+
+            <div class="campo">
+                <label>Cliente</label>
+                <input
+                    type="text"
+                    id="cliente"
+                >
+            </div>
+
+        </div>
+
+        <div class="linha">
+
+            <div class="campo">
+                <label>Vendedor</label>
+                <select id="vendedor">
+                    <option value="">Selecione</option>
+                </select>
+            </div>
+
+            <div class="campo">
+                <label>Data</label>
+                <input
+                    type="date"
+                    id="data"
+                >
+            </div>
+
+        </div>
+
+        <div class="linha">
+
+            <div class="campo">
+
+                <label>Condição</label>
+
+                <select id="condicao">
+                    <option value="avista">À VISTA</option>
+                    <option value="aprazo">A PRAZO</option>
+                </select>
+
+            </div>
+
+            <div class="campo">
+
+                <label>Desconto (%)</label>
+
+                <input
+                    type="number"
+                    id="desconto"
+                    value="0"
+                    min="0"
+                    step="0.01"
+                    oninput="calcularTotal()"
+                >
+
+            </div>
+
+        </div>
+
+        <h3>Produtos</h3>
+
+        <div class="tabela-cabecalho">
+            <span>QTD.</span>
+            <span>DESCRIÇÃO</span>
+            <span>VALOR</span>
+            <span>SUBTOTAL</span>
+            <span></span>
+        </div>
+
+        <div id="itens"></div>
+
+        <button
+            type="button"
+            onclick="adicionarItem()"
+        >
+            + ADICIONAR PRODUTO
+        </button>
+
+        <div class="resumo">
+
+            <div class="resumo-linha">
+                <b>Total:</b>
+                <span>
+                    R$
+                    <span id="totalItens">0,00</span>
+                </span>
+            </div>
+
+            <div class="resumo-linha">
+                <b>Desconto:</b>
+                <span>
+                    R$
+                    <span id="valorDesconto">0,00</span>
+                </span>
+            </div>
+
+            <div class="resumo-linha total">
+                <b>Total Final:</b>
+                <b>
+                    R$
+                    <span id="totalFinal">0,00</span>
+                </b>
+            </div>
+
+        </div>
+
+        <div class="botoes">
+
+            <button
+                type="button"
+                onclick="salvarAlteracoes()"
+            >
+                SALVAR ALTERAÇÕES
+            </button>
+
+            <button
+                type="button"
+                onclick="cancelarEdicao()"
+            >
+                CANCELAR
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+<script>
+
+let vendas = [];
+let vendaEditando = null;
+
+
+/* CARREGAR VENDEDORES */
+
+async function carregarVendedores(){
+
+    try{
+
+        const resposta =
+            await fetch("/api/vendedores");
+
+        const usuarios =
+            await resposta.json();
+
+        const select =
+            document.getElementById("vendedor");
+
+        select.innerHTML =
+            '<option value="">Selecione</option>';
+
+        usuarios.forEach(function(usuario){
+
+            const nome =
+                usuario.usuario ||
+                usuario.nome ||
+                "";
+
+            if(nome){
+
+                const option =
+                    document.createElement("option");
+
+                option.value = nome;
+                option.textContent = nome;
+
+                select.appendChild(option);
+
+            }
+
+        });
+
+    }catch(erro){
+
+        console.error(
+            "Erro ao carregar vendedores:",
+            erro
+        );
+
+    }
+
+}
+
+
+/* CARREGAR VENDAS */
+
+async function carregarVendas(){
+
+    try{
+
+        const resposta =
+            await fetch("/api/vendas");
+
+        if(!resposta.ok){
+
+            throw new Error(
+                "Erro ao carregar vendas"
+            );
+
+        }
+
+        vendas =
+            await resposta.json();
+
+        console.log(
+            "Vendas carregadas:",
+            vendas
+        );
+
+    }catch(erro){
+
+        console.error(erro);
+
+        vendas = [];
+
+    }
+
+}
+
+
+/* BUSCAR VENDAS */
+
+async function buscarVendas(){
+
+    const termo =
+        document
+        .getElementById("buscar")
+        .value
+        .toLowerCase()
+        .trim();
+
+    const resultado =
+        document
+        .getElementById("resultado");
+
+    resultado.innerHTML = "";
+
+    if(!termo){
+        return;
+    }
+
+    try{
+
+        await carregarVendas();
+
+        const filtradas =
+            vendas.filter(function(venda){
+
+                const numero =
+                    String(venda.numero || "")
+                    .toLowerCase();
+
+                const cliente =
+                    String(venda.cliente || "")
+                    .toLowerCase();
+
+                const vendedor =
+                    String(venda.vendedor || "")
+                    .toLowerCase();
+
+                return (
+                    numero.includes(termo) ||
+                    cliente.includes(termo) ||
+                    vendedor.includes(termo)
+                );
+
+            });
+
+        if(filtradas.length === 0){
+
+            resultado.innerHTML =
+                "<p>Nenhuma venda encontrada.</p>";
+
+            return;
+
+        }
+
+        filtradas.forEach(function(venda){
+
+            const card =
+                document.createElement("div");
+
+            card.className =
+                "venda-card";
+
+            card.innerHTML = `
+                <div>
+                    <b>V${venda.numero}</b>
+                    - ${venda.cliente || ""}
+
+                    | ${venda.vendedor || ""}
+
+                    | R$ ${Number(venda.total || 0)
+                        .toFixed(2)
+                        .replace(".", ",")}
+                </div>
+
+                <button
+                    type="button"
+                    onclick="editarVenda(${venda.id})"
+                >
+                    EDITAR
+                </button>
+            `;
+
+            resultado.appendChild(card);
+
+        });
+
+    }catch(erro){
+
+        console.error(erro);
+
+        resultado.innerHTML =
+            "<p>Erro ao carregar as vendas.</p>";
+
+    }
+
+}
+
+
+/* ABRIR VENDA */
+
+async function editarVenda(id){
+
+    try{
+
+        const resposta =
+            await fetch(
+                "/api/vendas/" + id
+            );
+
+        if(!resposta.ok){
+
+            throw new Error(
+                "Venda não encontrada"
+            );
+
+        }
+
+        const venda =
+            await resposta.json();
+
+        vendaEditando = id;
+
+        document
+        .getElementById("formulario")
+        .style.display =
+            "block";
+
+        document
+        .getElementById("numero")
+        .value =
+            "V" + venda.numero;
+
+        document
+        .getElementById("cliente")
+        .value =
+            venda.cliente || "";
+
+        document
+        .getElementById("vendedor")
+        .value =
+            venda.vendedor || "";
+
+        document
+        .getElementById("data")
+        .value =
+            venda.data || "";
+
+        document
+        .getElementById("condicao")
+        .value =
+            venda.condicao || "avista";
+
+        document
+        .getElementById("desconto")
+        .value =
+            venda.desconto || 0;
+
+        const itens =
+            document
+            .getElementById("itens");
+
+        itens.innerHTML = "";
+
+        if(
+            venda.itens &&
+            venda.itens.length > 0
+        ){
+
+            venda.itens.forEach(function(item){
+
+                adicionarItem(item);
+
+            });
+
+        }else{
+
+            adicionarItem();
+
+        }
+
+        calcularTotal();
+
+        document
+        .getElementById("formulario")
+        .scrollIntoView({
+            behavior:"smooth"
+        });
+
+    }catch(erro){
+
+        console.error(erro);
+
+        alert(
+            "Erro ao abrir venda."
+        );
+
+    }
+
+}
+
+
+/* ADICIONAR ITEM */
+
+function adicionarItem(dados=null){
+
+    const item =
+        document.createElement("div");
+
+    item.className = "item";
+
+    item.innerHTML = `
+
+        <input
+            type="number"
+            class="quantidade"
+            min="1"
+            value="${dados ? dados.quantidade : 1}"
+            oninput="calcularTotal()"
+        >
+
+        <input
+            type="text"
+            class="descricao"
+            placeholder="Descrição"
+            value="${dados ? dados.descricao : ""}"
+        >
+
+        <input
+            type="number"
+            class="valor"
+            min="0"
+            step="0.01"
+            value="${dados ? dados.valor : 0}"
+            oninput="calcularTotal()"
+        >
+
+        <input
+            type="text"
+            class="subtotal"
+            readonly
+            value="0,00"
+        >
+
+        <button
+            type="button"
+            onclick="removerItem(this)"
+        >
+            X
+        </button>
+
+    `;
+
+    document
+    .getElementById("itens")
+    .appendChild(item);
+
+    calcularTotal();
+
+}
+
+
+/* REMOVER ITEM */
+
+function removerItem(botao){
+
+    botao.parentElement.remove();
+
+    calcularTotal();
+
+}
+
+
+/* CALCULAR TOTAL */
+
+function calcularTotal(){
+
+    let total = 0;
+
+    document
+    .querySelectorAll(".item")
+    .forEach(function(item){
+
+        const quantidade =
+            Number(
+                item
+                .querySelector(".quantidade")
+                .value
+            ) || 0;
+
+        const valor =
+            Number(
+                item
+                .querySelector(".valor")
+                .value
+            ) || 0;
+
+        const subtotal =
+            quantidade * valor;
+
+        item
+        .querySelector(".subtotal")
+        .value =
+            subtotal
+            .toFixed(2)
+            .replace(".",",");
+
+        total += subtotal;
+
+    });
+
+    const desconto =
+        Number(
+            document
+            .getElementById("desconto")
+            .value
+        ) || 0;
+
+    const valorDesconto =
+        total * desconto / 100;
+
+    const totalFinal =
+        total - valorDesconto;
+
+    document
+    .getElementById("totalItens")
+    .innerText =
+        total
+        .toFixed(2)
+        .replace(".",",");
+
+    document
+    .getElementById("valorDesconto")
+    .innerText =
+        valorDesconto
+        .toFixed(2)
+        .replace(".",",");
+
+    document
+    .getElementById("totalFinal")
+    .innerText =
+        totalFinal
+        .toFixed(2)
+        .replace(".",",");
+
+}
+
+
+/* SALVAR ALTERAÇÕES */
+
+async function salvarAlteracoes(){
+
+    if(vendaEditando === null){
+
+        alert(
+            "Nenhuma venda selecionada."
+        );
+
+        return;
+
+    }
+
+    const itens = [];
+
+    document
+    .querySelectorAll(".item")
+    .forEach(function(item){
+
+        const descricao =
+            item
+            .querySelector(".descricao")
+            .value
+            .trim();
+
+        if(descricao !== ""){
+
+            itens.push({
+
+                quantidade:
+                    Number(
+                        item
+                        .querySelector(".quantidade")
+                        .value
+                    ) || 1,
+
+                descricao:
+                    descricao,
+
+                valor:
+                    Number(
+                        item
+                        .querySelector(".valor")
+                        .value
+                    ) || 0
+
+            });
+
+        }
+
+    });
+
+    if(itens.length === 0){
+
+        alert(
+            "Adicione pelo menos um produto."
+        );
+
+        return;
+
+    }
+
+    calcularTotal();
+
+    const totalTexto =
+        document
+        .getElementById("totalFinal")
+        .innerText;
+
+    const total =
+        Number(
+            totalTexto
+            .replace(/\./g,"")
+            .replace(",",".")
+        ) || 0;
+
+    const dados = {
+
+        cliente:
+            document
+            .getElementById("cliente")
+            .value
+            .trim(),
+
+        vendedor:
+            document
+            .getElementById("vendedor")
+            .value,
+
+        data:
+            document
+            .getElementById("data")
+            .value,
+
+        condicao:
+            document
+            .getElementById("condicao")
+            .value,
+
+        desconto:
+            Number(
+                document
+                .getElementById("desconto")
+                .value
+            ) || 0,
+
+        total:total,
+
+        itens:itens
+
+    };
+
+    try{
+
+        const resposta =
+            await fetch(
+                "/api/vendas/" + vendaEditando,
+                {
+
+                    method:"PUT",
+
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(dados)
+
+                }
+            );
+
+        const resultado =
+            await resposta.json();
+
+        if(!resposta.ok){
+
+            throw new Error(
+                resultado.erro ||
+                "Erro ao salvar."
+            );
+
+        }
+
+        alert(
+            "Venda alterada com sucesso!"
+        );
+
+        cancelarEdicao();
+
+        document
+        .getElementById("buscar")
+        .value = "";
+
+        document
+        .getElementById("resultado")
+        .innerHTML = "";
+
+        await carregarVendas();
+
+    }catch(erro){
+
+        console.error(erro);
+
+        alert(
+            "Erro ao salvar: " +
+            erro.message
+        );
+
+    }
+
+}
+
+
+/* CANCELAR */
+
+function cancelarEdicao(){
+
+    vendaEditando = null;
+
+    document
+    .getElementById("formulario")
+    .style.display =
+        "none";
+
+    document
+    .getElementById("itens")
+    .innerHTML = "";
+
+}
+
+
+/* INICIAR */
+
+async function iniciar(){
+
+    await carregarVendedores();
+
+    await carregarVendas();
+
+}
+
+iniciar();
+
+</script>
+
+</body>
+</html>

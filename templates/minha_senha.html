@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Minha Senha - Sistema OS</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 500px;
+    margin: 50px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.usuario {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 18px;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+button {
+    padding: 12px 18px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.salvar {
+    background: #007bff;
+    color: white;
+}
+
+.voltar {
+    background: #666;
+    color: white;
+    margin-right: 10px;
+}
+
+.navegacao{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+}
+
+.navegacao button{
+    margin-top:0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="navegacao" aria-label="Navegação principal">
+    <button class="voltar" onclick="window.location.href='/'">INÍCIO</button>
+    <button class="voltar" onclick="window.location.href='/dashboard'">DASHBOARD</button>
+</div>
+
+<h1>ALTERAR MINHA SENHA</h1>
+
+<div class="usuario">
+Usuário: <strong>{{ usuario }}</strong>
+</div>
+
+<label>Senha Atual</label>
+<input type="password" id="senhaAtual">
+
+<label>Nova Senha</label>
+<input type="password" id="novaSenha">
+
+<label>Confirmar Nova Senha</label>
+<input type="password" id="confirmarSenha">
+
+<button class="salvar" onclick="alterarSenha()">
+ALTERAR SENHA
+</button>
+
+</div>
+
+<script>
+
+async function alterarSenha() {
+
+    const senhaAtual =
+    document.getElementById("senhaAtual").value;
+
+    const novaSenha =
+    document.getElementById("novaSenha").value;
+
+    const confirmarSenha =
+    document.getElementById("confirmarSenha").value;
+
+
+    if (!senhaAtual || !novaSenha || !confirmarSenha) {
+
+        alert("Preencha todos os campos.");
+
+        return;
+    }
+
+
+    if (novaSenha !== confirmarSenha) {
+
+        alert("A confirmação da nova senha não confere.");
+
+        return;
+    }
+
+
+    const resposta = await fetch(
+        "/api/minha_senha",
+        {
+            method: "PUT",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                senha_atual: senhaAtual,
+                nova_senha: novaSenha
+            })
+        }
+    );
+
+
+    const resultado = await resposta.json();
+
+
+    if (!resposta.ok) {
+
+        alert(resultado.erro);
+
+        return;
+    }
+
+
+    alert(resultado.mensagem);
+
+
+    document.getElementById("senhaAtual").value = "";
+    document.getElementById("novaSenha").value = "";
+    document.getElementById("confirmarSenha").value = "";
+}
+
+</script>
+
+</body>
+</html>

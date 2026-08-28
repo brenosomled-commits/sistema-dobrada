@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Acompanhamento de Notas</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial,sans-serif;
+    margin:0;
+    background:#f2f2f2;
+    padding:20px;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+}
+
+h1{
+    margin-top:0;
+}
+
+h2{
+    margin-top:35px;
+}
+
+.dashboard{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:20px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:8px;
+    border:1px solid #ddd;
+}
+
+.card h3{
+    margin:0 0 10px;
+    font-size:15px;
+}
+
+.numero{
+    font-size:28px;
+    font-weight:bold;
+}
+
+.filtros{
+    background:white;
+    padding:20px;
+    border:1px solid #ddd;
+    border-radius:8px;
+
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+}
+
+.filtro{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+
+.filtro label{
+    font-weight:bold;
+    font-size:13px;
+}
+
+.filtro input,
+.filtro select{
+    padding:10px;
+    border:1px solid #aaa;
+    border-radius:4px;
+    font-size:14px;
+}
+
+.tabela-box{
+    background:white;
+    border-radius:8px;
+    overflow-x:auto;
+    border:1px solid #ddd;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th{
+    background:#eee;
+    text-align:left;
+    padding:12px;
+}
+
+td{
+    padding:12px;
+    border-top:1px solid #ddd;
+}
+
+tr:hover{
+    background:#fafafa;
+}
+
+.sem-vendas{
+    text-align:center;
+    padding:25px;
+    color:#777;
+}
+
+.total-filtrado{
+    margin-top:20px;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:8px;
+    padding:20px;
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.total-filtrado .titulo{
+    font-size:16px;
+    font-weight:bold;
+}
+
+.total-filtrado .valor{
+    font-size:26px;
+    font-weight:bold;
+}
+
+.botao{
+    padding:10px 18px;
+    border:1px solid #555;
+    background:white;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.navegacao{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:20px;
+}
+
+.botao:hover{
+    background:#eee;
+}
+
+.topo{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:15px;
+}
+
+@media(max-width:700px){
+
+    .dashboard{
+        grid-template-columns:1fr;
+    }
+
+    .filtros{
+        grid-template-columns:1fr;
+    }
+
+    .total-filtrado{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="topo">
+
+    <h1>ACOMPANHAMENTO DE NOTAS</h1>
+
+    <button
+    class="botao"
+    onclick="window.location.href='/'">
+
+        INÍCIO
+
+    </button>
+
+</div>
+
+<nav class="navegacao" aria-label="Navegação principal">
+    <button class="botao" onclick="window.location.href='/nota_dobrada'">NOVA VENDA</button>
+    <button class="botao" onclick="window.location.href='/editar_venda'">EDITAR VENDA</button>
+    <button class="botao" onclick="window.location.href='/dashboard'">DASHBOARD</button>
+</nav>
+
+
+<h2>VENDAS DE HOJE</h2>
+
+<div class="dashboard">
+
+    <div class="card">
+
+        <h3>QUANTIDADE DE VENDAS</h3>
+
+        <div
+        class="numero"
+        id="quantidadeHoje">
+
+            0
+
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h3>VALOR TOTAL VENDIDO</h3>
+
+        <div
+        class="numero"
+        id="totalHoje">
+
+            R$ 0,00
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<h2>VENDAS REALIZADAS HOJE</h2>
+
+<div class="tabela-box">
+
+<table>
+
+<thead>
+
+<tr>
+
+    <th>VENDA</th>
+    <th>CLIENTE</th>
+    <th>VENDEDOR</th>
+    <th>CONDIÇÃO</th>
+    <th>VALOR</th>
+
+</tr>
+
+</thead>
+
+<tbody id="listaHoje"></tbody>
+
+</table>
+
+</div>
+
+
+<h2>ACOMPANHAMENTO DE VENDAS</h2>
+
+<div class="filtros">
+
+    <div class="filtro">
+
+        <label>MÊS</label>
+
+        <input
+        type="month"
+        id="mesFiltro"
+        onchange="aplicarFiltros()">
+
+    </div>
+
+
+    <div class="filtro">
+
+        <label>VENDEDOR</label>
+
+        <select
+        id="vendedorFiltro"
+        onchange="aplicarFiltros()">
+
+            <option value="">
+                TODOS OS VENDEDORES
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <div class="filtro">
+
+        <label>CONDIÇÃO DE VENDA</label>
+
+        <select
+        id="condicaoFiltro"
+        onchange="aplicarFiltros()">
+
+            <option value="">
+                TODAS AS CONDIÇÕES
+            </option>
+
+            <option value="avista">
+                À VISTA
+            </option>
+
+            <option value="aprazo">
+                A PRAZO
+            </option>
+
+        </select>
+
+    </div>
+
+</div>
+
+
+<div
+class="dashboard"
+style="margin-top:20px;">
+
+    <div class="card">
+
+        <h3>QUANTIDADE DE VENDAS FILTRADAS</h3>
+
+        <div
+        class="numero"
+        id="quantidadeFiltrada">
+
+            0
+
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h3>VALOR TOTAL FILTRADO</h3>
+
+        <div
+        class="numero"
+        id="totalFiltrado">
+
+            R$ 0,00
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<h2>RESULTADO DAS VENDAS</h2>
+
+<div class="tabela-box">
+
+<table>
+
+<thead>
+
+<tr>
+
+    <th>DATA</th>
+    <th>VENDA</th>
+    <th>CLIENTE</th>
+    <th>VENDEDOR</th>
+    <th>CONDIÇÃO</th>
+    <th>VALOR</th>
+
+</tr>
+
+</thead>
+
+<tbody id="listaFiltrada"></tbody>
+
+</table>
+
+</div>
+
+
+<div class="total-filtrado">
+
+    <div>
+
+        <div class="titulo">
+            TOTAL DAS VENDAS FILTRADAS
+        </div>
+
+        <div>
+
+            Quantidade:
+
+            <span id="quantidadeFinal">
+                0
+            </span>
+
+            vendas
+
+        </div>
+
+    </div>
+
+    <div
+    class="valor"
+    id="somatoriaFinal">
+
+        R$ 0,00
+
+    </div>
+
+</div>
+
+</div>
+
+
+<script>
+
+let vendas = [];
+
+
+/* FORMATAR MOEDA */
+
+function formatarMoeda(valor){
+
+    return Number(valor || 0).toLocaleString(
+        "pt-BR",
+        {
+            style:"currency",
+            currency:"BRL"
+        }
+    );
+
+}
+
+
+/* FORMATAR DATA */
+
+function formatarData(data){
+
+    if(!data){
+        return "";
+    }
+
+    const partes =
+        data.split("-");
+
+    if(partes.length !== 3){
+        return data;
+    }
+
+    return partes[2] + "/" +
+           partes[1] + "/" +
+           partes[0];
+
+}
+
+
+/* CONDIÇÃO */
+
+function nomeCondicao(condicao){
+
+    if(condicao === "avista"){
+        return "À VISTA";
+    }
+
+    if(condicao === "aprazo"){
+        return "A PRAZO";
+    }
+
+    return condicao || "";
+
+}
+
+
+/* CARREGAR VENDAS */
+
+async function carregarVendas(){
+
+    try{
+
+        const resposta =
+            await fetch("/api/vendas");
+
+        if(!resposta.ok){
+
+            throw new Error(
+                "Erro ao carregar vendas"
+            );
+
+        }
+
+        vendas =
+            await resposta.json();
+
+        atualizarHoje();
+
+        aplicarFiltros();
+
+    }
+    catch(erro){
+
+        console.error(erro);
+
+        alert(
+            "Não foi possível carregar as vendas do servidor."
+        );
+
+    }
+
+}
+
+
+/* CARREGAR VENDEDORES */
+
+async function carregarVendedores(){
+
+    try{
+
+        const resposta =
+            await fetch("/api/vendedores");
+
+        const usuarios =
+            await resposta.json();
+
+        const select =
+            document
+            .getElementById("vendedorFiltro");
+
+        select.innerHTML =
+            '<option value="">TODOS OS VENDEDORES</option>';
+
+        usuarios.forEach(function(usuario){
+
+            let nome = "";
+
+            if(typeof usuario === "string"){
+
+                nome = usuario;
+
+            }
+            else{
+
+                nome =
+                    usuario.nome ||
+                    usuario.usuario ||
+                    "";
+
+            }
+
+            if(nome){
+
+                const option =
+                    document.createElement("option");
+
+                option.value =
+                    nome;
+
+                option.textContent =
+                    nome;
+
+                select.appendChild(option);
+
+            }
+
+        });
+
+    }
+    catch(erro){
+
+        console.error(
+            "Erro ao carregar vendedores:",
+            erro
+        );
+
+    }
+
+}
+
+
+/* DASHBOARD HOJE */
+
+function atualizarHoje(){
+
+    const hoje =
+        new Date()
+        .toISOString()
+        .split("T")[0];
+
+
+    const vendasHoje =
+        vendas.filter(function(venda){
+
+            return venda.data === hoje;
+
+        });
+
+
+    let total = 0;
+
+
+    vendasHoje.forEach(function(venda){
+
+        total +=
+            Number(venda.total) || 0;
+
+    });
+
+
+    document
+    .getElementById("quantidadeHoje")
+    .innerText =
+        vendasHoje.length;
+
+
+    document
+    .getElementById("totalHoje")
+    .innerText =
+        formatarMoeda(total);
+
+
+    const lista =
+        document
+        .getElementById("listaHoje");
+
+
+    lista.innerHTML = "";
+
+
+    if(vendasHoje.length === 0){
+
+        lista.innerHTML = `
+            <tr>
+                <td
+                colspan="5"
+                class="sem-vendas">
+
+                    Nenhuma venda registrada hoje.
+
+                </td>
+            </tr>
+        `;
+
+        return;
+
+    }
+
+
+    vendasHoje.forEach(function(venda){
+
+        lista.innerHTML += `
+
+            <tr>
+
+                <td>
+                    ${venda.numero || ""}
+                </td>
+
+                <td>
+                    ${venda.cliente || ""}
+                </td>
+
+                <td>
+                    ${venda.vendedor || ""}
+                </td>
+
+                <td>
+                    ${nomeCondicao(venda.condicao)}
+                </td>
+
+                <td>
+                    ${formatarMoeda(venda.total)}
+                </td>
+
+            </tr>
+
+        `;
+
+    });
+
+}
+
+
+/* APLICAR FILTROS */
+
+function aplicarFiltros(){
+
+    const mes =
+        document
+        .getElementById("mesFiltro")
+        .value;
+
+
+    const vendedor =
+        document
+        .getElementById("vendedorFiltro")
+        .value;
+
+
+    const condicao =
+        document
+        .getElementById("condicaoFiltro")
+        .value;
+
+
+    let vendasFiltradas =
+        [...vendas];
+
+
+    if(mes){
+
+        vendasFiltradas =
+            vendasFiltradas.filter(
+                function(venda){
+
+                    return (
+                        venda.data || ""
+                    ).startsWith(mes);
+
+                }
+            );
+
+    }
+
+
+    if(vendedor){
+
+        vendasFiltradas =
+            vendasFiltradas.filter(
+                function(venda){
+
+                    return venda.vendedor === vendedor;
+
+                }
+            );
+
+    }
+
+
+    if(condicao){
+
+        vendasFiltradas =
+            vendasFiltradas.filter(
+                function(venda){
+
+                    return venda.condicao === condicao;
+
+                }
+            );
+
+    }
+
+
+    let total = 0;
+
+
+    vendasFiltradas.forEach(function(venda){
+
+        total +=
+            Number(venda.total) || 0;
+
+    });
+
+
+    document
+    .getElementById("quantidadeFiltrada")
+    .innerText =
+        vendasFiltradas.length;
+
+
+    document
+    .getElementById("totalFiltrado")
+    .innerText =
+        formatarMoeda(total);
+
+
+    document
+    .getElementById("quantidadeFinal")
+    .innerText =
+        vendasFiltradas.length;
+
+
+    document
+    .getElementById("somatoriaFinal")
+    .innerText =
+        formatarMoeda(total);
+
+
+    const lista =
+        document
+        .getElementById("listaFiltrada");
+
+
+    lista.innerHTML = "";
+
+
+    if(vendasFiltradas.length === 0){
+
+        lista.innerHTML = `
+
+            <tr>
+
+                <td
+                colspan="6"
+                class="sem-vendas">
+
+                    Nenhuma venda encontrada
+                    com os filtros selecionados.
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+
+    }
+
+
+    vendasFiltradas.forEach(function(venda){
+
+        lista.innerHTML += `
+
+            <tr>
+
+                <td>
+                    ${formatarData(venda.data)}
+                </td>
+
+                <td>
+                    ${venda.numero || ""}
+                </td>
+
+                <td>
+                    ${venda.cliente || ""}
+                </td>
+
+                <td>
+                    ${venda.vendedor || ""}
+                </td>
+
+                <td>
+                    ${nomeCondicao(venda.condicao)}
+                </td>
+
+                <td>
+                    ${formatarMoeda(venda.total)}
+                </td>
+
+            </tr>
+
+        `;
+
+    });
+
+}
+
+
+/* MÊS ATUAL */
+
+function definirMesAtual(){
+
+    const hoje =
+        new Date();
+
+    const ano =
+        hoje.getFullYear();
+
+    const mes =
+        String(
+            hoje.getMonth() + 1
+        ).padStart(2,"0");
+
+
+    document
+    .getElementById("mesFiltro")
+    .value =
+        ano + "-" + mes;
+
+}
+
+
+/* ATUALIZAR AUTOMATICAMENTE */
+
+setInterval(
+    carregarVendas,
+    30000
+);
+
+
+/* INICIAR */
+
+async function iniciar(){
+
+    definirMesAtual();
+
+    await carregarVendedores();
+
+    await carregarVendas();
+
+}
+
+iniciar();
+
+</script>
+
+</body>
+</html>
