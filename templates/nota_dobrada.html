@@ -116,27 +116,28 @@
 }
 
 #areaImpressao{display:none}
-.pagina-impressao{ width:200mm; min-height:287mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
-.via-impressao{ width:190mm; min-height:132mm; padding:6mm 8mm; border:1px solid #000; overflow:hidden; margin:3mm auto 0; background:#fff; display:flex; flex-direction:column; }
+.pagina-impressao{ width:204mm; min-height:287mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
+.via-impressao{ width:196mm; min-height:132mm; padding:3mm 4mm; border:1.2px solid #000; overflow:hidden; margin:2mm auto 0; background:#fff; display:flex; flex-direction:column; }
 .via-impressao + .via-impressao{ border-top:none; }
-.nota-linha{ border-top:1px solid var(--cor-borda-forte); margin:14px 0; }
-.nota-tabela-cabecalho, .nota-item-impressao{ display:grid; gap:10px; align-items:center; }
-.nota-tabela-cabecalho{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; font-weight:700; font-size:.78rem; border-bottom:1px solid #000; padding:6px 0 5px; }
-.nota-item-impressao{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; padding:4px 0; font-size:13px; border-bottom:1px solid #e8edf2; }
-.via-impressao .resumo-financeiro{ width:104mm; margin:14px auto 0; border:none; border-radius:0; background:transparent; }
-.assinatura{ margin-top:18px; text-align:center; }
-.assinatura-linha{ width:90mm; border-top:1px solid #000; margin:0 auto 4px; }
-.entrega-impressao{ margin-top:8px; display:flex; gap:20px; justify-content:center; font-size:12px; font-weight:bold; }
-.marcador-caixa{ width:12px; height:12px; border:1px solid #000; display:inline-flex; align-items:center; justify-content:center; font-size:10px; line-height:1; }
+.nota-linha{ border-top:1px solid #000; margin:6px 0; }
+.nota-tabela-cabecalho, .nota-item-impressao{ display:grid; gap:6px; align-items:center; }
+.nota-tabela-cabecalho{ grid-template-columns:14mm minmax(0,1fr) 26mm 26mm; font-weight:700; font-size:7.5pt; border-bottom:1.2px solid #000; padding:4px 0 3px; letter-spacing:.02em; }
+.nota-item-impressao{ grid-template-columns:14mm minmax(0,1fr) 26mm 26mm; padding:3px 0; font-size:9pt; border-bottom:1px solid #e5e7eb; min-height:6mm; }
+.via-impressao .resumo-financeiro{ width:98mm; margin:8px 0 0 auto; border:none; border-radius:0; background:transparent; }
+.assinatura{ margin-top:12px; text-align:center; }
+.assinatura-linha{ width:78mm; border-top:1px solid #000; margin:0 auto 3px; }
+.entrega-impressao{ margin-top:6px; display:flex; gap:16px; justify-content:center; font-size:10px; font-weight:700; }
+.marcador-caixa{ width:11px; height:11px; border:1px solid #000; display:inline-flex; align-items:center; justify-content:center; font-size:9px; line-height:1; }
 @media print{
-    @page{ size:A4 portrait; margin:3mm; }
+    @page{ size:A4 portrait; margin:2mm 3mm; }
     body{ background:#fff; }
     body > .layout{ display:none!important; }
     #areaImpressao{ display:block!important; }
-    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; width:204mm; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    .via-impressao{ min-height:133mm; max-height:138mm; height:auto; padding:1.5mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; }
+    .via-impressao{ min-height:133mm; max-height:140mm; height:auto; padding:2mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:9pt; width:196mm; border-width:1px; }
     .via-impressao + .via-impressao{ border-top:none; }
+    .via-impressao .resumo-financeiro{ width:88mm; margin:6px 0 0 auto; }
     .nota-tabela-cabecalho *{ text-transform:uppercase; }
     .nota-item-impressao *{ text-transform:uppercase; }
     .via-impressao .resumo-financeiro *{ text-transform:uppercase; }
@@ -408,28 +409,38 @@ async function novaVenda(){
 const LOGO_URL = "{{ url_for('static', filename='logo.png') }}";
 function venc30(dataStr){ if(!dataStr) return '30 DIAS'; const d=new Date(dataStr+'T12:00:00'); d.setDate(d.getDate()+30); const dd=d.toISOString().split('T')[0].split('-'); return dd[2]+'/'+dd[1]+'/'+dd[0]; }
 function etiquetaVia(isSegunda){
-    return `<div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 8px -2px;padding:4px 10px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 6px -2px;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-weight:600;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>`;
 }
 function gerarCabecalho(isSegunda=false){
-    const cliente = document.getElementById("cliente").value;
+    const cliente = (document.getElementById("cliente").value || "CONSUMIDOR FINAL").trim() || "CONSUMIDOR FINAL";
     const venda = document.getElementById("venda").value;
-    const vendedor = document.getElementById("vendedor").value;
+    const vendedor = document.getElementById("vendedor").value || "-";
     const data = document.getElementById("data").value;
-    const obs = document.getElementById("obs").value;
-    const endereco = document.getElementById("endereco").value;
-    const condicao = document.getElementById("condicao").selectedOptions[0]?.text || "";
-    const vencimento = document.getElementById("vencimento").value || "";
+    const obs = document.getElementById("obs").value.trim() || "-";
     const condicaoRaw = document.getElementById("condicao").value;
-    const tipoEntrega = document.querySelector('input[name="tipoEntrega"]:checked')?.value || "RETIRAR";
+    const vencimento = document.getElementById("vencimento").value || "";
+    const condicaoTxt = condicaoRaw==='aprazo' ? 'A PRAZO' : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[condicaoRaw])||(condicaoRaw||'-').toUpperCase());
+    const dataFmt = data ? data.split('-').reverse().join('/') : "-";
+    const vencFmt = vencimento ? vencimento.split('-').reverse().join('/') : (condicaoRaw==='aprazo' ? venc30(data) : "-");
+    const validade = "7 DIAS";
     return etiquetaVia(isSegunda) + `
-        <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL}" style="height:22px;object-fit:contain" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL</span></div>
-        <div style="border-top:1px solid #000;margin:8px 0"></div>
-        <div><b>CLIENTE:</b> ${cliente}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${venda}</div><div><b>CONDIÇÃO:</b> <span style="display:inline-block;background:${condicaoRaw==='aprazo' ? '#fef3c7' : '#e0f2fe'};color:${condicaoRaw==='aprazo' ? '#92400e' : '#0c4a6e'};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.05em;vertical-align:middle">${condicaoRaw==='aprazo' ? 'A PRAZO' : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[condicaoRaw])||(condicaoRaw||'').toUpperCase())}</span>${condicaoRaw==='aprazo' ? '<span style="font-size:11px;color:#92400e;margin-left:8px;font-weight:700">· VENC '+ (vencimento ? vencimento.split('-').reverse().join('/') : venc30(data))+' (30 DIAS)</span>' : ''}</div><div><b>VENDEDOR:</b> ${vendedor}</div><div><b>DATA:</b> ${data.split('-').reverse().join('/')}</div></div>
-        <div><b>OBS:</b> ${obs}</div><div><b>ENDEREÇO:</b> ${endereco || "-"}</div>
-        <div style="display:flex;gap:20px;justify-content:center;font-size:12px;font-weight:bold;margin-top:6px"><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:10px">${tipoEntrega === "RETIRAR" ? "X" : ""}</span>RETIRAR</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:10px">${tipoEntrega === "ENTREGAR" ? "X" : ""}</span>ENTREGAR</span></div>
-        <div style="border-top:1px solid #000;margin:8px 0"></div>
-        <div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000">
+            <div style="flex:1"></div>
+            <div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div>
+            <div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;letter-spacing:.02em;margin-top:2px">${venda}</div></div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35">
+            <div><span style="font-size:7pt;font-weight:700;letter-spacing:.04em">CLIENTE:</span> <span style="font-weight:600">${cliente}</span></div>
+            <div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condicaoTxt}</span></div>
+            <div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${venda}</span></div>
+            <div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div>
+            <div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${vendedor}</div>
+            <div><span style="font-size:7pt;font-weight:700">VALIDADE:</span> ${validade}</div>
+            <div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${obs}</div>
+            <div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div>
+        </div>
+        <div style="border-top:1px solid #000;margin:5px 0 0"></div>
+        <div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;font-weight:700;border-bottom:1.2px solid #000;padding:3px 0;font-size:7.5pt;letter-spacing:.02em"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>
     `;
 }
 function gerarLinhaProduto(item){
@@ -437,10 +448,12 @@ function gerarLinhaProduto(item){
     const descricao = item.querySelector(".descricao").value;
     const valor = Number(item.querySelector(".valor").value) || 0;
     const subtotal = item.querySelector(".subtotal").value;
-    return `<div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;padding:4px 0;font-size:13px;border-bottom:1px solid #e8edf2"><span>${quantidade}</span><span>${descricao}</span><span>R$ ${valor.toFixed(2).replace(".",",")}</span><span>R$ ${subtotal}</span></div>`;
+    return `<div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;padding:2.5px 0;font-size:8.5pt;border-bottom:1px dotted #d1d5db;min-height:6mm;align-items:center"><span>${quantidade}</span><span style="padding-right:4px">${descricao}</span><span>R$ ${valor.toFixed(2).replace(".",",")}</span><span>R$ ${subtotal}</span></div>`;
 }
 function gerarResumo(){
-    return `<div style="width:68mm;margin-left:auto;margin-top:auto;padding-top:10px;text-align:right"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px"><b>TOTAL:</b><span>R$ ${document.getElementById("totalItens").innerText}</span></div><div style="display:flex;justify-content:space-between;border-top:1.5px solid #000;padding-top:6px;font-size:13px"><b>TOTAL FINAL:</b><b>R$ ${document.getElementById("totalFinal").innerText}</b></div></div>`;
+    const descontoPct = document.getElementById("desconto").value || "0";
+    const valorDesc = document.getElementById("valorDesconto").innerText;
+    return `<div style="width:86mm;margin-left:auto;margin-top:6px;border:1px solid #000;padding:4px 6px;font-size:8pt;line-height:1.35"><div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL:</span><span>R$ ${document.getElementById("totalItens").innerText}</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">DESCONTO:</span><span>${descontoPct}%</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">VALOR DESCONTO:</span><span>R$ ${valorDesc}</span></div><div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:3px"><span style="font-weight:800">TOTAL FINAL:</span><span style="font-weight:800">R$ ${document.getElementById("totalFinal").innerText}</span></div></div>`;
 }
 async function prepararImpressao(){
     const cliente = document.getElementById("cliente").value.trim();
@@ -459,24 +472,32 @@ async function prepararImpressao(){
         primeiraVia.innerHTML = gerarCabecalho(false);
         grupo.forEach(item => { primeiraVia.innerHTML += gerarLinhaProduto(item); });
         if(i + itensPorVia >= itens.length) primeiraVia.innerHTML += gerarResumo();
-        primeiraVia.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        // assinatura automática quando a prazo — nas duas vias, mais visível
-        if(condicaoAtual === "aprazo"){
-            const assinaturaHTML = `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700;letter-spacing:.04em">ASSINATURA DO CLIENTE — VENDA A PRAZO</div>${document.getElementById("vencimento").value ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
-            primeiraVia.innerHTML += assinaturaHTML;
+        // Rodapé compacto: financeiro + assinatura lado a lado (aproveita largura, economiza vertical)
+        if(i + itensPorVia >= itens.length){
+            const resumoHTML = gerarResumo();
+            const assinaturaCliente = `<div style="flex:1;text-align:center;padding-top:10px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;color:#374151;margin-top:2px">Ao assinar, declaro que estou ciente<br>das condições deste orçamento.</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+            const assinaturaLoja = `<div style="flex:1;text-align:center;padding-top:10px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA — VIA DA LOJA</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+            primeiraVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:6px">${assinaturaCliente}${resumoHTML}</div>`;
+            primeiraVia.innerHTML += '<div style="margin-top:4px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+            const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
+            segundaVia.innerHTML = gerarCabecalho(true);
+            grupo.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
+            segundaVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:6px">${assinaturaLoja}${resumoHTML}</div>`;
+            segundaVia.innerHTML += '<div style="margin-top:4px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+            pagina.appendChild(primeiraVia);
+            pagina.appendChild(recorteVia());
+            pagina.appendChild(segundaVia); area.appendChild(pagina);
+        } else {
+            // Páginas intermediárias sem totais nem assinatura — só produtos e cabeçalho
+            primeiraVia.innerHTML += '<div style="margin-top:4px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">continua...</div>';
+            const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
+            segundaVia.innerHTML = gerarCabecalho(true);
+            grupo.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
+            segundaVia.innerHTML += '<div style="margin-top:4px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">continua...</div>';
+            pagina.appendChild(primeiraVia);
+            pagina.appendChild(recorteVia());
+            pagina.appendChild(segundaVia); area.appendChild(pagina);
         }
-        const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
-        segundaVia.innerHTML = gerarCabecalho(true);
-        grupo.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
-        if(i + itensPorVia >= itens.length) segundaVia.innerHTML += gerarResumo();
-        segundaVia.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        if(condicaoAtual === "aprazo"){
-            const assinaturaHTML2 = `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700;letter-spacing:.04em">ASSINATURA DO CLIENTE — VIA DA LOJA — VENDA A PRAZO</div>${document.getElementById("vencimento").value ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
-            segundaVia.innerHTML += assinaturaHTML2;
-        }
-        pagina.appendChild(primeiraVia);
-        pagina.appendChild(recorteVia());
-        pagina.appendChild(segundaVia); area.appendChild(pagina);
     }
     window.print();
     setTimeout(function(){ novaVenda(); }, 500);
@@ -517,9 +538,17 @@ async function reimprimirDobrada(id){
         const area=document.getElementById('areaImpressao'); area.innerHTML='';
         const pagina=document.createElement('div'); pagina.className='pagina-impressao';
         function viaHTML(isSegunda){
-            let h=`<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL}" style="height:20px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtVenda(v.numero)}</span></div><div style="border-top:1px solid #000;margin:8px 0"></div><div><b>CLIENTE:</b> ${v.cliente||''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${fmtVenda(v.numero)}</div><div><b>VENDEDOR:</b> ${v.vendedor||''}</div><div><b>DATA:</b> ${(v.data||'').split('-').reverse().join('/')}</div><div><b>CONDIÇÃO:</b> ${(v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'').toUpperCase())}</b>${v.condicao==='aprazo' && v.vencimento ? ' · VENC: '+v.vencimento.split('-').reverse().join('/') : ''}</div></div><div style="border-top:1px solid #000;margin:8px 0"></div><div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR</span><span>SUBTOTAL</span></div>`;
-            (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); h+=`<div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;padding:4px 0;border-bottom:1px solid #e8edf2"><span>${it.quantidade}</span><span>${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
-            h+=`<div style="width:68mm;margin-left:auto;margin-top:auto;padding-top:10px;text-align:right"><div style="display:flex;justify-content:space-between"><b>TOTAL:</b><span>R$ ${Number(v.total).toFixed(2).replace('.',',')}</span></div><div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:6px"><b>TOTAL FINAL:</b><b>R$ ${Number(v.total).toFixed(2).replace('.',',')}</b></div></div>`;
+            const condTxt = (v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'-').toUpperCase());
+            const dataFmt = (v.data||"").split("-").reverse().join("/") || "-";
+            const vencFmt = v.vencimento ? v.vencimento.split("-").reverse().join("/") : (v.condicao==="aprazo" ? "30 DIAS" : "-");
+            const descontoPct = v.desconto!=null ? v.desconto : 0;
+            const valorDesc = (Number(v.total||0) * Number(descontoPct||0) / (100 - Number(descontoPct||0) || 100) * 0).toFixed(2).replace(".",","); // placeholder, será recalculado se necessário
+            // cabeçalho compacto 2 colunas
+            let h=`<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 6px -2px;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000"><div style="flex:1"></div><div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div><div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">${fmtVenda(v.numero)}</div></div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35"><div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">${v.cliente||"CONSUMIDOR FINAL"}</span></div><div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condTxt}</span></div><div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${fmtVenda(v.numero)}</span></div><div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div><div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${v.vendedor||"-"}</div><div><span style="font-size:7pt;font-weight:700">VALIDADE:</span> 7 DIAS</div><div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${v.observacao||"-"}</div><div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div></div><div style="border-top:1px solid #000;margin:5px 0 0"></div><div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;font-weight:700;border-bottom:1.2px solid #000;padding:3px 0;font-size:7.5pt;letter-spacing:.02em"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>`;
+            (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); h+=`<div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;padding:2.5px 0;font-size:8.5pt;border-bottom:1px dotted #d1d5db;min-height:6mm;align-items:center"><span>${it.quantidade}</span><span style="padding-right:4px">${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
+            const totalItens = Number(v.total||0) / (1 - Number(descontoPct||0)/100 || 1);
+            const vDesc = (totalItens * Number(descontoPct||0)/100).toFixed(2).replace(".",",");
+            h+=`<div style="display:flex;gap:12px;align-items:flex-end;margin-top:6px"><div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">${isSegunda ? 'ASSINATURA — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>${!isSegunda ? '<div style="font-size:6pt;color:#374151;margin-top:2px">Ao assinar, declaro que estou ciente<br>das condições deste orçamento.</div>' : ''}</div><div style="width:86mm;border:1px solid #000;padding:4px 6px;font-size:8pt;line-height:1.35"><div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL:</span><span>R$ ${totalItens.toFixed(2).replace(".",",")}</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">DESCONTO:</span><span>${descontoPct}%</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">VALOR DESCONTO:</span><span>R$ ${vDesc}</span></div><div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:3px"><span style="font-weight:800">TOTAL FINAL:</span><span style="font-weight:800">R$ ${Number(v.total).toFixed(2).replace('.',',')}</span></div></div></div><div style="margin-top:4px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>`;
             if(v.condicao==='aprazo'){
                 h+=`<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">${isSegunda ? 'ASSINATURA DO CLIENTE — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>${v.vencimento ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+v.vencimento.split('-').reverse().join('/')+'</div>' : ''}</div>`;
             }
@@ -528,8 +557,6 @@ async function reimprimirDobrada(id){
         }
         const v1=document.createElement('div'); v1.innerHTML=viaHTML(false);
         const v2=document.createElement('div'); v2.innerHTML=viaHTML(true);
-        v1.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        v2.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
         const recorte = recorteVia();
         pagina.appendChild(v1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(v2.firstElementChild);
         area.appendChild(pagina); area.style.display='block'; window.print(); setTimeout(()=> area.style.display='none',500);
