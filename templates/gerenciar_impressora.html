@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
+<meta name="theme-color" content="#000">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
+<title>Gerenciar Impressora - SOMLED</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=3">
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<aside class="sidebar">
+<div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+<nav class="sidebar-nav">
+<div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+<div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/usuarios"><span class="link-icon">👥</span> Gerenciar Logins</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link ativa" href="/gerenciar_impressora"><span class="link-icon">🖨</span> Impressora Zebra</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>
+</nav>
+<div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div></div></div><a class="btn btn-outline w-full mt-2" href="/logout">Sair</a></div>
+</aside>
+<main class="conteudo">
+<div class="pagina-titulo"><h1>🖨 Impressora Zebra</h1><p class="pagina-sub">Configuração da Elgin i9 (80mm) — gerência</p></div>
+
+<div class="card">
+<div class="card-header"><h2 class="card-title">Configuração</h2><span class="badge badge-pronta">Somente gerente</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+<div class="form-group"><label class="form-label">Nome da impressora (Windows)</label><input type="text" class="form-input" id="zebraNome" placeholder="ELGIN i9 (USB)"></div>
+<div class="form-group"><label class="form-label">Largura (mm)</label><select class="form-select" id="zebraLargura"><option value="80">80mm (padrão)</option><option value="58">58mm</option></select></div>
+</div>
+<div class="form-group" style="margin-top:12px"><label class="form-label">Modo automático (sem diálogo)</label><select class="form-select" id="zebraAuto" style="max-width:220px"><option value="1">Ativado — tenta direto na Zebra</option><option value="0">Desativado — sempre mostra diálogo</option></select><div class="form-hint">Quando ativado, o botão 🖨 Zebra tenta imprimir direto via Web Serial. Na primeira vez em cada máquina é necessário selecionar a porta.</div></div>
+<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="salvarConfig()">💾 Salvar</button><button class="btn btn-outline" onclick="testarZebra()">🧪 Testar impressão</button></div>
+</div>
+
+<div class="card mt-3">
+<h3 style="font-size:1rem;margin-bottom:8px">Como deixar automático em todas as máquinas</h3>
+<ol style="margin-left:18px;line-height:1.7;font-size:.9rem;color:var(--cor-texto-secundario)">
+<li>Em cada computador, abra <b>Entregas</b> e clique em <b>🖨 Zebra</b> — na primeira vez selecione <b>ELGIN i9 (USB)</b> ou <b>USB Serial</b> e marque “Lembrar” se aparecer. Depois fica automático.</li>
+<li>Para o botão 🖨 normal (navegador), defina a Elgin como padrão no Windows: <b>Painel de Controle → Dispositivos e Impressoras → botão direito na Elgin i9 → Definir como padrão</b>.</li>
+<li>Mantenha o Chrome/Edge atualizado e use <b>https</b> (Vercel já é https).</li>
+<li>Se o diálogo ainda mostrar “Brother”, é porque a padrão ainda é a Brother — altere no Windows.</li>
+</ol>
+</div>
+
+<div class="card mt-3" style="background:var(--cor-fundo)">
+<div style="font-size:.85rem"><b>Dica:</b> A impressão direta via Web Serial funciona em Chrome/Edge desktop. No celular, use o botão 🖨 normal (80mm) — o sistema já está com <b>@page 80mm auto</b> e cupom negrito.</div>
+</div>
+</main>
+</div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=3"></script>
+<script>
+const S=window.SistemaUtil; S.initSidebar();
+async function carregarConfig(){
+    try{ const r=await fetch("/api/configuracoes"); const j=await r.json();
+        document.getElementById("zebraNome").value=j.zebra_nome||"ELGIN i9 (USB)";
+        document.getElementById("zebraLargura").value=j.zebra_largura||"80";
+        document.getElementById("zebraAuto").value=j.zebra_auto||"1";
+    }catch(e){}
+}
+async function salvarConfig(){
+    const dados={ valor: document.getElementById("zebraNome").value };
+    try{
+        S.mostrarLoading("Salvando...");
+        await fetch("/api/configuracoes/zebra_nome",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:document.getElementById("zebraNome").value})});
+        await fetch("/api/configuracoes/zebra_largura",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:document.getElementById("zebraLargura").value})});
+        await fetch("/api/configuracoes/zebra_auto",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:document.getElementById("zebraAuto").value})});
+        S.Toast.sucesso("Configuração salva!"); 
+        localStorage.setItem("zebra_auto", document.getElementById("zebraAuto").value);
+        localStorage.setItem("zebra_nome", document.getElementById("zebraNome").value);
+    }catch(e){ S.Toast.erro("Erro ao salvar"); }finally{ S.esconderLoading(); }
+}
+async function testarZebra(){
+    // cria entrega fake só para teste visual
+    S.Toast.info("Use uma entrega real e clique em 🖨 Zebra para testar. O teste imprime um cupom de exemplo.");
+    // opcional: tenta abrir serial para verificar
+    if("serial" in navigator){
+        try{ const ports=await navigator.serial.getPorts(); S.Toast.info(ports.length+" porta(s) pareada(s) nesta máquina"); }catch(e){}
+    }
+}
+carregarConfig();
+</script>
+<script>
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
+</script>
+</body>
+</html>

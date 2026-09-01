@@ -556,6 +556,17 @@ def _criar_banco_sqlite():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS configuracoes (
+            chave TEXT PRIMARY KEY,
+            valor TEXT
+        )
+    """)
+    # config padrão da Zebra
+    cursor.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)", ("zebra_nome", "ELGIN i9 (USB)"))
+    cursor.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)", ("zebra_largura", "80"))
+    cursor.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)", ("zebra_auto", "1"))
+
     # Índices mantêm as telas de triagem e acompanhamento rápidas quando a
     # base crescer.
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_ordens_numero ON ordens(numero DESC)")
@@ -866,6 +877,16 @@ def _criar_banco_postgres():
             FOREIGN KEY (entrega_id) REFERENCES entregas(id)
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS configuracoes (
+            chave TEXT PRIMARY KEY,
+            valor TEXT
+        )
+    """)
+    cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO NOTHING", ("zebra_nome", "ELGIN i9 (USB)"))
+    cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO NOTHING", ("zebra_largura", "80"))
+    cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO NOTHING", ("zebra_auto", "1"))
 
     # Índices
     try:
@@ -2873,6 +2894,43 @@ def avancar_entrega(id):
     conexao.commit()
     conexao.close()
     return jsonify({"mensagem":f"Status alterado para {novo}!", "status": novo, "data_hora": agora})
+
+@app.route("/gerenciar_impressora")
+@admin_obrigatorio
+def pagina_gerenciar_impressora():
+    papel = obter_papel_usuario(session["usuario"])
+    return render_template("gerenciar_impressora.html", usuario=session["usuario"], papel=papel)
+
+@app.route("/api/configuracoes")
+@login_obrigatorio
+def listar_configuracoes():
+    conexao=conectar()
+    cur=conexao.cursor()
+    cur.execute("SELECT chave, valor FROM configuracoes")
+    rows=cur.fetchall()
+    conexao.close()
+    out={}
+    for r in rows:
+        k=r["chave"] if hasattr(r,"keys") else r[0]
+        v=r["valor"] if hasattr(r,"keys") else r[1]
+        out[k]=v
+    return jsonify(out)
+
+@app.route("/api/configuracoes/<chave>", methods=["PUT"])
+@admin_obrigatorio
+def atualizar_configuracao(chave):
+    dados=json_body()
+    if dados is None:
+        return jsonify({"erro":"Envie um JSON válido."}),400
+    valor=str(dados.get("valor") or "")
+    conexao=conectar()
+    cur=conexao.cursor()
+    cur.execute("UPDATE configuracoes SET valor=? WHERE chave=?", (valor, chave))
+    if cur.rowcount==0:
+        cur.execute("INSERT INTO configuracoes (chave, valor) VALUES (?, ?)", (chave, valor))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem":"Configuração atualizada!", "chave": chave, "valor": valor})
 
 
 # =========================

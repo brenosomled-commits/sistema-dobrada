@@ -65,7 +65,7 @@
     <nav class="sidebar-nav">
         <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
         <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link ativa" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
-        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/gerenciar_impressora"><span class="link-icon">🖨</span> Impressora Zebra</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
     </nav>
     <div class="sidebar-footer">
         <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div></div></div>
@@ -403,28 +403,44 @@ async function fecharScannerQR(){
     document.getElementById("qrScanner").style.display="none";
 }
 async function imprimirZebraDireto(id){
-    if(!("serial" in navigator)){
-        S.Toast.aviso("Para impressão automática use Chrome/Edge. Será aberta a impressão normal.");
-        return imprimirEntrega(id);
-    }
+    const isZebra = true;
     let port=null;
     try{
-        const ports=await navigator.serial.getPorts();
-        if(ports.length>0) port=ports[0];
-        else { S.Toast.info("Selecione a Elgin i9 (USB) na janela — depois fica automático"); port=await navigator.serial.requestPort(); }
-        const r=await fetch("/api/entregas/"+id); const e=await r.json(); if(!r.ok) throw new Error(e.erro||"Entrega não encontrada");
-        const ESC="\x1B", GS="\x1D";
-        let txt=ESC+"@"; txt+=ESC+"a\x01"; txt+="SOMLED\n"; txt+="NOTA DE ENTREGA\n"; txt+=`ENT${String(e.numero).padStart(4,"0")}\n`; txt+=`${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}\n`; txt+=ESC+"a\x00"; txt+="--------------------------------\n";
-        txt+=`CLIENTE: ${e.cliente||""}\n`; if(e.telefone) txt+=`TEL: ${e.telefone}\n`; txt+=`END: ${e.endereco||""}${e.bairro?" - "+e.bairro:""}\n`; txt+=`ENTREGADOR: ${e.entregador||"-"}\n`; txt+=`TAXA: R$ ${Number(e.taxa||0).toFixed(2).replace(".",",")}  STATUS: ${e.status||""}\n`; if(e.observacao) txt+=`OBS: ${e.observacao}\n`; txt+="--------------------------------\n"; txt+="QTD  DESCRICAO\n"; txt+="--------------------------------\n";
-        const itens=e.itens||[]; if(itens.length===0){ for(let i=0;i<5;i++) txt+="\n"; } else itens.slice(0,12).forEach(it=>{ txt+=`${String(it.quantidade||"").padEnd(4)}${(it.descricao||"").slice(0,28)}\n`; });
-        txt+="--------------------------------\n"; txt+=`COMPROVANTE: ${e.comprovante||"-"}\n\n`; txt+="ASSINATURA DO CLIENTE\n"; txt+="-------------------------------\n"; txt+="Recebi em perfeitas condicoes\n\n"; txt+=`ENT${String(e.numero).padStart(4,"0")} ${e.cliente||""}\n`; txt+=window.location.origin+"/m/entrega/"+e.id+"\n\n\n"; txt+=GS+"V\x00";
-        await port.open({baudRate:9600}); const writer=port.writable.getWriter(); await writer.write(new TextEncoder().encode(txt)); writer.releaseLock(); await port.close();
-        S.Toast.sucesso("Enviado direto para Elgin i9!");
+        if("serial" in navigator){
+            const ports=await navigator.serial.getPorts();
+            // tenta encontrar Elgin/i9/USB por nome se disponível
+            if(ports.length>0){
+                // prioriza porta que parece ser Elgin/USB
+                port = ports.find(p=> {
+                    const info=p.getInfo ? p.getInfo() : {};
+                    return String(info.usbVendorId||"").toLowerCase().includes("elgin") || String(info.usbProductId||"").includes("");
+                }) || ports[0];
+            } else {
+                S.Toast.info("Na primeira vez selecione a Elgin i9 (USB) — depois fica automático nesta máquina", 5000);
+                port=await navigator.serial.requestPort({filters:[]});
+                // salva escolha implicitamente via getPorts na próxima vez
+            }
+        }
+        if(port){
+            const r=await fetch("/api/entregas/"+id); const e=await r.json(); if(!r.ok) throw new Error(e.erro||"Entrega não encontrada");
+            const ESC="\x1B", GS="\x1D";
+            let txt=ESC+"@"; txt+=ESC+"a\x01"; txt+="SOMLED\n"; txt+="NOTA DE ENTREGA\n"; txt+=`ENT${String(e.numero).padStart(4,"0")}\n`; txt+=`${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}\n`; txt+=ESC+"a\x00"; txt+="--------------------------------\n";
+            txt+=`CLIENTE: ${e.cliente||""}\n`; if(e.telefone) txt+=`TEL: ${e.telefone}\n`; txt+=`END: ${e.endereco||""}${e.bairro?" - "+e.bairro:""}\n`; txt+=`ENTREGADOR: ${e.entregador||"-"}\n`; txt+=`TAXA: R$ ${Number(e.taxa||0).toFixed(2).replace(".",",")}  STATUS: ${e.status||""}\n`; if(e.observacao) txt+=`OBS: ${e.observacao}\n`; txt+="--------------------------------\n"; txt+="QTD  DESCRICAO\n"; txt+="--------------------------------\n";
+            const itens=e.itens||[]; if(itens.length===0){ for(let i=0;i<5;i++) txt+="\n"; } else itens.slice(0,12).forEach(it=>{ txt+=`${String(it.quantidade||"").padEnd(4)}${(it.descricao||"").slice(0,28)}\n`; });
+            txt+="--------------------------------\n"; txt+=`COMPROVANTE: ${e.comprovante||"-"}\n\n`; txt+="ASSINATURA DO CLIENTE\n"; txt+="-------------------------------\n"; txt+="Recebi em perfeitas condicoes\n\n"; txt+=`ENT${String(e.numero).padStart(4,"0")} ${e.cliente||""}\n`; txt+=window.location.origin+"/m/entrega/"+e.id+"\n\n\n"; txt+=GS+"V\x00";
+            await port.open({baudRate:9600}); const writer=port.writable.getWriter(); await writer.write(new TextEncoder().encode(txt)); writer.releaseLock(); await port.close();
+            localStorage.setItem("zebra_auto","1");
+            S.Toast.sucesso("Enviado direto para Elgin i9! Próximas impressões serão automáticas.");
+            return;
+        }
     }catch(e){
-        if(e.message && e.message.includes("No port")) S.Toast.erro("Nenhuma impressora selecionada");
-        else S.Toast.erro("Zebra: "+(e.message||e));
-        try{ if(port && port.readable) await port.close(); }catch(_){}
+        if(e && String(e.message||"").includes("No port")){ S.Toast.aviso("Selecione a Elgin i9 e marque 'Lembrar' se disponível"); return; }
+        console.warn("Zebra direto falhou, caindo para impressão normal", e);
     }
+    // Fallback: impressão normal 80mm — instruções para deixar automático
+    const pref = localStorage.getItem("zebra_auto");
+    if(!pref) S.Toast.info("Dica: no Windows defina Elgin i9 como padrão em Painel de Controle > Impressoras > Definir como padrão. Assim o botão 🖨 normal já vai direto.", 6000);
+    return imprimirEntrega(id);
 }
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
 </script>
