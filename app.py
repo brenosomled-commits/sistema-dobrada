@@ -3,7 +3,7 @@ import threading
 import time
 from pathlib import Path
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response
 import sqlite3
 from functools import wraps
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -1054,12 +1054,18 @@ def login():
 
             return redirect(url_for("inicio"))
 
-        return render_template(
+        resp = make_response(render_template(
             "login.html",
             erro="Usuário ou senha incorretos!"
-        )
+        ))
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
 
-    return render_template("login.html")
+    resp = make_response(render_template("login.html"))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 # =========================
@@ -1070,8 +1076,10 @@ def login():
 def logout():
 
     session.clear()
-
-    return redirect(url_for("login"))
+    resp = make_response(redirect(url_for("login")))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 # =========================

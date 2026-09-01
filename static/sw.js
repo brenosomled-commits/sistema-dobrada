@@ -1,10 +1,13 @@
-const CACHE = "somled-v1";
+const CACHE = "somled-v3";
 const CORE = [
-  "/static/manifest.webmanifest",
-  "/static/icon-192.png",
-  "/static/icon-512.png",
-  "/static/estilo.css",
-  "/static/utilitarios.js",
+  "/static/manifest.webmanifest?v=3",
+  "/static/icon-192.png?v=3",
+  "/static/icon-512.png?v=3",
+  "/static/apple-touch-icon.png?v=3",
+  "/static/favicon-32.png?v=3",
+  "/static/favicon-16.png?v=3",
+  "/static/estilo.css?v=3",
+  "/static/utilitarios.js?v=3",
 ];
 
 self.addEventListener("install", (event) => {
@@ -26,6 +29,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname === "/login" || url.pathname === "/logout") return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

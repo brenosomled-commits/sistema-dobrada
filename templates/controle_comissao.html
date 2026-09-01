@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
 <title>Controle de Comissão </title>
 <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
@@ -128,7 +128,7 @@ carregar();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js").catch(function(e){ console.warn("SW:", e); });
+    navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>
