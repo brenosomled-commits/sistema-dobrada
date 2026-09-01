@@ -13,6 +13,7 @@
 <title>Entregas</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 .nota-wrap{ max-width:960px; margin:0 auto; }
 .nota-via{ background:var(--cor-painel); border:1px solid var(--cor-borda); border-radius:16px; box-shadow:var(--sombra); overflow:hidden; }
@@ -72,8 +73,20 @@
 <main class="conteudo">
     <div class="nota-wrap">
         <div class="pagina-titulo" style="margin-bottom:16px">
-            <h1 style="display:flex;align-items:center;gap:10px">🚚 Entregas <span class="badge badge-pronta" style="font-size:.65rem">Vinculada / Avulsa + Rota</span></h1>
-            <p class="pagina-sub">Cadastre entregas vinculadas à venda/OS ou avulsas — com taxa, entregador, horário e comprovante</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                <div>
+                    <h1 style="display:flex;align-items:center;gap:10px">🚚 Entregas <span class="badge badge-pronta" style="font-size:.65rem">Vinculada / Avulsa + Rota</span></h1>
+                    <p class="pagina-sub">Cadastre entregas vinculadas à venda/OS ou avulsas — com taxa, entregador, horário e comprovante</p>
+                </div>
+                <button class="btn btn-primary" style="background:#000;border-color:#000" onclick="abrirScannerQR()">📷 Bipar QR</button>
+            </div>
+            <div id="qrScanner" style="display:none;margin-top:12px;border:1px solid #000;border-radius:8px;overflow:hidden;background:#fff">
+                <div id="qr-reader" style="width:100%"></div>
+                <div style="display:flex;gap:8px;padding:8px;justify-content:space-between;align-items:center;background:#f3f4f6">
+                    <span style="font-size:7.5pt;color:#374151">Aponte a câmera para o QR da nota (ENT0001) — leitura não altera, só abre</span>
+                    <button class="btn btn-outline btn-sm" onclick="fecharScannerQR()">✕ Fechar</button>
+                </div>
+            </div>
         </div>
 
         <div class="nota-via">
@@ -348,6 +361,49 @@ function imprimirEntrega(id){
             window.print();
         }, 350);
     });
+}
+let _qrScanner=null;
+async function abrirScannerQR(){
+    const box=document.getElementById("qrScanner");
+    box.style.display="block";
+    box.scrollIntoView({behavior:"smooth"});
+    if(!window.Html5Qrcode){ S.Toast.erro("Leitor QR não carregado. Verifique internet."); return; }
+    try{
+        _qrScanner=new Html5Qrcode("qr-reader");
+        await _qrScanner.start({facingMode:"environment"}, {fps:10, qrbox:{width:240, height:240}}, (decoded)=>{
+            try{ _qrScanner.stop(); }catch(e){}
+            document.getElementById("qrScanner").style.display="none";
+            // extrai id de URL tipo /m/entrega/123 ou ENT0001
+            let id=null;
+            const m=String(decoded).match(/\/m\/entrega\/(\d+)/);
+            if(m) id=m[1];
+            else {
+                const m2=String(decoded).match(/ENT0*(\d+)/i);
+                if(m2) id=m2[1];
+                else if(/^\d+$/.test(String(decoded).trim())) id=String(decoded).trim();
+            }
+            if(id){
+                if(String(decoded).includes("/m/entrega/")){
+                    window.location.href=String(decoded).trim();
+                } else {
+                    // tenta por numero -> busca entrega por numero
+                    fetch("/api/entregas").then(r=>r.json()).then(lista=>{
+                        const ent=lista.find(e=> String(e.numero)===String(id).padStart(4,"0") || String(e.id)===String(id) || String(e.numero)===String(id));
+                        if(ent) window.location.href="/m/entrega/"+ent.id;
+                        else S.Toast.erro("Entrega não encontrada: "+decoded);
+                    });
+                }
+            } else {
+                // se for URL completa, abre direto
+                if(String(decoded).startsWith("http")) window.location.href=decoded;
+                else S.Toast.erro("QR inválido: "+decoded);
+            }
+        }, (err)=>{});
+    }catch(e){ S.Toast.erro("Câmera não disponível: "+(e.message||e)); }
+}
+async function fecharScannerQR(){
+    try{ if(_qrScanner){ await _qrScanner.stop(); _qrScanner.clear(); } }catch(e){}
+    document.getElementById("qrScanner").style.display="none";
 }
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
 </script>
