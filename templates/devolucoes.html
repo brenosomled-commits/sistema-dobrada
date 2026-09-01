@@ -124,6 +124,7 @@
         <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link ativa" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a></div>
         {% if papel in ["GERENTE", "DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div>
   <a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a>
+  <a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a>
   <a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a>
 </div>{% endif %}
     </nav>
@@ -136,7 +137,7 @@
     <div class="nota-wrap">
         <div class="pagina-titulo" style="margin-bottom:16px">
             <h1 style="display:flex;align-items:center;gap:10px">↩️ Devolução de Produto <span class="badge badge-perigo" style="font-size:.65rem">Registro de devolução</span></h1>
-            <p class="pagina-sub">Registre devoluções a partir de uma venda — qualquer vendedor pode usar</p>
+            <p class="pagina-sub">Registre devoluções vinculadas a uma venda ou avulsas — qualquer vendedor pode usar</p>
         </div>
 
         <div class="nota-via">
@@ -152,19 +153,34 @@
             </div>
 
             <div class="nota-corpo">
-                <div class="nota-secao-titulo">Vincular à venda original</div>
-                <div class="campo-nota" style="margin-bottom:10px"><label for="buscarVenda">Buscar venda (número, SL, cliente)</label><input type="text" id="buscarVenda" oninput="filtrarVendas()" placeholder="Ex.: SL0001 ou nome do cliente"></div>
-                <div class="campo-nota" style="margin-bottom:12px"><label for="vendaSelect">Selecione a venda para vincular *</label><select id="vendaSelect" onchange="carregarItensVenda()"><option value="">Selecione a venda (SL0001...)</option></select></div>
-                <div id="vendaVinculada" style="display:none;border:1.5px solid var(--cor-primaria);border-radius:12px;padding:12px 16px;background:var(--cor-primaria-light);margin-bottom:12px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-                        <div style="font-weight:800;color:var(--cor-primaria);display:flex;align-items:center;gap:8px">🔗 Venda vinculada: <span id="vvNumero" style="font-family:monospace"></span></div>
-                        <span style="font-size:.75rem;color:var(--cor-texto-secundario)">Itens carregados da venda — ajuste as quantidades conforme o que foi devolvido</span>
+                <div style="display:flex;gap:8px;margin-bottom:14px;border:1px solid var(--cor-borda);border-radius:10px;overflow:hidden;width:fit-content">
+                    <button type="button" id="btnModoVinculada" class="btn" style="border-radius:0;border:none;padding:10px 22px;font-weight:700;font-size:.85rem;background:var(--cor-primaria);color:#fff;transition:all .15s" onclick="trocarModoDevolucao('vinculada')">🔗 VINCULADA</button>
+                    <button type="button" id="btnModoAvulsa" class="btn" style="border-radius:0;border:none;padding:10px 22px;font-weight:700;font-size:.85rem;background:var(--cor-fundo);color:var(--cor-texto-secundario);transition:all .15s" onclick="trocarModoDevolucao('avulsa')">📦 AVULSA</button>
+                </div>
+                <input type="hidden" id="modoDevolucao" value="vinculada">
+
+                <div id="camposVinculada">
+                    <div class="nota-secao-titulo">Vincular à venda original</div>
+                    <div class="campo-nota" style="margin-bottom:10px"><label for="buscarVenda">Buscar venda (número, SL, cliente)</label><input type="text" id="buscarVenda" oninput="filtrarVendas()" placeholder="Ex.: SL0001 ou nome do cliente"></div>
+                    <div class="campo-nota" style="margin-bottom:12px"><label for="vendaSelect">Selecione a venda para vincular *</label><select id="vendaSelect" onchange="carregarItensVenda()"><option value="">Selecione a venda (SL0001...)</option></select></div>
+                    <div id="vendaVinculada" style="display:none;border:1.5px solid var(--cor-primaria);border-radius:12px;padding:12px 16px;background:var(--cor-primaria-light);margin-bottom:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                            <div style="font-weight:800;color:var(--cor-primaria);display:flex;align-items:center;gap:8px">🔗 Venda vinculada: <span id="vvNumero" style="font-family:monospace"></span></div>
+                            <span style="font-size:.75rem;color:var(--cor-texto-secundario)">Itens carregados da venda — ajuste as quantidades conforme o que foi devolvido</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;font-size:.84rem">
+                            <div><b>Cliente:</b> <span id="vvCliente"></span></div>
+                            <div><b>Vendedor:</b> <span id="vvVendedor"></span></div>
+                            <div><b>Data:</b> <span id="vvData"></span></div>
+                            <div><b>Total da venda:</b> <span id="vvTotal"></span></div>
+                        </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;font-size:.84rem">
-                        <div><b>Cliente:</b> <span id="vvCliente"></span></div>
-                        <div><b>Vendedor:</b> <span id="vvVendedor"></span></div>
-                        <div><b>Data:</b> <span id="vvData"></span></div>
-                        <div><b>Total da venda:</b> <span id="vvTotal"></span></div>
+                </div>
+
+                <div id="camposAvulsa" style="display:none">
+                    <div class="nota-secao-titulo">Devolução avulsa (sem vínculo com venda)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                        <div class="campo-nota"><label for="vendedorAvulso">Vendedor responsável</label><select id="vendedorAvulso"><option value="">Selecione</option></select></div>
                     </div>
                 </div>
 
@@ -208,6 +224,37 @@ const S = window.SistemaUtil; S.initSidebar();
 const LOGO_URL = "{{ url_for('static', filename='logo.png') }}";
 let listaVendas = [];
 let editandoId = null;
+
+function trocarModoDevolucao(modo){
+    document.getElementById("modoDevolucao").value = modo;
+    const btnV = document.getElementById("btnModoVinculada");
+    const btnA = document.getElementById("btnModoAvulsa");
+    if(modo==="avulsa"){
+        btnV.style.background="var(--cor-fundo)"; btnV.style.color="var(--cor-texto-secundario)";
+        btnA.style.background="var(--cor-primaria)"; btnA.style.color="#fff";
+        document.getElementById("camposVinculada").style.display="none";
+        document.getElementById("camposAvulsa").style.display="block";
+        document.getElementById("vendaVinculada").style.display="none";
+    }else{
+        btnV.style.background="var(--cor-primaria)"; btnV.style.color="#fff";
+        btnA.style.background="var(--cor-fundo)"; btnA.style.color="var(--cor-texto-secundario)";
+        document.getElementById("camposVinculada").style.display="block";
+        document.getElementById("camposAvulsa").style.display="none";
+    }
+}
+
+async function carregarVendedoresAvulso(){
+    try{
+        const r = await fetch("/api/vendedores");
+        const usuarios = await r.json();
+        const sel = document.getElementById("vendedorAvulso");
+        sel.innerHTML = '<option value="">Selecione</option>';
+        usuarios.forEach(function(u){
+            const nome = u.usuario || u.nome || "";
+            if(nome){ const o = document.createElement("option"); o.value = nome; o.textContent = nome; sel.appendChild(o); }
+        });
+    }catch(erro){ console.error(erro); }
+}
 
 function fmtMoedaV(valor){
     const v = Number(valor) || 0;
@@ -347,10 +394,11 @@ function calcularTotal(){
 }
 
 async function registrarDevolucao(){
-    const vendaSelect = document.getElementById("vendaSelect");
-    const vendaId = vendaSelect.value;
+    const modo = document.getElementById("modoDevolucao").value;
     const motivo = document.getElementById("motivo").value;
-    if(!vendaId){ S.Toast.erro("Selecione a venda original."); return; }
+    const vendaId = document.getElementById("vendaSelect").value;
+    if(modo==="vinculada" && !vendaId){ S.Toast.erro("Selecione a venda original."); return; }
+    if(modo==="avulsa" && !document.getElementById("vendedorAvulso").value){ S.Toast.erro("Selecione o vendedor responsável."); return; }
     if(!motivo){ S.Toast.erro("Informe o motivo da devolução."); return; }
 
     const itens = [];
@@ -369,10 +417,11 @@ async function registrarDevolucao(){
     if(itens.length===0){ S.Toast.erro("Selecione pelo menos um item para devolver."); return; }
 
     const dados = {
-        venda_id: Number(vendaId),
+        venda_id: modo==="vinculada" && vendaId ? Number(vendaId) : null,
         motivo: motivo,
         observacao: document.getElementById("observacao").value.trim(),
         data: document.getElementById("data").value || undefined,
+        vendedor: modo==="avulsa" ? document.getElementById("vendedorAvulso").value : undefined,
         itens: itens
     };
 
@@ -496,7 +545,6 @@ function carregarDevolucaoParaEdicao(id){
         .then(dev=>{
             S.esconderLoading();
             editandoId = id;
-            document.getElementById("vendaSelect").value = dev.venda_id ? String(dev.venda_id) : "";
             document.getElementById("motivo").value = dev.motivo || "";
             document.getElementById("condicao").value = "";
             document.getElementById("observacao").value = dev.observacao || "";
@@ -510,14 +558,19 @@ function carregarDevolucaoParaEdicao(id){
             document.getElementById("badgeDevolucao").innerText = "EDITANDO DEV" + String(dev.numero).padStart(4,"0");
             document.getElementById("btnSalvarDevolucao").innerText = "💾 Salvar alterações";
             document.getElementById("btnSalvarDevolucao").onclick = registrarDevolucao;
-            const vv = document.getElementById("vendaVinculada");
             if(dev.venda_id){
+                trocarModoDevolucao("vinculada");
+                document.getElementById("vendaSelect").value = String(dev.venda_id);
+                const vv = document.getElementById("vendaVinculada");
                 vv.style.display = "block";
                 document.getElementById("vvNumero").innerText = "SL" + String(dev.venda_numero||"").padStart(4,"0");
                 document.getElementById("vvCliente").innerText = dev.venda_cliente || "-";
                 document.getElementById("vvVendedor").innerText = dev.vendedor || "-";
                 document.getElementById("vvData").innerText = dev.data ? dev.data.split('-').reverse().join('/') : "-";
                 document.getElementById("vvTotal").innerText = "R$ " + fmtMoedaV(dev.total);
+            }else{
+                trocarModoDevolucao("avulsa");
+                document.getElementById("vendedorAvulso").value = dev.vendedor || "";
             }
             window.scrollTo({top:0, behavior:"smooth"});
         })
@@ -565,6 +618,8 @@ function limparFormulario(){
     document.getElementById("observacao").value = "";
     document.getElementById("itens").innerHTML = "";
     document.getElementById("vendaVinculada").style.display = "none";
+    trocarModoDevolucao("vinculada");
+    if(document.getElementById("vendedorAvulso")) document.getElementById("vendedorAvulso").value = "";
     const btn = document.getElementById("btnSalvarDevolucao");
     if(btn){ btn.innerText = "↩️ Registrar devolução"; btn.onclick = registrarDevolucao; }
     document.getElementById("badgeDevolucao").innerText = "DEV --";
@@ -575,6 +630,7 @@ function limparFormulario(){
 document.addEventListener("DOMContentLoaded", function(){
     definirDataHoje();
     carregarVendas();
+    carregarVendedoresAvulso();
     carregarDevolucoes();
 });
 </script>

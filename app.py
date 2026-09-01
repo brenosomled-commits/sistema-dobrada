@@ -1,4 +1,6 @@
 import os
+import threading
+import time
 from pathlib import Path
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
@@ -16,6 +18,16 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
     MAX_CONTENT_LENGTH=1 * 1024 * 1024,
 )
+
+_ultima_verificacao_vencimentos = 0.0
+
+@app.before_request
+def _verificar_vencimentos_startup():
+    global _ultima_verificacao_vencimentos
+    agora = time.time()
+    if agora - _ultima_verificacao_vencimentos > 1800:
+        _ultima_verificacao_vencimentos = agora
+        threading.Thread(target=verificar_vencimentos, daemon=True).start()
 
 BANCO = None  # reservado (backward compatibility)
 USAR_POSTGRES = db.banco_eh_postgres()
@@ -179,6 +191,40 @@ def validar_itens(itens, campo_nome):
             return None, "Preencha itens com nome, quantidade positiva e valor válido."
         resultado.append((nome, quantidade, valor))
     return resultado, None
+
+
+def verificar_vencimentos():
+    """Marca como 'vencida' todas as vendas a prazo cujo vencimento já passou."""
+    from datetime import datetime
+    hoje = datetime.now().strftime("%Y-%m-%d")
+    try:
+        conexao = conectar()
+        cur = conexao.cursor()
+        if USAR_POSTGRES:
+            cur.execute(
+                "UPDATE vendas SET status = 'vencida' WHERE condicao = 'aprazo' AND status <> 'vencida' AND COALESCE(vencimento,'') <> '' AND vencimento < %s",
+                (hoje,)
+            )
+        else:
+            cur.execute(
+                "UPDATE vendas SET status = 'vencida' WHERE condicao = 'aprazo' AND status <> 'vencida' AND COALESCE(vencimento,'') <> '' AND vencimento < ?",
+                (hoje,)
+            )
+        alteradas = cur.rowcount
+        conexao.commit()
+        conexao.close()
+        if alteradas:
+            print(f"[VENCIMENTOS] {alteradas} venda(s) marcada(s) como vencida(s).")
+    except Exception as e:
+        print(f"[VENCIMENTOS] Erro ao verificar vencimentos: {e}")
+
+
+def _loop_vencimentos():
+    """Thread em background que verifica vencimentos a cada 60 segundos."""
+    import time
+    while True:
+        time.sleep(60)
+        verificar_vencimentos()
 
 
 @app.after_request
@@ -372,7 +418,8 @@ def _criar_banco_sqlite():
             desconto REAL DEFAULT 0,
             observacao TEXT,
             total REAL DEFAULT 0,
-            comissao REAL DEFAULT 0
+            comissao REAL DEFAULT 0,
+            status TEXT DEFAULT 'ativa'
         )
     """)
 
@@ -389,6 +436,12 @@ def _criar_banco_sqlite():
 
     try:
         cursor.execute("ALTER TABLE vendas ADD COLUMN comissao REAL DEFAULT 0")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN status TEXT DEFAULT 'ativa'")
     except sqlite3.OperationalError as erro:
         if not _erro_coluna_duplicada(erro):
             raise
@@ -526,6 +579,11 @@ def _criar_banco_postgres():
     except Exception:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativa'")
+    except Exception:
+        pass
+
     for nome, papel in USUARIOS_INICIAIS:
         cursor.execute("SELECT id FROM usuarios WHERE upper(usuario) = %s", (nome,))
         existente = cursor.fetchone()
@@ -613,7 +671,8 @@ def _criar_banco_postgres():
             desconto DOUBLE PRECISION DEFAULT 0,
             observacao TEXT,
             total DOUBLE PRECISION DEFAULT 0,
-            comissao DOUBLE PRECISION DEFAULT 0
+            comissao DOUBLE PRECISION DEFAULT 0,
+            status TEXT DEFAULT 'ativa'
         )
     """)
 
@@ -1803,6 +1862,66 @@ def listar_vendas():
     ])
 
 
+def _normalizar_data(d):
+    """Normaliza datas para YYYY-MM-DD (aceita DD/MM/YYYY ou YYYY-MM-DD)."""
+    if not d:
+        return None
+    s = str(d).strip()
+    if len(s) == 10 and "/" in s:
+        p = s.split("/")
+        if len(p) == 3:
+            return f"{p[2]}-{p[1]}-{p[0]}"
+    return s
+
+
+@app.route("/api/acompanhar")
+@login_obrigatorio
+def acompanhar_unificado():
+    conexao = conectar()
+    cursor = conexao.cursor()
+
+    resultado = []
+
+    # Ordens de serviço
+    cursor.execute("SELECT * FROM ordens ORDER BY numero DESC")
+    for o in cursor.fetchall():
+        resultado.append({
+            "tipo": "OS",
+            "id": o["id"],
+            "numero": o["numero"],
+            "data": _normalizar_data(o["data_entrada"]),
+            "cliente": o["cliente"],
+            "profissional": o["responsavel"],
+            "status": o["status"],
+            "total": o["total"],
+            "condicao": None,
+            "comissao": None,
+            "vendedor": None
+        })
+
+    # Vendas
+    cursor.execute("SELECT * FROM vendas ORDER BY numero DESC")
+    for v in cursor.fetchall():
+        resultado.append({
+            "tipo": "VENDA",
+            "id": v["id"],
+            "numero": v["numero"],
+            "data": _normalizar_data(v["data"]),
+            "cliente": v["cliente"],
+            "profissional": v["vendedor"],
+            "status": v["status"],
+            "total": v["total"],
+            "condicao": v["condicao"],
+            "comissao": v["comissao"],
+            "vendedor": v["vendedor"]
+        })
+
+    conexao.close()
+
+    resultado.sort(key=lambda x: (x["data"] or "")[:10], reverse=True)
+    return jsonify(resultado)
+
+
 # =========================
 # RESUMO DO DASHBOARD
 # =========================
@@ -2198,9 +2317,7 @@ def criar_devolucao():
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
-    venda_id = dados.get("venda_id")
-    if not venda_id:
-        return jsonify({"erro": "Selecione a venda original."}), 400
+    venda_id = dados.get("venda_id") or None
     motivo = str(dados.get("motivo") or "").strip()
     if not motivo:
         return jsonify({"erro": "Informe o motivo da devolução."}), 400
@@ -2212,12 +2329,15 @@ def criar_devolucao():
     total = sum(q*valor for _, q, valor in itens)
     conexao = conectar()
     cur = conexao.cursor()
-    # verifica venda existe
-    cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
-    venda = cur.fetchone()
-    if not venda:
-        conexao.close()
-        return jsonify({"erro": "Venda original não encontrada."}), 404
+    vendedor = str(dados.get("vendedor") or "").strip() or session["usuario"]
+    # se vinculada, valida venda e usa o vendedor da venda como fallback
+    if venda_id:
+        cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
+        venda = cur.fetchone()
+        if not venda:
+            conexao.close()
+            return jsonify({"erro": "Venda original não encontrada."}), 404
+        vendedor = vendedor or venda["vendedor"]
     cur.execute("BEGIN IMMEDIATE")
     cur.execute("SELECT ultimo_numero FROM controle_devolucoes WHERE id=1")
     ctrl = cur.fetchone()
@@ -2228,7 +2348,7 @@ def criar_devolucao():
     cur.execute("""
         INSERT INTO devolucoes (numero, venda_id, data, motivo, observacao, total, vendedor)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (novo, venda_id, data, motivo, dados.get("observacao",""), total, dados.get("vendedor") or venda["vendedor"]))
+    """, (novo, venda_id, data, motivo, dados.get("observacao",""), total, vendedor))
     dev_id = cur.lastrowid
     for desc, q, v in itens:
         cur.execute("INSERT INTO devolucao_itens (devolucao_id, quantidade, descricao, valor) VALUES (?, ?, ?, ?)", (dev_id, q, desc, v))
@@ -2244,9 +2364,7 @@ def editar_devolucao(id):
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
-    venda_id = dados.get("venda_id")
-    if not venda_id:
-        return jsonify({"erro": "Selecione a venda original."}), 400
+    venda_id = dados.get("venda_id") or None
     motivo = str(dados.get("motivo") or "").strip()
     if not motivo:
         return jsonify({"erro": "Informe o motivo da devolução."}), 400
@@ -2264,11 +2382,14 @@ def editar_devolucao(id):
         conexao.close()
         return jsonify({"erro": "Devolução não encontrada."}), 404
 
-    cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
-    venda = cur.fetchone()
-    if not venda:
-        conexao.close()
-        return jsonify({"erro": "Venda original não encontrada."}), 404
+    vendedor = str(dados.get("vendedor") or "").strip() or session["usuario"]
+    if venda_id:
+        cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
+        venda = cur.fetchone()
+        if not venda:
+            conexao.close()
+            return jsonify({"erro": "Venda original não encontrada."}), 404
+        vendedor = vendedor or venda["vendedor"]
 
     cur.execute("BEGIN IMMEDIATE")
     from datetime import datetime
@@ -2307,6 +2428,9 @@ def cancelar_devolucao(id):
 # =========================
 
 if __name__ == "__main__":
+
+    verificar_vencimentos()
+    threading.Thread(target=_loop_vencimentos, daemon=True).start()
 
     app.run(
         host="0.0.0.0",
