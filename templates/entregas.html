@@ -156,8 +156,8 @@
 <script>
 const S=window.SistemaUtil; S.initSidebar();
 let listaVendas=[], listaOS=[], entregas=[], rotaAtual=[], editandoId=null;
-let ultimaQtd=-1, ultimoIds=new Set(), audioCtx=null;
-function tocarAlerta(){
+let ultimaQtd=-1, ultimoIds=new Set(), ultimoMapa=new Map(), audioCtx=null;
+function tocarAlerta(tipo="nova"){
     if(!document.getElementById("alertaSonoro")?.checked) return;
     try{
         if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -169,10 +169,18 @@ function tocarAlerta(){
             g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+delay+dur);
             o.start(audioCtx.currentTime+delay); o.stop(audioCtx.currentTime+delay+dur);
         };
-        beep(880,0.18,0); beep(1200,0.18,0.2); beep(880,0.35,0.4);
-        if("vibrate" in navigator) navigator.vibrate([180,80,180]);
+        if(tipo==="nova"){ beep(880,0.18,0); beep(1200,0.18,0.2); beep(880,0.35,0.4); }
+        else { beep(900,0.15,0); beep(900,0.15,0.18); }
+        if("vibrate" in navigator) navigator.vibrate(tipo==="nova" ? [180,80,180] : [120,60,120]);
     }catch(e){}
-    try{ if("Notification" in window && Notification.permission==="granted"){ new Notification("🚚 Nova entrega",{body:"Nova entrega registrada no sistema"}); } }catch(e){}
+    try{
+        if("speechSynthesis" in window){
+            const texto=tipo==="nova" ? "Nova entrega" : "Entrega atualizada";
+            const u=new SpeechSynthesisUtterance(texto); u.lang="pt-BR"; u.rate=1; u.volume=0.9;
+            speechSynthesis.cancel(); speechSynthesis.speak(u);
+        }
+    }catch(e){}
+    try{ if("Notification" in window && Notification.permission==="granted"){ const t=tipo==="nova"?"🚚 Nova entrega":"🔄 Entrega atualizada"; new Notification(t,{body: tipo==="nova" ? "Nova entrega registrada" : "Uma entrega foi atualizada"}); } }catch(e){}
 }
 if("Notification" in window && Notification.permission==="default"){ try{ Notification.requestPermission(); }catch(e){} }
 document.addEventListener("click", function primeiraInteracao(){ if(!audioCtx) try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} document.removeEventListener("click", primeiraInteracao); }, {once:true});
@@ -207,7 +215,7 @@ async function carregarOrigem(){
     }catch(e){}
 }
 function statusBadge(s){ return `<span class="badge-entrega badge-${s}">${s}</span>`; }
-async function carregar(){ try{ const r=await fetch("/api/entregas"); const lista=r.ok?await r.json():[]; const ids=new Set(lista.map(e=>e.id)); const ehPrimeira=ultimaQtd===-1; const novas=lista.filter(e=>!ultimoIds.has(e.id)); if(!ehPrimeira && novas.length>0){ tocarAlerta(); if(novas.length===1) S.Toast.info("🚚 Nova entrega: "+(novas[0].cliente||"ENT"+String(novas[0].numero).padStart(4,"0"))); else S.Toast.info("🚚 "+novas.length+" novas entregas"); } entregas=lista; ultimaQtd=lista.length; ultimoIds=ids; filtrar(); carregarRota(); }catch(e){} }
+async function carregar(){ try{ const r=await fetch("/api/entregas"); const lista=r.ok?await r.json():[]; const ids=new Set(lista.map(e=>e.id)); const mapa=new Map(lista.map(e=>[e.id, (e.status||"")+"|"+(e.cliente||"")+"|"+(e.endereco||"")])); const ehPrimeira=ultimaQtd===-1; const novas=lista.filter(e=>!ultimoIds.has(e.id)); const atualizadas=ehPrimeira?[]:lista.filter(e=> ultimoIds.has(e.id) && mapa.get(e.id)!==ultimoMapa.get(e.id)); if(!ehPrimeira && novas.length>0){ tocarAlerta("nova"); if(novas.length===1) S.Toast.info("🚚 Nova entrega: "+(novas[0].cliente||"ENT"+String(novas[0].numero).padStart(4,"0"))); else S.Toast.info("🚚 "+novas.length+" novas entregas"); } else if(!ehPrimeira && atualizadas.length>0){ tocarAlerta("atualizada"); S.Toast.info("🔄 Entrega atualizada: "+(atualizadas[0].cliente||"ENT"+String(atualizadas[0].numero).padStart(4,"0"))+" → "+atualizadas[0].status); } entregas=lista; ultimaQtd=lista.length; ultimoIds=ids; ultimoMapa=mapa; filtrar(); carregarRota(); }catch(e){} }
 function filtrar(){
     const termo=(document.getElementById("buscar").value||"").toLowerCase().trim(), status=document.getElementById("filtroStatus").value;
     const lista=entregas.filter(e=>{
