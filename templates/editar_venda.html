@@ -55,14 +55,14 @@
 
         <div class="form-row">
             <div class="form-group"><label class="form-label">Venda</label><input type="text" class="form-input" id="numero" readonly></div>
-            <div class="form-group"><label class="form-label">Cliente</label><input type="text" class="form-input" id="cliente" placeholder="Nome do cliente"></div>
+            <div class="form-group"><label class="form-label">Cliente</label><input type="text" class="form-input" id="cliente" placeholder="CONSUMIDOR FINAL"></div>
         </div>
         <div class="form-row">
             <div class="form-group"><label class="form-label">Vendedor</label><select id="vendedor" class="form-select"><option value="">Selecione</option></select></div>
             <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="data"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label class="form-label">Condição</label><select id="condicao" class="form-select">
+            <div class="form-group"><label class="form-label">Condição</label><select id="condicao" class="form-select" onchange="atualizarVencimentoEdit()">
   <option value="">Selecione</option>
   <option value="dinheiro">DINHEIRO</option>
   <option value="cartadebito">CARTAO DEBITO</option>
@@ -73,6 +73,14 @@
   <option value="aprazo">A prazo</option>
 </select></div>
             <div class="form-group"><label class="form-label">Desconto (%)</label><input type="number" class="form-input" id="desconto" min="0" step="0.01" oninput="calcularTotal()"></div>
+        </div>
+        <div class="form-row" id="linhaVencimentoEdit" style="display:none">
+            <div class="form-group"><label class="form-label">Vencimento (30 dias)</label><input type="date" class="form-input" id="vencimento" readonly></div>
+            <div class="form-group"><label class="form-label">Taxa/Info</label><input type="text" class="form-input" value="Vencimento automático +30 dias" readonly style="background:var(--cor-fundo)"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Endereço de entrega</label><input type="text" class="form-input" id="endereco" placeholder="Rua, número, bairro"></div>
+            <div class="form-group"><label class="form-label">Observação</label><input type="text" class="form-input" id="observacao" placeholder="Ex.: instalação incluída"></div>
         </div>
 
         <div class="mt-3" style="font-weight:700;font-size:.9rem;margin-bottom:8px">Produtos</div>
@@ -200,11 +208,17 @@ async function editarVenda(id){
         document.getElementById("formulario").style.display="block";
         document.getElementById("numeroTitulo").innerText=fmtVenda(v.numero);
         document.getElementById("numero").value=fmtVenda(v.numero);
-        document.getElementById("cliente").value=v.cliente||"";
+        document.getElementById("cliente").value=v.cliente||"CONSUMIDOR FINAL";
+        document.getElementById("cliente").placeholder="CONSUMIDOR FINAL (editável)";
         document.getElementById("vendedor").value=v.vendedor||"";
         document.getElementById("data").value=v.data||"";
         document.getElementById("condicao").value=v.condicao||"avista";
+        document.getElementById("vencimento").value=v.vencimento||"";
         document.getElementById("desconto").value=v.desconto||0;
+        document.getElementById("endereco").value=v.endereco||"";
+        document.getElementById("observacao").value=v.observacao||"";
+        atualizarVencimentoEdit();
+        if(v.vencimento) document.getElementById("vencimento").value=v.vencimento;
         const itens=document.getElementById("itens"); itens.innerHTML="";
         if(v.itens&&v.itens.length>0) v.itens.forEach(item=>adicionarItem(item)); else adicionarItem();
         calcularTotal();
@@ -229,6 +243,10 @@ function calcularTotal(){
     document.getElementById("valorDesconto").innerText=valDesc.toFixed(2).replace(".",",");
     document.getElementById("totalFinal").innerText=final.toFixed(2).replace(".",",");
 }
+function atualizarVencimentoEdit(){
+    const cond=document.getElementById("condicao").value, data=document.getElementById("data").value, linha=document.getElementById("linhaVencimentoEdit"), venc=document.getElementById("vencimento");
+    if(cond==="aprazo" && data){ const d=new Date(data+"T12:00:00"); d.setDate(d.getDate()+30); venc.value=d.toISOString().split("T")[0]; linha.style.display="flex"; } else { linha.style.display="none"; venc.value=""; }
+}
 async function salvarAlteracoes(){
     if(vendaEditando===null){ S.Toast.erro("Nenhuma venda selecionada."); return; }
     const itens=[]; document.querySelectorAll(".item-linha").forEach(item=>{
@@ -239,7 +257,8 @@ async function salvarAlteracoes(){
     calcularTotal();
     const totalTexto=document.getElementById("totalFinal").innerText;
     const total=Number(totalTexto.replace(/\./g,"").replace(",","."))||0;
-    const dados={ cliente:document.getElementById("cliente").value.trim(), vendedor:document.getElementById("vendedor").value, data:document.getElementById("data").value, condicao:document.getElementById("condicao").value, desconto:Number(document.getElementById("desconto").value)||0, total, itens };
+    let cliente=document.getElementById("cliente").value.trim(); if(!cliente) cliente="CONSUMIDOR FINAL";
+    const dados={ cliente, vendedor:document.getElementById("vendedor").value, data:document.getElementById("data").value, condicao:document.getElementById("condicao").value, vencimento:document.getElementById("vencimento").value, desconto:Number(document.getElementById("desconto").value)||0, observacao:document.getElementById("observacao").value.trim(), endereco:document.getElementById("endereco").value.trim(), total, itens };
     S.mostrarLoading("Salvando...");
     try{
         const r=await fetch("/api/vendas/"+vendaEditando,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});

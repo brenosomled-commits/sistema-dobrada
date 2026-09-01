@@ -188,7 +188,7 @@
 
             <div class="nota-corpo">
                 <div class="nota-secao-titulo">Dados do cliente</div>
-                <div class="campo-nota" style="margin-bottom:12px"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="Nome completo do cliente"></div>
+                <div class="campo-nota" style="margin-bottom:12px"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="CONSUMIDOR FINAL" value="CONSUMIDOR FINAL"></div>
 
                 <div class="nota-grid-4">
                     <div class="campo-nota"><label for="venda">Venda</label><input type="text" id="venda" readonly></div>
@@ -278,7 +278,7 @@ function salvarRascunho(){
 function restaurarRascunho(){
     let rascunho; try{ rascunho = JSON.parse(localStorage.getItem(chaveRascunho) || "null"); }catch(erro){ return false; }
     if(!rascunho) return false;
-    document.getElementById("cliente").value = rascunho.cliente || "";
+    document.getElementById("cliente").value = rascunho.cliente || "CONSUMIDOR FINAL";
     document.getElementById("venda").value = rascunho.venda || "";
     document.getElementById("vendedor").value = rascunho.vendedor || "";
     document.getElementById("data").value = rascunho.data || "";
@@ -398,7 +398,7 @@ async function novaVenda(){
         const confirmar = await S.confirmacao({titulo:"Descartar venda?",mensagem:"Esta venda ainda não foi salva. Deseja descartá-la?",textoSim:"Descartar",tipo:"danger"});
         if(!confirmar) return;
     }
-    document.getElementById("cliente").value = ""; document.getElementById("vendedor").value = ""; document.getElementById("obs").value = "";
+    document.getElementById("cliente").value = "CONSUMIDOR FINAL"; document.getElementById("vendedor").value = ""; document.getElementById("obs").value = "";
     document.getElementById("endereco").value = ""; document.getElementById("condicao").value = ""; document.getElementById("desconto").value = "";
     document.getElementById("vencimento").value = ""; document.getElementById("campoVencimento").style.display = "none";
     document.getElementById("itens").innerHTML = ""; document.querySelectorAll('input[name="tipoEntrega"]').forEach(function(opcao){ opcao.checked = false; });

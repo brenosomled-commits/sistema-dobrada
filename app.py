@@ -417,11 +417,18 @@ def _criar_banco_sqlite():
             vencimento TEXT,
             desconto REAL DEFAULT 0,
             observacao TEXT,
+            endereco TEXT,
             total REAL DEFAULT 0,
             comissao REAL DEFAULT 0,
             status TEXT DEFAULT 'ativa'
         )
     """)
+
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN endereco TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS venda_itens (
@@ -702,11 +709,16 @@ def _criar_banco_postgres():
             vencimento TEXT,
             desconto DOUBLE PRECISION DEFAULT 0,
             observacao TEXT,
+            endereco TEXT,
             total DOUBLE PRECISION DEFAULT 0,
             comissao DOUBLE PRECISION DEFAULT 0,
             status TEXT DEFAULT 'ativa'
         )
     """)
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN IF NOT EXISTS endereco TEXT")
+    except Exception:
+        pass
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS venda_itens (
@@ -1833,6 +1845,7 @@ def salvar_venda():
 
     novo_numero = ultimo_numero + 1
 
+    cliente_final = str(dados.get("cliente") or "").strip() or "CONSUMIDOR FINAL"
     cursor.execute("""
         INSERT INTO vendas (
             numero,
@@ -1844,13 +1857,14 @@ def salvar_venda():
             vencimento,
             desconto,
             observacao,
+            endereco,
             total,
             comissao
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         novo_numero,
-        dados.get("cliente", ""),
+        cliente_final,
         dados.get("fantasia", ""),
         dados.get("vendedor", ""),
         dados.get("data", ""),
@@ -1858,6 +1872,7 @@ def salvar_venda():
         dados.get("vencimento", ""),
         desconto,
         dados.get("observacao", ""),
+        dados.get("endereco", ""),
         total,
         comissao
     ))
@@ -2149,6 +2164,7 @@ def atualizar_venda(id):
     conexao = conectar()
     cursor = conexao.cursor()
 
+    cliente_final = str(dados.get("cliente") or "").strip() or "CONSUMIDOR FINAL"
     cursor.execute("""
         UPDATE vendas
         SET
@@ -2160,11 +2176,12 @@ def atualizar_venda(id):
             vencimento = ?,
             desconto = ?,
             observacao = ?,
+            endereco = ?,
             total = ?,
             comissao = ?
         WHERE id = ?
     """, (
-        dados.get("cliente", ""),
+        cliente_final,
         dados.get("fantasia", ""),
         dados.get("vendedor", ""),
         dados.get("data", ""),
@@ -2172,6 +2189,7 @@ def atualizar_venda(id):
         dados.get("vencimento", ""),
         desconto,
         dados.get("observacao", ""),
+        dados.get("endereco", ""),
         total,
         comissao,
         id
