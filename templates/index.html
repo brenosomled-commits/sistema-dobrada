@@ -914,6 +914,36 @@ async function atualizarOS() {
     }
 }
 
+async function salvarEImprimirOS(){
+    const dados = pegarDadosOS();
+    if(!dados.responsavel){ S.Toast.erro("Selecione o vendedor/responsável primeiro."); document.getElementById("responsavel").focus(); return; }
+    if(!dados.cliente){ S.Toast.erro("Informe o cliente."); document.getElementById("cliente").focus(); return; }
+    if(!dados.problema){ S.Toast.erro("O problema é obrigatório."); document.getElementById("problema").focus(); return; }
+    if(dados.itens.length===0){ S.Toast.erro("Adicione pelo menos um item."); return; }
+    if(!dados.data_entrada){ S.Toast.erro("Informe a data de entrada."); return; }
+    if(!ordemEditando){
+        S.mostrarLoading("Salvando e imprimindo...");
+        try{
+            const r=await fetch("/salvar_os",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
+            const res=await r.json(); if(!r.ok) throw new Error(res.erro||"Erro ao salvar");
+            S.Toast.sucesso("OS #"+String(res.numero).padStart(5,"0")+" salva!");
+            const ordens=await fetch("/ordens").then(x=>x.json());
+            const nova=ordens.find(o=>o.numero===res.numero);
+            if(nova){ await verDetalhes(nova.id); setTimeout(()=>window.print(),700); }
+            novaOS();
+        }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
+    } else {
+        S.mostrarLoading("Atualizando e imprimindo...");
+        try{
+            const r=await fetch("/atualizar_os/"+ordemEditando,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
+            const res=await r.json(); if(!r.ok) throw new Error(res.erro||"Erro");
+            S.Toast.sucesso("OS atualizada!");
+            await verDetalhes(ordemEditando);
+            setTimeout(()=>window.print(),700);
+        }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
+    }
+}
+
 /* ===================== CONSULTA ===================== */
 
 async function carregarOrdens() {

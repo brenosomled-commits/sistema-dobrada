@@ -387,6 +387,9 @@ async function salvarVendaNota(){
     }catch(erro){ console.error(erro); S.Toast.erro("Erro ao salvar venda: " + erro.message); return null; }
 }
 async function salvarVendaManual(){
+    if(!document.getElementById("vendedor").value){ S.Toast.erro("Selecione o vendedor primeiro."); document.getElementById("vendedor").focus(); return; }
+    if(!document.getElementById("data").value){ S.Toast.erro("Informe a data."); document.getElementById("data").focus(); return; }
+    if(!document.getElementById("condicao").value){ S.Toast.erro("Selecione a condição."); document.getElementById("condicao").focus(); return; }
     const cliente = document.getElementById("cliente").value.trim();
     const itens = Array.from(document.querySelectorAll(".nota-item-editor")).filter(function(item){ return item.querySelector(".descricao").value.trim() !== ""; });
     if(!cliente){ S.Toast.erro("Informe o cliente."); document.getElementById("cliente").focus(); return; }
@@ -466,10 +469,13 @@ function gerarResumo(){
     return `<div style="width:86mm;margin-left:auto;margin-top:6px;border:1px solid #000;padding:4px 6px;font-size:8pt;line-height:1.35"><div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL:</span><span>R$ ${document.getElementById("totalItens").innerText}</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">DESCONTO:</span><span>${descontoPct}%</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">VALOR DESCONTO:</span><span>R$ ${valorDesc}</span></div><div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:3px"><span style="font-weight:800">TOTAL FINAL:</span><span style="font-weight:800">R$ ${document.getElementById("totalFinal").innerText}</span></div></div>`;
 }
 async function prepararImpressao(){
+    if(!document.getElementById("vendedor").value){ S.Toast.erro("Selecione o vendedor primeiro."); document.getElementById("vendedor").focus(); return; }
+    if(!document.getElementById("data").value){ S.Toast.erro("Informe a data."); return; }
+    if(!document.getElementById("condicao").value){ S.Toast.erro("Selecione a condição."); document.getElementById("condicao").focus(); return; }
     const cliente = document.getElementById("cliente").value.trim();
     calcularTotal();
     const itens = Array.from(document.querySelectorAll(".nota-item-editor")).filter(item => item.querySelector(".descricao").value.trim() !== "");
-    if(!cliente){ S.Toast.erro("Informe o cliente."); return; }
+    if(!cliente){ S.Toast.erro("Informe o cliente."); document.getElementById("cliente").focus(); return; }
     if(itens.length === 0){ S.Toast.erro("Adicione pelo menos um produto."); return; }
     ajustarLinhas(itens.length);
     const condicaoAtual = document.getElementById("condicao").value;
