@@ -44,15 +44,15 @@
 #areaImpressaoEntrega{display:none}
 .pagina-impressao{ width:204mm; height:293mm; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
 .via-impressao{ width:196mm; height:143.5mm; min-height:143.5mm; max-height:143.5mm; padding:2mm 3mm; border:1px solid #000; overflow:hidden; margin:0; background:#fff; display:flex; flex-direction:column; font-size:8.5pt; box-sizing:border-box; }
-/* ZEBRA 80mm — Elgin i9 */
+/* ZEBRA 80mm — Elgin i9 — NEGRITO */
 @media print{
-    @page{ size:80mm auto; margin:2mm; }
-    body{ background:#fff; }
+    @page{ size:80mm auto; margin:1.5mm; }
+    body{ background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     body > .layout{ display:none!important; }
     #areaImpressaoEntrega{ display:block!important; }
     .pagina-impressao{ width:80mm; height:auto; min-height:0; page-break-after:always; page-break-inside:avoid; display:block; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    .via-impressao{ width:76mm; height:auto; min-height:0; max-height:none; padding:2mm; margin:0 auto; overflow:visible; border:1px solid #000; font-size:8pt; }
+    .via-impressao{ width:76mm; height:auto; min-height:0; max-height:none; padding:2.5mm; margin:0 auto; overflow:visible; border:1.8px solid #000; font-size:8.5pt; font-weight:700; color:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
 </style>
 </head>
@@ -320,34 +320,34 @@ function imprimirEntrega(id){
     fetch("/api/entregas/"+id).then(r=>r.json()).then(e=>{
         const area=document.getElementById("areaImpressaoEntrega");
         const dataHora = (e.data_entrega ? e.data_entrega.split("-").reverse().join("/") : "") + (e.horario ? " " + e.horario : (e.criacao ? " " + e.criacao.split(" ")[1] : ""));
-                function viaZebra(){
+                        function viaZebra(){
             const taxaFmt = "R$ " + Number(e.taxa||0).toFixed(2).replace(".",",");
-            // Estrutura conforme cupom termico 80mm - largura util 72-76mm, altura auto
-            return `<div class="via-impressao" style="color:#000;font-family:Arial,Helvetica,sans-serif">
-                <div style="text-align:center;padding-bottom:4px;border-bottom:1px solid #000;margin-bottom:4px">
-                    <div style="font-weight:900;font-size:11pt;letter-spacing:.03em">SOMLED</div>
-                    <div style="font-size:7pt;letter-spacing:.08em">NOTA DE ENTREGA</div><div style="font-size:5pt;letter-spacing:.08em;font-weight:700">SEM VALOR FISCAL</div>
-                    <div style="margin-top:3px;display:inline-block;border:1px solid #000;padding:2px 8px;font-weight:800;font-size:10pt">ENT${String(e.numero).padStart(4,"0")}</div>
-                    <div style="font-size:6.5pt;margin-top:2px">${dataHora.trim()||"-"}</div>
+            return `<div class="via-impressao" style="color:#000;font-family:Arial,Helvetica,sans-serif;font-weight:700">
+                <div style="text-align:center;padding-bottom:4px;border-bottom:1.8px solid #000;margin-bottom:4px">
+                    <div style="font-weight:900;font-size:12pt;letter-spacing:.04em;color:#000">SOMLED</div>
+                    <div style="font-weight:900;font-size:9pt;letter-spacing:.02em;color:#000">NOTA DE ENTREGA</div>
+                    <div style="margin-top:3px;display:inline-block;border:1.8px solid #000;padding:2px 10px;font-weight:900;font-size:11pt;color:#000">ENT${String(e.numero).padStart(4,"0")}</div>
+                    <div style="font-size:7pt;margin-top:2px;font-weight:700;color:#000">${dataHora.trim()||"-"} — ${e.status||""}</div>
                 </div>
-                <div style="font-size:7pt;line-height:1.45">
-                    <div><span style="font-weight:700">CLIENTE:</span> ${e.cliente||"-"}</div>
-                    <div><span style="font-weight:700">TELEFONE:</span> ${e.telefone||"-"}</div>
-                    <div><span style="font-weight:700">ENDEREÇO:</span> ${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</div>
-                    <div><span style="font-weight:700">ENTREGADOR:</span> ${e.entregador||"-"}</div>
-                    <div style="display:flex;gap:10px"><span><span style="font-weight:700">TAXA:</span> ${taxaFmt}</span><span><span style="font-weight:700">STATUS:</span> ${e.status||""}</span></div>
+                <div style="font-size:7.5pt;line-height:1.5;color:#000">
+                    <div><span style="font-weight:900">CLIENTE:</span> <span style="font-weight:800">${e.cliente||"-"}</span></div>
+                    <div><span style="font-weight:900">TELEFONE:</span> <span style="font-weight:800">${e.telefone||"-"}</span></div>
+                    <div><span style="font-weight:900">ENDEREÇO:</span> <span style="font-weight:800">${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</span></div>
+                    <div><span style="font-weight:900">ENTREGADOR:</span> <span style="font-weight:800">${e.entregador||"-"}</span></div>
+                    <div style="display:flex;gap:10px"><span><span style="font-weight:900">TAXA:</span> <span style="font-weight:800">${taxaFmt}</span></span><span><span style="font-weight:900">STATUS:</span> <span style="font-weight:800">${e.status||""}</span></span></div>
                 </div>
-                ${e.observacao ? `<div style="margin-top:4px;padding:3px 4px;border:1px solid #000;background:#fff;font-size:7pt"><span style="font-weight:800">OBSERVAÇÕES:</span> ${e.observacao}</div>` : ""}
-                <div style="margin-top:5px;border:1px solid #000">
-                    <div style="display:grid;grid-template-columns:12mm 1fr;background:#fff;color:#000;font-weight:700;font-size:7pt;text-align:center;border-bottom:1px solid #000"><span style="padding:3px 2px;border-right:1px solid #000">QTD.</span><span style="padding:3px 2px">PRODUTO / DESCRIÇÃO</span></div>
-                    <div style="min-height:28mm">
-                        ${(e.itens && e.itens.length ? e.itens : Array(5).fill(0).map(()=>({quantidade:"", descricao:""}))).slice(0,12).map(it=>`<div style="display:grid;grid-template-columns:12mm 1fr;min-height:7mm;border-bottom:1px dotted #999;font-size:7pt;align-items:center"><span style="text-align:center;border-right:1px dotted #999;padding:2px">${it.quantidade||""}</span><span style="padding:2px 4px">${it.descricao||""}</span></div>`).join("")}
+                ${e.observacao ? `<div style="margin-top:4px;padding:3px 4px;border:1.5px solid #000;background:#fff;font-size:7.5pt;color:#000"><span style="font-weight:900">OBSERVAÇÕES:</span> <span style="font-weight:700">${e.observacao}</span></div>` : ""}
+                <div style="margin-top:5px;border:1.5px solid #000">
+                    <div style="display:grid;grid-template-columns:12mm 1fr;background:#000;color:#fff;font-weight:900;font-size:7.5pt;text-align:center;border-bottom:1.5px solid #000"><span style="padding:4px 2px;border-right:1px solid #fff">QTD.</span><span style="padding:4px 2px">PRODUTO / DESCRIÇÃO</span></div>
+                    <div style="min-height:30mm">
+                        ${(e.itens && e.itens.length ? e.itens : Array(5).fill(0).map(()=>({quantidade:"", descricao:""}))).slice(0,12).map(it=>`<div style="display:grid;grid-template-columns:12mm 1fr;min-height:8mm;border-bottom:1px solid #000;font-size:7.5pt;align-items:center;color:#000"><span style="text-align:center;border-right:1px solid #000;padding:2px;font-weight:800">${it.quantidade||""}</span><span style="padding:2px 4px;font-weight:700">${it.descricao||""}</span></div>`).join("")}
                     </div>
                 </div>
-                <div style="margin-top:4px;font-size:7pt"><span style="font-weight:700">COMPROVANTE:</span> ${e.comprovante||"—"}</div>
-                <div style="margin-top:8px;text-align:center"><div style="border-top:1px solid #000;width:62mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;margin-top:1px">RECEBI OS PRODUTOS EM PERFEITAS CONDIÇÕES.</div></div>
-                <div style="margin-top:6px;display:flex;justify-content:center"><div id="qr-entrega" style="width:22mm;height:22mm;border:1px solid #000;padding:1px;background:#fff"></div></div>
-                <div style="font-size:5pt;text-align:center;margin-top:2px;font-weight:700;letter-spacing:.04em">DOCUMENTO SEM VALOR FISCAL — APENAS CONTROLE INTERNO</div><div style="font-size:5pt;text-align:center;margin-top:1px;word-break:break-all">${window.location.origin}/m/entrega/${e.id}</div>
+                <div style="margin-top:4px;font-size:7.5pt;color:#000"><span style="font-weight:900">COMPROVANTE:</span> <span style="font-weight:700">${e.comprovante||"—"}</span></div>
+                <div style="margin-top:10px;text-align:center"><div style="border-top:1.8px solid #000;width:62mm;margin:0 auto 3px"></div><div style="font-size:7.5pt;font-weight:900;color:#000">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;margin-top:1px;font-weight:700;color:#000">RECEBI OS PRODUTOS EM PERFEITAS CONDIÇÕES.</div></div>
+                <div style="margin-top:6px;display:flex;justify-content:center"><div id="qr-entrega" style="width:22mm;height:22mm;border:1.5px solid #000;padding:1px;background:#fff"></div></div>
+                <div style="font-size:5.5pt;text-align:center;margin-top:2px;font-weight:700;letter-spacing:.04em;color:#000;border-top:1px solid #000;padding-top:2px;margin-top:4px">DOCUMENTO SEM VALOR FISCAL — CONTROLE INTERNO — SOMLED</div>
+                <div style="font-size:5pt;text-align:center;word-break:break-all;color:#000">${window.location.origin}/m/entrega/${e.id}</div>
             </div>`;
         }
         area.innerHTML=`<div class="pagina-impressao">${viaZebra()}</div>`;
