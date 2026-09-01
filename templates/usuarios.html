@@ -3,320 +3,123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Gerenciar Usuários - Sistema OS</title>
-
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
-    margin: 0;
-    padding: 20px;
-}
-
-.container {
-    max-width: 800px;
-    margin: auto;
-    background: white;
-    padding: 30px;
-    border-radius: 10px;
-}
-
-h1, h2 {
-    text-align: center;
-}
-
-input {
-    width: 100%;
-    padding: 12px;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-
-select {
-    width: 100%;
-    padding: 12px;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-
-button {
-    padding: 10px 15px;
-    margin: 5px 3px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    background: #007bff;
-    color: white;
-    font-size: 14px;
-}
-
-button:hover {
-    opacity: 0.85;
-}
-
-.voltar {
-    background: #666;
-}
-
-.excluir {
-    background: #dc3545;
-}
-
-.usuario {
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin-top: 10px;
-    border-radius: 5px;
-}
-
-.usuario strong {
-    font-size: 18px;
-}
-
-.navegacao{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-bottom:18px;
-}
-
-.navegacao button{
-    margin:0;
-}
+.usuario-card { border:1px solid var(--cor-borda); border-radius:var(--raio); padding:16px 18px; display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:10px; background:var(--cor-painel); }
+.usuario-card:hover { border-color:var(--cor-primaria); }
+@media(max-width:640px){ .usuario-card{ flex-direction:column; align-items:stretch; } }
 </style>
 </head>
-
 <body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a></div>
+        {% if papel_logado in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link ativa" href="/usuarios"><span class="link-icon">👥</span> Gerenciar Logins</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a></div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario_logado or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario_logado }}</div><div class="user-role">{{ papel_logado }}</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+    <div class="pagina-titulo"><h1>Gerenciar Usuários</h1><p class="pagina-sub">Crie, edite perfis e redefina senhas</p></div>
 
-<div class="container">
-
-<div class="navegacao" aria-label="Navegação principal">
-    <button class="voltar" onclick="window.location.href='/'">INÍCIO</button>
-    <button onclick="window.location.href='/dashboard'">DASHBOARD</button>
-    <button onclick="window.location.href='/nota_dobrada'">NOVA VENDA</button>
-</div>
-
-<h1>GERENCIAR USUÁRIOS</h1>
-
-<h2>Novo Usuário</h2>
-
-<label>Usuário</label>
-<input type="text" id="novoUsuario" placeholder="Digite o nome do usuário">
-
-<label>Senha</label>
-<input type="password" id="novaSenha" placeholder="Digite a senha">
-
-<label>Perfil de acesso</label>
-<select id="novoPapel">
-    <option value="VENDEDOR">Vendedor/Triagem — atende e opera ordens/vendas</option>
-    <option value="FINANCEIRO">Financeiro — acompanha e fecha vendas</option>
-    <option value="GERENTE">Gerente — acesso total da operação</option>
-    <option value="DONO">Dono — controle total do sistema</option>
-</select>
-
-<button onclick="criarUsuario()">
-CRIAR USUÁRIO
-</button>
-
-<hr>
-
-<h2>Usuários Cadastrados</h2>
-
-<div id="listaUsuarios"></div>
-
-</div>
-
-<script>
-
-async function carregarUsuarios() {
-
-    const resposta = await fetch("/api/usuarios");
-
-    const usuarios = await resposta.json();
-
-    const lista =
-    document.getElementById("listaUsuarios");
-
-    lista.innerHTML = "";
-
-    usuarios.forEach(function(usuario) {
-
-        const div = document.createElement("div");
-
-        div.className = "usuario";
-
-        div.innerHTML = `
-            <strong>${usuario.usuario}</strong>
-
-            <br>
-            <span>Perfil: <b>${usuario.papel}</b></span>
-
-            <br><br>
-
-            <select onchange="alterarPapel(${usuario.id}, this.value)"
-                ${usuario.usuario === "admin" ? "disabled" : ""}>
-                <option value="VENDEDOR" ${usuario.papel === "VENDEDOR" ? "selected" : ""}>Vendedor/Triagem</option>
-                <option value="FINANCEIRO" ${usuario.papel === "FINANCEIRO" ? "selected" : ""}>Financeiro</option>
-                <option value="GERENTE" ${usuario.papel === "GERENTE" ? "selected" : ""}>Gerente</option>
-                <option value="DONO" ${usuario.papel === "DONO" ? "selected" : ""}>Dono</option>
+    <div class="card">
+        <div class="card-header"><h2 class="card-title">Novo usuário</h2></div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Usuário</label><input type="text" class="form-input" id="novoUsuario" placeholder="Ex.: BRENO"></div>
+            <div class="form-group"><label class="form-label">Senha</label><input type="password" class="form-input" id="novaSenha" placeholder="Mín. 4 caracteres"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Perfil de acesso</label>
+            <select id="novoPapel" class="form-select">
+                <option value="VENDEDOR">VENDEDOR — atende e opera ordens/vendas</option>
+                <option value="FINANCEIRO">FINANCEIRO — acompanha e fecha vendas</option>
+                <option value="GERENTE">GERENTE — acesso total da operação</option>
+                <option value="DONO">DONO — controle total do sistema</option>
             </select>
+        </div>
+        <div class="flex justify-between" style="justify-content:flex-end"><button class="btn btn-primary" onclick="criarUsuario()">+ Criar usuário</button></div>
+    </div>
 
-            <button onclick="alterarSenha(${usuario.id}, '${usuario.usuario}')">
-            ALTERAR SENHA
-            </button>
-
-            ${
-                usuario.usuario !== "admin"
-                ?
-                `<button class="excluir"
-                onclick="excluirUsuario(${usuario.id}, '${usuario.usuario}')">
-                EXCLUIR
-                </button>`
-                :
-                `<span>Administrador principal</span>`
-            }
-        `;
-
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Usuários cadastrados</h2><button class="btn btn-outline btn-sm" onclick="carregarUsuarios()">Atualizar</button></div>
+        <div id="listaUsuarios"><div class="empty-state"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
+    </div>
+</main>
+</div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
+<script>
+const S=window.SistemaUtil;
+function badgePapel(p){ if(p==="DONO")return "badge-finalizada"; if(p==="GERENTE")return "badge-pronta"; if(p==="FINANCEIRO")return "badge-andamento"; return ""; }
+async function carregarUsuarios(){
+    const r=await fetch("/api/usuarios"); const usuarios=await r.json();
+    const lista=document.getElementById("listaUsuarios"); lista.innerHTML="";
+    if(usuarios.length===0){ lista.innerHTML='<div class="empty-state"><div class="empty-icon">👥</div><h3>Nenhum usuário</h3></div>'; return; }
+    usuarios.forEach(u=>{
+        const div=document.createElement("div"); div.className="usuario-card";
+        div.innerHTML=`
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><strong>${u.usuario}</strong><span class="badge ${badgePapel(u.papel)}">${u.papel}</span>${u.usuario==="admin"?'<span class="text-muted" style="font-size:.78rem">· Administrador principal</span>':''}</div>
+                <div class="mt-1"><select class="form-select" style="max-width:220px;padding:6px 10px;font-size:.82rem" onchange="alterarPapel(${u.id},this.value)" ${u.usuario==="admin"?"disabled":""}><option value="VENDEDOR" ${u.papel==="VENDEDOR"?"selected":""}>Vendedor</option><option value="FINANCEIRO" ${u.papel==="FINANCEIRO"?"selected":""}>Financeiro</option><option value="GERENTE" ${u.papel==="GERENTE"?"selected":""}>Gerente</option><option value="DONO" ${u.papel==="DONO"?"selected":""}>Dono</option></select></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-outline btn-sm" onclick="alterarSenha(${u.id},'${u.usuario}')">Alterar senha</button>
+                ${u.usuario!=="admin"?`<button class="btn btn-danger btn-sm" onclick="excluirUsuario(${u.id},'${u.usuario}')">Excluir</button>`:""}
+            </div>`;
         lista.appendChild(div);
     });
 }
-
-
-async function criarUsuario() {
-
-    const usuario =
-    document.getElementById("novoUsuario").value.trim();
-
-    const senha =
-    document.getElementById("novaSenha").value.trim();
-
-    const papel = document.getElementById("novoPapel").value;
-
-    if (!usuario || !senha) {
-        alert("Preencha o usuário e a senha.");
-        return;
-    }
-
-    const resposta = await fetch("/api/usuarios", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            usuario: usuario,
-            senha: senha,
-            papel: papel
-        })
-    });
-
-    const resultado = await resposta.json();
-
-    if (!resposta.ok) {
-        alert(resultado.erro);
-        return;
-    }
-
-    alert(resultado.mensagem);
-
-    document.getElementById("novoUsuario").value = "";
-    document.getElementById("novaSenha").value = "";
-    document.getElementById("novoPapel").value = "VENDEDOR";
-
-    carregarUsuarios();
-}
-
-
-async function alterarPapel(id, papel) {
-
-    const resposta = await fetch("/api/usuarios/" + id + "/papel", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ papel: papel })
-    });
-    const resultado = await resposta.json();
-
-    if (!resposta.ok) {
-        alert(resultado.erro);
+async function criarUsuario(){
+    const usuario=document.getElementById("novoUsuario").value.trim();
+    const senha=document.getElementById("novaSenha").value.trim();
+    const papel=document.getElementById("novoPapel").value;
+    if(!usuario||!senha){ S.Toast.erro("Preencha usuário e senha."); return; }
+    S.mostrarLoading("Criando usuário...");
+    try{
+        const r=await fetch("/api/usuarios",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({usuario,senha,papel})});
+        const res=await r.json(); if(!r.ok){ S.Toast.erro(res.erro||"Erro ao criar usuário."); return; }
+        S.Toast.sucesso(res.mensagem||"Usuário criado!");
+        document.getElementById("novoUsuario").value=""; document.getElementById("novaSenha").value=""; document.getElementById("novoPapel").value="VENDEDOR";
         carregarUsuarios();
-        return;
-    }
-
-    alert(resultado.mensagem);
-    carregarUsuarios();
+    }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
 }
-
-
-async function alterarSenha(id, usuario) {
-
-    const senha = prompt(
-        "Digite a nova senha para o usuário: " + usuario
-    );
-
-    if (!senha) return;
-
-    const resposta = await fetch(
-        "/api/usuarios/" + id + "/senha",
-        {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                senha: senha
-            })
-        }
-    );
-
-    const resultado = await resposta.json();
-
-    if (!resposta.ok) {
-        alert(resultado.erro);
-        return;
-    }
-
-    alert(resultado.mensagem);
+async function alterarPapel(id,papel){
+    S.mostrarLoading("Atualizando perfil...");
+    try{
+        const r=await fetch("/api/usuarios/"+id+"/papel",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({papel})});
+        const res=await r.json(); if(!r.ok){ S.Toast.erro(res.erro||"Erro."); carregarUsuarios(); return; }
+        S.Toast.sucesso(res.mensagem||"Perfil atualizado!");
+        carregarUsuarios();
+    }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
 }
-
-
-async function excluirUsuario(id, usuario) {
-
-    const confirmar = confirm(
-        "Tem certeza que deseja excluir o usuário " +
-        usuario + "?"
-    );
-
-    if (!confirmar) return;
-
-    const resposta = await fetch(
-        "/api/usuarios/" + id,
-        {
-            method: "DELETE"
-        }
-    );
-
-    const resultado = await resposta.json();
-
-    if (!resposta.ok) {
-        alert(resultado.erro);
-        return;
-    }
-
-    alert(resultado.mensagem);
-
-    carregarUsuarios();
+async function alterarSenha(id,usuario){
+    const senha=prompt("Digite a nova senha para "+usuario+" (mín. 4 caracteres):");
+    if(!senha) return;
+    S.mostrarLoading("Alterando senha...");
+    try{
+        const r=await fetch("/api/usuarios/"+id+"/senha",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({senha})});
+        const res=await r.json(); if(!r.ok){ S.Toast.erro(res.erro||"Erro."); return; }
+        S.Toast.sucesso(res.mensagem||"Senha alterada!");
+    }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
 }
-
-
-carregarUsuarios();
-
+async function excluirUsuario(id,usuario){
+    const ok=await S.confirmacao({titulo:"Excluir usuário",mensagem:`Tem certeza que deseja excluir <b>${usuario}</b>?`,textoSim:"Excluir",tipo:"danger"});
+    if(!ok) return;
+    S.mostrarLoading("Excluindo...");
+    try{
+        const r=await fetch("/api/usuarios/"+id,{method:"DELETE"}); const res=await r.json();
+        if(!r.ok){ S.Toast.erro(res.erro||"Erro ao excluir."); return; }
+        S.Toast.sucesso(res.mensagem||"Usuário excluído!");
+        carregarUsuarios();
+    }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
+}
+S.initSidebar(); carregarUsuarios();
 </script>
-
 </body>
 </html>

@@ -15,7 +15,11 @@ O arquivo `vercel.json` e `requirements.txt` já configuram a função Flask. An
 - `SECRET_KEY`: valor longo, aleatório e exclusivo.
 - `ADMIN_PASSWORD`: senha forte do administrador inicial, se o banco estiver vazio.
 
-> Importante: SQLite é adequado ao teste local, mas o disco da Vercel é efêmero. Para uma operação com dados reais e escala, a próxima etapa obrigatória é conectar um PostgreSQL persistente (por exemplo, Vercel Postgres/Neon) e migrar o banco `ordens.db`. Não publique esperando que o arquivo SQLite local retenha dados entre execuções.
+> Importante: SQLite é adequado ao teste local, mas o disco da Vercel é efêmero. Em produção o app usa **PostgreSQL (Neon)**:
+>
+> - A integração Neon no Vercel injeta automaticamente a variável `DATABASE_URL` no projeto.
+> - Quando `DATABASE_URL` está presente, `db.py` usa PostgreSQL (Neon); caso contrário, usa SQLite local (`ordens.db`).
+> - As tabelas e o usuário inicial são criados automaticamente no primeiro boot (`criar_banco()` roda no import). Não é preciso migrar dados do `ordens.db` local.
 
 ## Controles incluídos
 

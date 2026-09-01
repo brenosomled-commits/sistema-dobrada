@@ -5,3 +5,6 @@ __pycache__/
 ordens.db
 ordens.db-shm
 ordens.db-wal
+
+.vercel
+.env*

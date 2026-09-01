@@ -6,6 +6,8 @@ import sqlite3
 from functools import wraps
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import db
+
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=os.environ.get("SECRET_KEY", "desenvolvimento-altere-esta-chave"),
@@ -15,14 +17,15 @@ app.config.update(
     MAX_CONTENT_LENGTH=1 * 1024 * 1024,
 )
 
-BANCO = os.environ.get(
-    "SQLITE_DATABASE",
-    "/tmp/ordens.db" if os.environ.get("VERCEL") else str(Path(__file__).with_name("ordens.db")),
-)
-STATUS_OS = {"Em andamento", "Pronta", "Finalizada"}
+BANCO = None  # reservado (backward compatibility)
+USAR_POSTGRES = db.banco_eh_postgres()
+STATUS_OS = {"Em andamento", "Aguardando peça", "Aguardando cliente", "Aguardando retirada", "Orçamento", "Aprovado", "Em análise", "Pronta", "Finalizada", "Cancelada", "Entregue"}
 PAPEIS = {"DONO", "GERENTE", "FINANCEIRO", "VENDEDOR"}
 PAPEIS_GESTAO = {"DONO", "GERENTE"}
+PAPEIS_FINANCEIRO = {"DONO", "GERENTE", "FINANCEIRO"}
 DESCONTO_MAXIMO_PERCENTUAL = 5
+COMISSAO_PERCENTUAL = 2
+HIERARQUIA_NIVEL = {"VENDEDOR": 1, "FINANCEIRO": 2, "GERENTE": 3, "DONO": 4}
 USUARIOS_INICIAIS = [
     ("BRENO", "GERENTE"),
     ("GABRIEL", "VENDEDOR"),
@@ -33,17 +36,26 @@ USUARIOS_INICIAIS = [
 ]
 SENHA_TEMPORARIA_PADRAO = os.environ.get("DEFAULT_USER_PASSWORD", "Trocar@123")
 
+# Logins por setor (cada setor possui senha própria de 4 dígitos).
+# Valor default é sobrescrito por variável de ambiente, se definida.
+def _senha_setor(chave, padrao):
+    return os.environ.get("SETOR_SENHA_" + chave, padrao)
+
+SETORES_LOGIN = [
+    {"nome": "VENDAS",      "papel": "VENDEDOR",   "senha": _senha_setor("VENDAS", "1111")},
+    {"nome": "GERENCIA",    "papel": "GERENTE",    "senha": _senha_setor("GERENCIA", "2222")},
+    {"nome": "DONO",        "papel": "DONO",       "senha": _senha_setor("DONO", "3333")},
+    {"nome": "FINANCEIRO",  "papel": "FINANCEIRO", "senha": _senha_setor("FINANCEIRO", "4444")},
+]
+
 
 # =========================
 # BANCO DE DADOS
 # =========================
 
 def conectar():
-    conexao = sqlite3.connect(BANCO, timeout=10)
-    conexao.row_factory = sqlite3.Row
-    conexao.execute("PRAGMA foreign_keys = ON")
-    conexao.execute("PRAGMA journal_mode = WAL")
-    return conexao
+    """Retorna uma conexão SQLite (local) ou PostgreSQL (Neon) unificada."""
+    return db.conectar()
 
 
 def json_body():
@@ -55,7 +67,7 @@ def json_body():
 
 
 def senha_valida(senha):
-    return isinstance(senha, str) and len(senha) >= 8
+    return isinstance(senha, str) and len(senha) >= 4
 
 
 def normalizar_usuario(usuario):
@@ -65,11 +77,34 @@ def normalizar_usuario(usuario):
 def obter_papel_usuario(usuario):
     conexao = conectar()
     registro = conexao.execute(
-        "SELECT papel FROM usuarios WHERE usuario = ?",
+        "SELECT papel FROM usuarios WHERE upper(usuario) = upper(?)",
         (usuario,)
     ).fetchone()
     conexao.close()
     return registro["papel"] if registro else None
+
+
+def _acessar(registro, chave):
+    try:
+        return registro[chave]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
+def usuario_e_setor(usuario):
+    """Retorna True apenas se o usuário for um login de setor (VENDAS,
+    GERENCIA, DONO, FINANCEIRO). Logins individuais são bloqueados."""
+    conexao = conectar()
+    reg = conexao.execute(
+        "SELECT tipo FROM usuarios WHERE upper(usuario) = upper(?)",
+        (usuario,)
+    ).fetchone()
+    conexao.close()
+    return bool(reg and str(_acessar(reg, "tipo") or "PESSOA").upper() == "SETOR")
+
+
+def nivel_do_papel(papel):
+    return HIERARQUIA_NIVEL.get(str(papel or "").upper(), 0)
 
 
 def usuario_tem_gestao(usuario):
@@ -77,9 +112,44 @@ def usuario_tem_gestao(usuario):
     return papel in PAPEIS_GESTAO
 
 
+def usuario_pode_ver_financeiro(usuario):
+    papel = obter_papel_usuario(usuario)
+    return (papel or "").upper() in PAPEIS_FINANCEIRO
+
+
+def usuario_tem_nivel_minimo(usuario, papel_minimo):
+    return nivel_do_papel(obter_papel_usuario(usuario)) >= nivel_do_papel(papel_minimo)
+
+
+def pode_gerenciar_usuario_alvo(papel_atual, papel_alvo_atual, papel_desejado=None):
+    """Retorna None se permitido, ou mensagem de erro.
+    Regras:
+    - DONO pode gerenciar todos.
+    - GERENTE pode gerenciar VENDEDOR, FINANCEIRO e outros GERENTES (mais poder),
+      mas nunca DONO e nunca promove a DONO.
+    - FINANCEIRO/VENDEDOR não gerenciam ninguém.
+    - Ninguém pode promover a DONO exceto DONO.
+    """
+    atual = (papel_atual or "").upper()
+    alvo = (papel_alvo_atual or "").upper()
+    desejado = (papel_desejado or alvo).upper() if papel_desejado else alvo
+    if atual == "DONO":
+        return None
+    if atual == "GERENTE":
+        if alvo == "DONO":
+            return "Gerente não pode alterar usuário Dono."
+        if desejado == "DONO":
+            return "Apenas Dono pode promover a Dono."
+        return None
+    return "Seu perfil não tem permissão para gerenciar usuários."
+
+
 def desconto_maximo_por_papel(papel):
-    if papel in {"GERENTE", "DONO"}:
+    p = str(papel or "").upper()
+    if p in {"GERENTE", "DONO"}:
         return 100
+    if p == "FINANCEIRO":
+        return 10
     return DESCONTO_MAXIMO_PERCENTUAL
 
 
@@ -124,12 +194,64 @@ def requisicao_grande(_erro):
     return jsonify({"erro": "A requisição excede o limite de 1 MB."}), 413
 
 
+def _erro_coluna_duplicada(erro):
+    texto = str(erro).lower()
+    if "duplicate column" in texto:
+        return True
+    if "duplicate column name" in texto:
+        return True
+    if "already exists" in texto and "column" in texto:
+        return True
+    if "duplicate_column" in texto:
+        return True
+    return False
+
+
+def _erro_duplicado(erro):
+    """Retorna True quando o erro indica violação de unicidade (SQLite ou PG)."""
+    texto = str(erro).lower()
+    if "unique constraint" in texto:
+        return True
+    if "duplicate key" in texto or "duplicate_key" in texto:
+        return True
+    if "unique_violation" in texto:
+        return True
+    if "integrityerror" in texto:
+        return True
+    return False
+
+
 def criar_banco():
 
-    conexao = conectar()
-    cursor = conexao.cursor()
+    if USAR_POSTGRES:
+        _criar_banco_postgres()
+    else:
+        _criar_banco_sqlite()
 
-    # =========================
+
+def _garantir_setores_sqlite(cursor):
+    for setor in SETORES_LOGIN:
+        cursor.execute(
+            "SELECT id, senha, papel FROM usuarios WHERE upper(usuario) = ?",
+            (setor["nome"],)
+        )
+        existente = cursor.fetchone()
+        senha_hash = generate_password_hash(setor["senha"])
+        if existente:
+            cursor.execute(
+                "UPDATE usuarios SET senha = ?, papel = ?, tipo = 'SETOR' WHERE id = ?",
+                (senha_hash, setor["papel"], existente["id"])
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO usuarios (usuario, senha, papel, tipo) VALUES (?, ?, ?, 'SETOR')",
+                (setor["nome"], senha_hash, setor["papel"])
+            )
+
+
+def _criar_banco_sqlite():
+    conexao = conectar()
+    cursor = conexao.cursor()    # =========================
     # USUÁRIOS
     # =========================
 
@@ -145,12 +267,18 @@ def criar_banco():
     try:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN papel TEXT NOT NULL DEFAULT 'VENDEDOR'")
     except sqlite3.OperationalError as erro:
-        if "duplicate column" not in str(erro).lower():
+        if not _erro_coluna_duplicada(erro):
             raise
     # Migração da hierarquia: administrador e Breno (gerente) mantêm acesso
     # completo sem interromper a operação atual.
     cursor.execute("UPDATE usuarios SET papel = 'VENDEDOR' WHERE papel = 'TRIAGEM'")
     cursor.execute("UPDATE usuarios SET papel = 'DONO' WHERE papel = 'ADMIN'")
+
+    try:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN tipo TEXT NOT NULL DEFAULT 'PESSOA'")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
 
     for nome, papel in USUARIOS_INICIAIS:
         cursor.execute(
@@ -168,6 +296,8 @@ def criar_banco():
                 "INSERT INTO usuarios (usuario, senha, papel) VALUES (?, ?, ?)",
                 (nome, generate_password_hash(SENHA_TEMPORARIA_PADRAO), papel)
             )
+
+    _garantir_setores_sqlite(cursor)
 
     # O primeiro administrador é criado somente quando a senha é definida no
     # ambiente. Isso evita publicar uma credencial conhecida em produção.
@@ -209,41 +339,7 @@ def criar_banco():
         )
     """)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS controle_os (
-            id INTEGER PRIMARY KEY,
-            ultimo_numero INTEGER DEFAULT 0
-        )
-    """)
-
-    cursor.execute(
-        "SELECT ultimo_numero FROM controle_os WHERE id = 1"
-    )
-
-    controle = cursor.fetchone()
-
-    if controle is None:
-
-        cursor.execute(
-            "SELECT MAX(numero) FROM ordens"
-        )
-
-        maior_numero = cursor.fetchone()[0]
-
-        ultimo_numero = (
-            0 if maior_numero is None
-            else maior_numero
-        )
-
-        cursor.execute(
-            "INSERT INTO controle_os (id, ultimo_numero) VALUES (1, ?)",
-            (ultimo_numero,)
-        )
-
-    # =========================
     # ATUALIZAÇÕES BANCO ANTIGO
-    # =========================
-
     for comando in [
         "ALTER TABLE ordens ADD COLUMN status TEXT DEFAULT 'Em andamento'",
         "ALTER TABLE ordens ADD COLUMN responsavel TEXT",
@@ -251,13 +347,13 @@ def criar_banco():
         "ALTER TABLE ordens ADD COLUMN telefone TEXT",
         "ALTER TABLE itens ADD COLUMN quantidade REAL DEFAULT 1"
     ]:
-
         try:
             cursor.execute(comando)
         except sqlite3.OperationalError as erro:
-            # A coluna já existe em bancos criados por versões anteriores.
-            if "duplicate column" not in str(erro).lower():
+            if not _erro_coluna_duplicada(erro):
                 raise
+
+    _inicializar_controle_os(cursor)
 
     # =========================
     # NOTA DOBRADA - VENDAS
@@ -275,7 +371,8 @@ def criar_banco():
             vencimento TEXT,
             desconto REAL DEFAULT 0,
             observacao TEXT,
-            total REAL DEFAULT 0
+            total REAL DEFAULT 0,
+            comissao REAL DEFAULT 0
         )
     """)
 
@@ -290,24 +387,55 @@ def criar_banco():
         )
     """)
 
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN comissao REAL DEFAULT 0")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+
+    # Mantém vendas existentes compatíveis com a comissão fixa.
+    cursor.execute(
+        "UPDATE vendas SET comissao = ROUND(COALESCE(total, 0) * ? / 100, 2)",
+        (COMISSAO_PERCENTUAL,)
+    )
+
+    _inicializar_controle_vendas(cursor)
+
+    # =========================
+    # DEVOLUÇÕES
+    # =========================
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS controle_vendas (
+        CREATE TABLE IF NOT EXISTS devolucoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero INTEGER UNIQUE NOT NULL,
+            venda_id INTEGER,
+            data TEXT,
+            motivo TEXT,
+            observacao TEXT,
+            total REAL DEFAULT 0,
+            vendedor TEXT,
+            FOREIGN KEY (venda_id) REFERENCES vendas(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS devolucao_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            devolucao_id INTEGER NOT NULL,
+            quantidade REAL DEFAULT 1,
+            descricao TEXT,
+            valor REAL DEFAULT 0,
+            FOREIGN KEY (devolucao_id) REFERENCES devolucoes(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_devolucoes (
             id INTEGER PRIMARY KEY,
             ultimo_numero INTEGER DEFAULT 0
         )
     """)
-
-    cursor.execute(
-        "SELECT id FROM controle_vendas WHERE id = 1"
-    )
-
+    cursor.execute("SELECT id FROM controle_devolucoes WHERE id = 1")
     if not cursor.fetchone():
-
-        cursor.execute("""
-            INSERT INTO controle_vendas
-            (id, ultimo_numero)
-            VALUES (1, 0)
-        """)
+        cursor.execute("INSERT INTO controle_devolucoes (id, ultimo_numero) VALUES (1, 0)")
 
     # Índices mantêm as telas de triagem e acompanhamento rápidas quando a
     # base crescer.
@@ -316,6 +444,255 @@ def criar_banco():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_ordem ON itens(ordem_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_vendas_numero ON vendas(numero DESC)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_venda_itens_venda ON venda_itens(venda_id)")
+
+    conexao.commit()
+    conexao.close()
+
+
+def _inicializar_controle_os(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_os (
+            id INTEGER PRIMARY KEY,
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("SELECT ultimo_numero FROM controle_os WHERE id = 1")
+    controle = cursor.fetchone()
+    if controle is None:
+        cursor.execute("SELECT MAX(numero) FROM ordens")
+        maior_numero = cursor.fetchone()[0]
+        ultimo_numero = 0 if maior_numero is None else maior_numero
+        cursor.execute(
+            "INSERT INTO controle_os (id, ultimo_numero) VALUES (1, ?)",
+            (ultimo_numero,)
+        )
+
+
+def _inicializar_controle_vendas(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_vendas (
+            id INTEGER PRIMARY KEY,
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("SELECT id FROM controle_vendas WHERE id = 1")
+    if not cursor.fetchone():
+        cursor.execute(
+            "INSERT INTO controle_vendas (id, ultimo_numero) VALUES (1, 0)"
+        )
+
+
+def _garantir_setores_postgres(cursor):
+    for setor in SETORES_LOGIN:
+        cursor.execute(
+            "SELECT id, senha, papel FROM usuarios WHERE upper(usuario) = %s",
+            (setor["nome"],)
+        )
+        existente = cursor.fetchone()
+        senha_hash = generate_password_hash(setor["senha"])
+        if existente:
+            cursor.execute(
+                "UPDATE usuarios SET senha = %s, papel = %s, tipo = 'SETOR' WHERE id = %s",
+                (senha_hash, setor["papel"], existente["id"])
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO usuarios (usuario, senha, papel, tipo) VALUES (%s, %s, %s, 'SETOR')",
+                (setor["nome"], senha_hash, setor["papel"])
+            )
+
+
+def _criar_banco_postgres():
+
+    conexao = conectar()
+    cursor = conexao.cursor()
+
+    # =========================
+    # USUÁRIOS
+    # =========================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id SERIAL PRIMARY KEY,
+            usuario TEXT UNIQUE NOT NULL,
+            senha TEXT NOT NULL,
+            papel TEXT NOT NULL DEFAULT 'VENDEDOR',
+            tipo TEXT NOT NULL DEFAULT 'PESSOA'
+        )
+    """)
+
+    try:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS tipo TEXT NOT NULL DEFAULT 'PESSOA'")
+    except Exception:
+        pass
+
+    for nome, papel in USUARIOS_INICIAIS:
+        cursor.execute("SELECT id FROM usuarios WHERE upper(usuario) = %s", (nome,))
+        existente = cursor.fetchone()
+        if existente:
+            cursor.execute(
+                "UPDATE usuarios SET usuario = %s, papel = %s WHERE id = %s",
+                (nome, papel, existente["id"])
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO usuarios (usuario, senha, papel) VALUES (%s, %s, %s)",
+                (nome, generate_password_hash(SENHA_TEMPORARIA_PADRAO), papel)
+            )
+
+    _garantir_setores_postgres(cursor)
+
+    cursor.execute("SELECT id FROM usuarios WHERE usuario = %s", ("admin",))
+    if not cursor.fetchone() and os.environ.get("ADMIN_PASSWORD"):
+        cursor.execute(
+            "INSERT INTO usuarios (usuario, senha) VALUES (%s, %s)",
+            ("admin", generate_password_hash(os.environ["ADMIN_PASSWORD"]))
+        )
+
+    # =========================
+    # ORDENS DE SERVIÇO
+    # =========================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ordens (
+            id SERIAL PRIMARY KEY,
+            numero INTEGER UNIQUE,
+            data_entrada TEXT,
+            cliente TEXT,
+            telefone TEXT,
+            problema TEXT,
+            solucao TEXT,
+            responsavel TEXT,
+            mao_obra DOUBLE PRECISION,
+            total DOUBLE PRECISION,
+            status TEXT DEFAULT 'Em andamento'
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS itens (
+            id SERIAL PRIMARY KEY,
+            ordem_id INTEGER,
+            nome TEXT,
+            quantidade DOUBLE PRECISION DEFAULT 1,
+            valor DOUBLE PRECISION,
+            FOREIGN KEY (ordem_id) REFERENCES ordens(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_os (
+            id INTEGER PRIMARY KEY,
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("SELECT ultimo_numero FROM controle_os WHERE id = 1")
+    controle = cursor.fetchone()
+    if controle is None:
+        cursor.execute("SELECT COALESCE(MAX(numero), 0) AS max FROM ordens")
+        maior_numero = list(cursor.fetchone().values())[0]
+        cursor.execute(
+            "INSERT INTO controle_os (id, ultimo_numero) VALUES (%s, %s)",
+            (1, maior_numero)
+        )
+
+    # =========================
+    # NOTA DOBRADA - VENDAS
+    # =========================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS vendas (
+            id SERIAL PRIMARY KEY,
+            numero INTEGER UNIQUE NOT NULL,
+            cliente TEXT,
+            fantasia TEXT,
+            vendedor TEXT,
+            data TEXT,
+            condicao TEXT,
+            vencimento TEXT,
+            desconto DOUBLE PRECISION DEFAULT 0,
+            observacao TEXT,
+            total DOUBLE PRECISION DEFAULT 0,
+            comissao DOUBLE PRECISION DEFAULT 0
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS venda_itens (
+            id SERIAL PRIMARY KEY,
+            venda_id INTEGER NOT NULL,
+            quantidade DOUBLE PRECISION DEFAULT 1,
+            descricao TEXT,
+            valor DOUBLE PRECISION DEFAULT 0,
+            FOREIGN KEY (venda_id) REFERENCES vendas(id)
+        )
+    """)
+
+    cursor.execute(
+        "UPDATE vendas SET comissao = ROUND(CAST(COALESCE(total, 0) * %s AS numeric), 2)",
+        (COMISSAO_PERCENTUAL,)
+    )
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_vendas (
+            id INTEGER PRIMARY KEY,
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("SELECT id FROM controle_vendas WHERE id = 1")
+    if not cursor.fetchone():
+        cursor.execute(
+            "INSERT INTO controle_vendas (id, ultimo_numero) VALUES (%s, %s)",
+            (1, 0)
+        )
+
+    # =========================
+    # DEVOLUÇÕES
+    # =========================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS devolucoes (
+            id SERIAL PRIMARY KEY,
+            numero INTEGER UNIQUE NOT NULL,
+            venda_id INTEGER,
+            data TEXT,
+            motivo TEXT,
+            observacao TEXT,
+            total DOUBLE PRECISION DEFAULT 0,
+            vendedor TEXT,
+            FOREIGN KEY (venda_id) REFERENCES vendas(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS devolucao_itens (
+            id SERIAL PRIMARY KEY,
+            devolucao_id INTEGER NOT NULL,
+            quantidade DOUBLE PRECISION DEFAULT 1,
+            descricao TEXT,
+            valor DOUBLE PRECISION DEFAULT 0,
+            FOREIGN KEY (devolucao_id) REFERENCES devolucoes(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_devolucoes (
+            id INTEGER PRIMARY KEY,
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("SELECT id FROM controle_devolucoes WHERE id = 1")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO controle_devolucoes (id, ultimo_numero) VALUES (%s, %s)", (1, 0))
+
+    # Índices
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ordens_numero ON ordens(numero DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ordens_status ON ordens(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_ordem ON itens(ordem_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_vendas_numero ON vendas(numero DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_venda_itens_venda ON venda_itens(venda_id)")
+    except Exception:
+        conexao.rollback()
+        conexao.close()
+        raise
 
     conexao.commit()
     conexao.close()
@@ -333,7 +710,8 @@ def login_obrigatorio(funcao):
     @wraps(funcao)
     def verificar(*args, **kwargs):
 
-        if "usuario" not in session:
+        if "usuario" not in session or not usuario_e_setor(session["usuario"]):
+            session.clear()
             return redirect(url_for("login"))
 
         return funcao(*args, **kwargs)
@@ -342,32 +720,93 @@ def login_obrigatorio(funcao):
 
 
 # =========================
-# SOMENTE ADMIN
+# CONTROLE DE ACESSO POR PAPEL
 # =========================
 
-def admin_obrigatorio(funcao):
+def requer_papeis(*papeis_permitidos):
+    permitidos = {str(p).upper() for p in papeis_permitidos}
+    def decorador(funcao):
+        @wraps(funcao)
+        def verificar(*args, **kwargs):
+            if "usuario" not in session:
+                return redirect(url_for("login"))
+            papel = obter_papel_usuario(session["usuario"])
+            if not papel or papel.upper() not in permitidos:
+                return jsonify({"erro": f"Acesso permitido somente para: {', '.join(sorted(permitidos))}."}), 403
+            return funcao(*args, **kwargs)
+        return verificar
+    return decorador
 
+
+def requer_nivel_minimo(papel_minimo):
+    nivel_min = nivel_do_papel(papel_minimo)
+    def decorador(funcao):
+        @wraps(funcao)
+        def verificar(*args, **kwargs):
+            if "usuario" not in session:
+                return redirect(url_for("login"))
+            papel = obter_papel_usuario(session["usuario"])
+            if nivel_do_papel(papel) < nivel_min:
+                return jsonify({"erro": f"Acesso requer nível mínimo: {papel_minimo}."}), 403
+            return funcao(*args, **kwargs)
+        return verificar
+    return decorador
+
+
+# Compatibilidade: gestao = DONO + GERENTE
+def admin_obrigatorio(funcao):
     @wraps(funcao)
     def verificar(*args, **kwargs):
-
         if "usuario" not in session:
             return redirect(url_for("login"))
-
         conexao = conectar()
         usuario = conexao.execute(
-            "SELECT papel FROM usuarios WHERE usuario = ?", (session["usuario"],)
+            "SELECT papel FROM usuarios WHERE upper(usuario) = upper(?)",
+            (session["usuario"],)
         ).fetchone()
         conexao.close()
-
         if not usuario or usuario["papel"] not in PAPEIS_GESTAO:
-
-            return jsonify({
-                "erro": "Acesso permitido somente para dono ou gerente."
-            }), 403
-
+            return jsonify({"erro": "Acesso permitido somente para Dono ou Gerente."}), 403
         return funcao(*args, **kwargs)
-
     return verificar
+
+
+def financeiro_obrigatorio(funcao):
+    @wraps(funcao)
+    def verificar(*args, **kwargs):
+        if "usuario" not in session:
+            return redirect(url_for("login"))
+        papel = obter_papel_usuario(session["usuario"])
+        if not papel or papel.upper() not in PAPEIS_FINANCEIRO:
+            return jsonify({"erro": "Acesso permitido somente para Dono, Gerente ou Financeiro."}), 403
+        return funcao(*args, **kwargs)
+    return verificar
+
+
+def dono_obrigatorio(funcao):
+    @wraps(funcao)
+    def verificar(*args, **kwargs):
+        if "usuario" not in session:
+            return redirect(url_for("login"))
+        papel = obter_papel_usuario(session["usuario"])
+        if not papel or papel.upper() != "DONO":
+            return jsonify({"erro": "Acesso permitido somente para Dono."}), 403
+        return funcao(*args, **kwargs)
+    return verificar
+
+
+# =========================
+# LOGIN - LISTA PÚBLICA PARA SELEÇÃO RÁPIDA
+# =========================
+
+@app.route("/api/public/usuarios")
+def api_public_usuarios():
+    conexao = conectar()
+    usuarios = conexao.execute(
+        "SELECT usuario, papel FROM usuarios WHERE tipo = 'SETOR' ORDER BY usuario"
+    ).fetchall()
+    conexao.close()
+    return jsonify([{"usuario": u["usuario"], "papel": u["papel"]} for u in usuarios])
 
 
 # =========================
@@ -379,22 +818,29 @@ def login():
 
     if request.method == "POST":
 
-        usuario = request.form.get("usuario", "").strip()
+        usuario = normalizar_usuario(request.form.get("usuario", ""))
         senha = request.form.get("senha", "")
 
         conexao = conectar()
         cursor = conexao.cursor()
 
-        cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario,))
+        cursor.execute(
+            "SELECT * FROM usuarios WHERE upper(usuario) = upper(?)",
+            (usuario,)
+        )
 
         resultado = cursor.fetchone()
 
         conexao.close()
 
-        if resultado and (
-            check_password_hash(resultado["senha"], senha)
-            if resultado["senha"].startswith(("pbkdf2:", "scrypt:"))
-            else resultado["senha"] == senha
+        if (
+            resultado
+            and usuario_e_setor(usuario)
+            and (
+                check_password_hash(resultado["senha"], senha)
+                if resultado["senha"].startswith(("pbkdf2:", "scrypt:"))
+                else resultado["senha"] == senha
+            )
         ):
 
             # Migração transparente das senhas legadas em texto puro.
@@ -519,7 +965,7 @@ def alterar_minha_senha():
 
     if not senha_valida(nova_senha):
         conexao.close()
-        return jsonify({"erro": "A nova senha deve ter ao menos 8 caracteres."}), 400
+        return jsonify({"erro": "A nova senha deve ter ao menos 4 caracteres."}), 400
 
     cursor.execute(
         "UPDATE usuarios SET senha = ? WHERE usuario = ?",
@@ -580,7 +1026,8 @@ def listar_vendedores():
     conexao = conectar()
     vendedores = conexao.execute(
         "SELECT id, usuario, papel FROM usuarios "
-        "WHERE papel IN ('VENDEDOR', 'GERENTE', 'DONO') AND lower(usuario) <> 'admin' ORDER BY usuario"
+        "WHERE papel IN ('VENDEDOR', 'GERENTE', 'DONO') AND lower(usuario) <> 'admin' "
+        "AND (tipo IS NULL OR tipo <> 'SETOR') ORDER BY usuario"
     ).fetchall()
     conexao.close()
 
@@ -613,7 +1060,7 @@ def criar_usuario():
         }), 400
 
     if not senha_valida(senha):
-        return jsonify({"erro": "A senha deve ter ao menos 8 caracteres."}), 400
+        return jsonify({"erro": "A senha deve ter ao menos 4 caracteres."}), 400
     if papel not in PAPEIS:
         return jsonify({"erro": "Perfil de acesso inválido."}), 400
 
@@ -629,13 +1076,16 @@ def criar_usuario():
 
         conexao.commit()
 
-    except sqlite3.IntegrityError:
+    except Exception as erro:
 
         conexao.close()
 
-        return jsonify({
-            "erro": "Este usuário já existe."
-        }), 400
+        if _erro_duplicado(erro):
+            return jsonify({
+                "erro": "Este usuário já existe."
+            }), 400
+
+        raise
 
     conexao.close()
 
@@ -679,7 +1129,7 @@ def alterar_senha_usuario(id):
     if not senha_valida(nova_senha):
 
         return jsonify({
-            "erro": "Digite uma senha com ao menos 8 caracteres."
+            "erro": "Digite uma senha com ao menos 4 caracteres."
         }), 400
 
     conexao = conectar()
@@ -1123,6 +1573,10 @@ def excluir_os(id):
         (id,)
     )
 
+    if cursor.rowcount == 0:
+        conexao.close()
+        return jsonify({"erro": "Ordem não encontrada."}), 404
+
     conexao.commit()
     conexao.close()
 
@@ -1152,7 +1606,8 @@ def pagina_editar_venda():
 
     return render_template(
         "editar_venda.html",
-        usuario=session["usuario"]
+        usuario=session["usuario"],
+        papel=obter_papel_usuario(session["usuario"])
     )
 
 
@@ -1162,7 +1617,8 @@ def pagina_acompanhamento_notas():
 
     return render_template(
         "acompanhamento_notas.html",
-        usuario=session["usuario"]
+        usuario=session["usuario"],
+        pode_visualizar_comissao=usuario_tem_gestao(session["usuario"])
     )
 
 
@@ -1220,6 +1676,9 @@ def salvar_venda():
     if erro_desconto:
         return jsonify({"erro": erro_desconto}), 400
 
+    total = max(0, sum(quantidade * valor for _, quantidade, valor in itens) * (1 - desconto / 100))
+    comissao = round(total * COMISSAO_PERCENTUAL / 100, 2)
+
     conexao = conectar()
     cursor = conexao.cursor()
     cursor.execute("BEGIN IMMEDIATE")
@@ -1250,9 +1709,10 @@ def salvar_venda():
             vencimento,
             desconto,
             observacao,
-            total
+            total,
+            comissao
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         novo_numero,
         dados.get("cliente", ""),
@@ -1263,7 +1723,8 @@ def salvar_venda():
         dados.get("vencimento", ""),
         desconto,
         dados.get("observacao", ""),
-        max(0, sum(quantidade * valor for _, quantidade, valor in itens) * (1 - desconto / 100))
+        total,
+        comissao
     ))
 
     venda_id = cursor.lastrowid
@@ -1297,7 +1758,8 @@ def salvar_venda():
     return jsonify({
         "mensagem": "Venda salva com sucesso!",
         "id": venda_id,
-        "numero": novo_numero
+        "numero": novo_numero,
+        "comissao": comissao
     })
 
 
@@ -1334,10 +1796,68 @@ def listar_vendas():
             "vencimento": venda["vencimento"],
             "desconto": venda["desconto"],
             "observacao": venda["observacao"],
-            "total": venda["total"]
+            "total": venda["total"],
+            "comissao": venda["comissao"]
         }
         for venda in vendas
     ])
+
+
+# =========================
+# RESUMO DO DASHBOARD
+# =========================
+
+@app.route("/api/dashboard/resumo")
+@login_obrigatorio
+def resumo_dashboard():
+    conexao = conectar()
+    cursor = conexao.cursor()
+
+    arredondar = "ROUND(COALESCE(%s, 0)::numeric, 2)" if USAR_POSTGRES else "ROUND(COALESCE(%s, 0), 2)"
+
+    cursor.execute("""
+        SELECT
+            COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
+            COUNT(*) AS vendas,
+            %s AS total_vendas,
+            %s AS total_comissao
+        FROM vendas
+        WHERE COALESCE(vendedor, '') <> ''
+        GROUP BY vendedor
+        ORDER BY total_vendas DESC, vendas DESC, vendedor ASC
+    """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"))
+
+    vendas_por_vendedor = cursor.fetchall()
+    conexao.close()
+
+    total_vendas = sum(int(item["vendas"]) for item in vendas_por_vendedor)
+    total_arrecadado = round(sum(float(item["total_vendas"]) for item in vendas_por_vendedor), 2)
+    total_comissao = round(sum(float(item["total_comissao"]) for item in vendas_por_vendedor), 2)
+    melhor_vendedor = (
+        {
+            "vendedor": vendas_por_vendedor[0]["vendedor"],
+            "vendas": vendas_por_vendedor[0]["vendas"],
+            "total_vendas": vendas_por_vendedor[0]["total_vendas"],
+            "total_comissao": vendas_por_vendedor[0]["total_comissao"],
+        }
+        if vendas_por_vendedor else None
+    )
+
+    return jsonify({
+        "total_vendas": total_vendas,
+        "total_arrecadado": total_arrecadado,
+        "total_comissao": total_comissao,
+        "melhor_vendedor": melhor_vendedor,
+        "por_vendedor": [
+            {
+                "vendedor": item["vendedor"],
+                "vendas": item["vendas"],
+                "total_vendas": float(item["total_vendas"]),
+                "total_comissao": float(item["total_comissao"]),
+            }
+            for item in vendas_por_vendedor
+        ],
+    })
 
 
 # =========================
@@ -1387,6 +1907,7 @@ def buscar_venda(id):
         "desconto": venda["desconto"],
         "observacao": venda["observacao"],
         "total": venda["total"],
+        "comissao": venda["comissao"],
         "itens": [
             {
                 "id": item["id"],
@@ -1422,6 +1943,9 @@ def atualizar_venda(id):
     if erro_desconto:
         return jsonify({"erro": erro_desconto}), 400
 
+    total = max(0, sum(quantidade * valor for _, quantidade, valor in itens) * (1 - desconto / 100))
+    comissao = round(total * COMISSAO_PERCENTUAL / 100, 2)
+
     conexao = conectar()
     cursor = conexao.cursor()
 
@@ -1436,7 +1960,8 @@ def atualizar_venda(id):
             vencimento = ?,
             desconto = ?,
             observacao = ?,
-            total = ?
+            total = ?,
+            comissao = ?
         WHERE id = ?
     """, (
         dados.get("cliente", ""),
@@ -1447,7 +1972,8 @@ def atualizar_venda(id):
         dados.get("vencimento", ""),
         desconto,
         dados.get("observacao", ""),
-        max(0, sum(quantidade * valor for _, quantidade, valor in itens) * (1 - desconto / 100)),
+        total,
+        comissao,
         id
     ))
 
@@ -1479,7 +2005,8 @@ def atualizar_venda(id):
     conexao.close()
 
     return jsonify({
-        "mensagem": "Venda atualizada com sucesso!"
+        "mensagem": "Venda atualizada com sucesso!",
+        "comissao": comissao
     })
 
 
@@ -1504,12 +2031,275 @@ def excluir_venda(id):
         (id,)
     )
 
+    if cursor.rowcount == 0:
+        conexao.close()
+        return jsonify({"erro": "Venda não encontrada."}), 404
+
     conexao.commit()
     conexao.close()
 
     return jsonify({
         "mensagem": "Venda excluída com sucesso!"
     })
+
+
+# =========================
+# CONTROLE DE COMISSÃO (só Dono/Gerente)
+# =========================
+
+@app.route("/controle_comissao")
+@login_obrigatorio
+def controle_comissao():
+    papel = obter_papel_usuario(session["usuario"])
+    return render_template(
+        "controle_comissao.html",
+        usuario=session["usuario"],
+        papel=papel,
+        eh_gerente=(papel or "").upper() in ("GERENTE","DONO")
+    )
+
+
+@app.route("/api/comissoes")
+@login_obrigatorio
+def api_comissoes():
+    mes = (request.args.get("mes") or "").strip()  # YYYY-MM
+    if mes and len(mes) != 7:
+        return jsonify({"erro": "Mês inválido. Use YYYY-MM."}), 400
+    papel = (obter_papel_usuario(session["usuario"]) or "").upper()
+    eh_gerente = papel in ("GERENTE","DONO")
+    # Vendedor vê só a própria comissão (já somada 2%), gerente vê todos
+    vendedor_filtro = None if eh_gerente else session["usuario"]
+    conexao = conectar()
+    cursor = conexao.cursor()
+    filtro_mes = f"{mes}%" if mes else "%"
+    arredondar = "ROUND(COALESCE(%s, 0)::numeric, 2)" if USAR_POSTGRES else "ROUND(COALESCE(%s, 0), 2)"
+    if vendedor_filtro:
+        # vendedor: só suas vendas
+        cursor.execute(f"""
+            SELECT
+                COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
+                COUNT(*) AS vendas,
+                {arredondar} AS total_vendas,
+                {arredondar} AS total_comissao
+            FROM vendas
+            WHERE COALESCE(vendedor,'') <> '' AND COALESCE(data,'') LIKE ? AND upper(vendedor)=upper(?)
+            GROUP BY vendedor
+            ORDER BY total_comissao DESC, vendas DESC, vendedor ASC
+        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes, vendedor_filtro))
+        por_vendedor = cursor.fetchall()
+        cursor.execute(f"""
+            SELECT
+                COUNT(*) AS qtd,
+                {arredondar} AS total,
+                {arredondar} AS comissao
+            FROM vendas
+            WHERE COALESCE(data,'') LIKE ? AND upper(vendedor)=upper(?)
+        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes, vendedor_filtro))
+        tot = cursor.fetchone()
+    else:
+        cursor.execute(f"""
+            SELECT
+                COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
+                COUNT(*) AS vendas,
+                {arredondar} AS total_vendas,
+                {arredondar} AS total_comissao
+            FROM vendas
+            WHERE COALESCE(vendedor,'') <> '' AND COALESCE(data,'') LIKE ?
+            GROUP BY vendedor
+            ORDER BY total_comissao DESC, vendas DESC, vendedor ASC
+        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes,))
+        por_vendedor = cursor.fetchall()
+        cursor.execute(f"""
+            SELECT
+                COUNT(*) AS qtd,
+                {arredondar} AS total,
+                {arredondar} AS comissao
+            FROM vendas
+            WHERE COALESCE(data,'') LIKE ?
+        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes,))
+        tot = cursor.fetchone()
+    conexao.close()
+    return jsonify({
+        "mes": mes,
+        "eh_gerente": eh_gerente,
+        "total_vendas": int(tot["qtd"] or 0),
+        "total_arrecadado": float(tot["total"] or 0),
+        "total_comissao": float(tot["comissao"] or 0),
+        "por_vendedor": [
+            {"vendedor": r["vendedor"], "vendas": int(r["vendas"]), "total_vendas": float(r["total_vendas"] or 0), "total_comissao": float(r["total_comissao"] or 0)}
+            for r in por_vendedor
+        ]
+    })
+
+
+# =========================
+# DEVOLUÇÕES
+# =========================
+
+@app.route("/devolucoes")
+@login_obrigatorio
+def pagina_devolucoes():
+    return render_template(
+        "devolucoes.html",
+        usuario=session["usuario"],
+        papel=obter_papel_usuario(session["usuario"])
+    )
+
+
+@app.route("/api/devolucoes/proximo_numero")
+@login_obrigatorio
+def proximo_numero_devolucao():
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT ultimo_numero FROM controle_devolucoes WHERE id=1")
+    r = cur.fetchone()
+    conexao.close()
+    return jsonify({"numero": (r["ultimo_numero"] if r else 0) + 1})
+
+
+@app.route("/api/devolucoes", methods=["GET"])
+@login_obrigatorio
+def listar_devolucoes():
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT * FROM devolucoes ORDER BY numero DESC")
+    devs = cur.fetchall()
+    conexao.close()
+    return jsonify([{"id": d["id"], "numero": d["numero"], "venda_id": d["venda_id"], "data": d["data"], "motivo": d["motivo"], "observacao": d["observacao"], "total": d["total"], "vendedor": d["vendedor"]} for d in devs])
+
+
+@app.route("/api/devolucoes/<int:id>")
+@login_obrigatorio
+def buscar_devolucao(id):
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT * FROM devolucoes WHERE id=?", (id,))
+    dev = cur.fetchone()
+    if not dev:
+        conexao.close()
+        return jsonify({"erro": "Devolução não encontrada"}), 404
+    cur.execute("SELECT * FROM devolucao_itens WHERE devolucao_id=? ORDER BY id", (id,))
+    itens = cur.fetchall()
+    venda_numero = None
+    venda_cliente = None
+    if dev["venda_id"]:
+        cur.execute("SELECT numero, cliente FROM vendas WHERE id=?", (dev["venda_id"],))
+        v = cur.fetchone()
+        if v:
+            venda_numero = v["numero"]
+            venda_cliente = v["cliente"]
+    conexao.close()
+    return jsonify({"id": dev["id"], "numero": dev["numero"], "venda_id": dev["venda_id"], "venda_numero": venda_numero, "venda_cliente": venda_cliente, "data": dev["data"], "motivo": dev["motivo"], "observacao": dev["observacao"], "total": dev["total"], "vendedor": dev["vendedor"], "itens": [{"id": it["id"], "quantidade": it["quantidade"], "descricao": it["descricao"], "valor": it["valor"]} for it in itens]})
+
+
+@app.route("/api/devolucoes", methods=["POST"])
+@login_obrigatorio
+def criar_devolucao():
+    dados = json_body()
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
+    venda_id = dados.get("venda_id")
+    if not venda_id:
+        return jsonify({"erro": "Selecione a venda original."}), 400
+    motivo = str(dados.get("motivo") or "").strip()
+    if not motivo:
+        return jsonify({"erro": "Informe o motivo da devolução."}), 400
+    itens, erro = validar_itens(dados.get("itens", []), "descricao")
+    if erro:
+        return jsonify({"erro": erro}), 400
+    if not itens:
+        return jsonify({"erro": "Adicione pelo menos um item devolvido."}), 400
+    total = sum(q*valor for _, q, valor in itens)
+    conexao = conectar()
+    cur = conexao.cursor()
+    # verifica venda existe
+    cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
+    venda = cur.fetchone()
+    if not venda:
+        conexao.close()
+        return jsonify({"erro": "Venda original não encontrada."}), 404
+    cur.execute("BEGIN IMMEDIATE")
+    cur.execute("SELECT ultimo_numero FROM controle_devolucoes WHERE id=1")
+    ctrl = cur.fetchone()
+    ultimo = 0 if not ctrl else ctrl["ultimo_numero"]
+    novo = ultimo + 1
+    from datetime import datetime
+    data = dados.get("data") or datetime.now().strftime("%Y-%m-%d")
+    cur.execute("""
+        INSERT INTO devolucoes (numero, venda_id, data, motivo, observacao, total, vendedor)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (novo, venda_id, data, motivo, dados.get("observacao",""), total, dados.get("vendedor") or venda["vendedor"]))
+    dev_id = cur.lastrowid
+    for desc, q, v in itens:
+        cur.execute("INSERT INTO devolucao_itens (devolucao_id, quantidade, descricao, valor) VALUES (?, ?, ?, ?)", (dev_id, q, desc, v))
+    cur.execute("UPDATE controle_devolucoes SET ultimo_numero=? WHERE id=1", (novo,))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Devolução registrada!", "numero": novo, "id": dev_id, "total": total})
+
+
+@app.route("/api/devolucoes/<int:id>", methods=["PUT"])
+@login_obrigatorio
+def editar_devolucao(id):
+    dados = json_body()
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
+    venda_id = dados.get("venda_id")
+    if not venda_id:
+        return jsonify({"erro": "Selecione a venda original."}), 400
+    motivo = str(dados.get("motivo") or "").strip()
+    if not motivo:
+        return jsonify({"erro": "Informe o motivo da devolução."}), 400
+    itens, erro = validar_itens(dados.get("itens", []), "descricao")
+    if erro:
+        return jsonify({"erro": erro}), 400
+    if not itens:
+        return jsonify({"erro": "Adicione pelo menos um item devolvido."}), 400
+    total = sum(q*valor for _, q, valor in itens)
+
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT id FROM devolucoes WHERE id=?", (id,))
+    if not cur.fetchone():
+        conexao.close()
+        return jsonify({"erro": "Devolução não encontrada."}), 404
+
+    cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
+    venda = cur.fetchone()
+    if not venda:
+        conexao.close()
+        return jsonify({"erro": "Venda original não encontrada."}), 404
+
+    cur.execute("BEGIN IMMEDIATE")
+    from datetime import datetime
+    data = dados.get("data") or datetime.now().strftime("%Y-%m-%d")
+    cur.execute("""
+        UPDATE devolucoes
+        SET venda_id=?, data=?, motivo=?, observacao=?, total=?, vendedor=?
+        WHERE id=?
+    """, (venda_id, data, motivo, dados.get("observacao",""), total, dados.get("vendedor") or venda["vendedor"], id))
+    cur.execute("DELETE FROM devolucao_itens WHERE devolucao_id=?", (id,))
+    for desc, q, v in itens:
+        cur.execute("INSERT INTO devolucao_itens (devolucao_id, quantidade, descricao, valor) VALUES (?, ?, ?, ?)", (id, q, desc, v))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Devolução atualizada!", "id": id, "total": total})
+
+
+@app.route("/api/devolucoes/<int:id>", methods=["DELETE"])
+@login_obrigatorio
+def cancelar_devolucao(id):
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT id FROM devolucoes WHERE id=?", (id,))
+    if not cur.fetchone():
+        conexao.close()
+        return jsonify({"erro": "Devolução não encontrada."}), 404
+    cur.execute("DELETE FROM devolucao_itens WHERE devolucao_id=?", (id,))
+    cur.execute("DELETE FROM devolucoes WHERE id=?", (id,))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Devolução cancelada!"})
 
 
 # =========================

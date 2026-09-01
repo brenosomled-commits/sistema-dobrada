@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Comissão </title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+<style>
+.comissao-hero{ background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1a56db 100%); color:#fff; border-radius:16px; padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.comissao-hero h1{ font-size:1.25rem; margin:0; }
+.comissao-hero p{ margin:4px 0 0; opacity:.85; font-size:.85rem; }
+.month-picker{ display:flex; gap:10px; align-items:end; flex-wrap:wrap; }
+.print-logo-com{ display:none; text-align:center; margin-bottom:12px; }
+@media print{ .print-logo-com{display:block!important} .comissao-hero{ background:#fff!important; color:#000!important; border:1px solid #000!important } .comissao-hero *{ color:#000!important } }
+</style>
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link ativa" href="/controle_comissao"><span class="link-icon">💰</span> Comissões</a></div>
+        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div><div class="text-muted" style="font-size:.70rem">Acesso restrito: Gerente</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+    <div class="print-logo-com">
+        <img src="{{ url_for('static', filename='logo.png') }}" style="height:44px" onerror="this.style.display='none'">
+        <div style="font-weight:800; margin-top:4px">Colatina - ES · Controle de Comissão</div>
+        <div style="height:2px; background:#0f172a; margin-top:8px"></div>
+    </div>
+    <div class="comissao-hero">
+        <div>
+            <h1>💰 Controle de Comissão — 2%</h1>
+            <p>A comissão é lançada automaticamente (2% do total). Gerente vê todos — vendedor vê só a sua, já somada.</p>
+        </div>
+        <div class="month-picker">
+            <div class="form-group" style="margin:0"><label class="form-label" style="color:#fff;opacity:.9">Mês</label><input type="month" class="form-input" id="mes" onchange="carregar()"></div>
+            <button class="btn btn-outline" style="background:#fff" onclick="imprimir()">🖨 Imprimir</button>
+            <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)" onclick="exportarCSV()">⬇ CSV</button>
+        </div>
+    </div>
+
+    <div class="stat-grid mt-3">
+        <div class="stat-card"><h3>Vendas no mês</h3><div class="stat-numero" id="qtd">0</div><div class="stat-sub" id="mesLabel">—</div></div>
+        <div class="stat-card stat-success"><h3>Arrecadado</h3><div class="stat-numero" id="total" style="font-size:1.35rem">R$ 0,00</div></div>
+        <div class="stat-card stat-warning"><h3>Comissão total (2%)</h3><div class="stat-numero" id="comissao" style="font-size:1.35rem">R$ 0,00</div><div class="stat-sub">a pagar no fechamento</div></div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Comissão por vendedor</h2><span class="badge badge-pronta" id="badgeMes">—</span></div>
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>#</th><th>Vendedor</th><th>Vendas</th><th>Total vendido</th><th>Comissão 2%</th></tr></thead><tbody id="tbody"></tbody></table></div>
+        <div id="empty" class="empty-state" style="display:none"><div class="empty-icon">📭</div><h3>Nenhuma venda no mês</h3><p>Selecione outro mês.</p></div>
+    </div>
+
+    <div class="card mt-3" style="background:var(--cor-fundo); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+        <div><div class="font-bold">Fechamento</div><div class="text-muted" style="font-size:.85rem">Soma de todas as comissões do mês selecionado</div></div>
+        <div class="font-bold" style="font-size:1.6rem; color:var(--cor-aviso)" id="fechamento">R$ 0,00</div>
+    </div>
+</main>
+</div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
+<script>
+const S=window.SistemaUtil; S.initSidebar();
+function fmtMoeda(v){ return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function mesAtual(){ const h=new Date(); return `${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}`; }
+let dadosAtual=null;
+async function carregar(){
+    const mes=document.getElementById('mes').value;
+    S.mostrarLoading("Carregando comissões...");
+    try{
+        const r=await fetch('/api/comissoes?mes='+encodeURIComponent(mes));
+        const j=await r.json();
+        if(!r.ok){ S.Toast.erro(j.erro||'Erro'); return; }
+        dadosAtual=j;
+        document.getElementById('qtd').innerText=j.total_vendas;
+        document.getElementById('total').innerText=fmtMoeda(j.total_arrecadado);
+        document.getElementById('comissao').innerText=fmtMoeda(j.total_comissao);
+        document.getElementById('fechamento').innerText=fmtMoeda(j.total_comissao);
+        document.getElementById('mesLabel').innerText=mes||'todos';
+        document.getElementById('badgeMes').innerText=mes||'todos';
+        const tbody=document.getElementById('tbody'); tbody.innerHTML='';
+        const empty=document.getElementById('empty');
+        if(!j.por_vendedor || j.por_vendedor.length===0){
+            tbody.innerHTML=''; empty.style.display='block';
+        } else {
+            empty.style.display='none';
+            j.por_vendedor.forEach((v,i)=>{
+                const tr=document.createElement('tr');
+                tr.innerHTML=`<td>${i+1}</td><td class="font-bold">${v.vendedor}</td><td>${v.vendas}</td><td>${fmtMoeda(v.total_vendas)}</td><td class="font-bold" style="color:var(--cor-aviso)">${fmtMoeda(v.total_comissao)}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+    }catch(e){ S.Toast.erro('Erro de conexão'); }
+    finally{ S.esconderLoading(); }
+}
+function imprimir(){ window.print(); }
+function exportarCSV(){
+    if(!dadosAtual || !dadosAtual.por_vendedor.length){ S.Toast.aviso('Nenhum dado para exportar'); return; }
+    const mes=dadosAtual.mes||'todos';
+    let csv='Vendedor;Vendas;Total;Comissao 2%\n';
+    dadosAtual.por_vendedor.forEach(v=>{ csv+=`${v.vendedor};${v.vendas};${v.total_vendas.toFixed(2).replace('.',',')};${v.total_comissao.toFixed(2).replace('.',',')}\n`; });
+    csv+=`TOTAL;${dadosAtual.total_vendas};${dadosAtual.total_arrecadado.toFixed(2).replace('.',',')};${dadosAtual.total_comissao.toFixed(2).replace('.',',')}\n`;
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`comissoes-${mes}.csv`; a.click(); URL.revokeObjectURL(url);
+    S.Toast.sucesso('CSV exportado');
+}
+document.getElementById('mes').value=mesAtual();
+carregar();
+</script>
+</body>
+</html>

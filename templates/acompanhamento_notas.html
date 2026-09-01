@@ -1,933 +1,172 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Acompanhamento de Notas</title>
-
+<title>Acompanhamento de Notas </title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
-
-*{
-    box-sizing:border-box;
-}
-
-body{
-    font-family:Arial,sans-serif;
-    margin:0;
-    background:#f2f2f2;
-    padding:20px;
-}
-
-.container{
-    max-width:1200px;
-    margin:auto;
-}
-
-h1{
-    margin-top:0;
-}
-
-h2{
-    margin-top:35px;
-}
-
-.dashboard{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:20px;
-}
-
-.card{
-    background:white;
-    padding:20px;
-    border-radius:8px;
-    border:1px solid #ddd;
-}
-
-.card h3{
-    margin:0 0 10px;
-    font-size:15px;
-}
-
-.numero{
-    font-size:28px;
-    font-weight:bold;
-}
-
-.filtros{
-    background:white;
-    padding:20px;
-    border:1px solid #ddd;
-    border-radius:8px;
-
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:20px;
-}
-
-.filtro{
-    display:flex;
-    flex-direction:column;
-    gap:7px;
-}
-
-.filtro label{
-    font-weight:bold;
-    font-size:13px;
-}
-
-.filtro input,
-.filtro select{
-    padding:10px;
-    border:1px solid #aaa;
-    border-radius:4px;
-    font-size:14px;
-}
-
-.tabela-box{
-    background:white;
-    border-radius:8px;
-    overflow-x:auto;
-    border:1px solid #ddd;
-}
-
-table{
-    width:100%;
-    border-collapse:collapse;
-}
-
-th{
-    background:#eee;
-    text-align:left;
-    padding:12px;
-}
-
-td{
-    padding:12px;
-    border-top:1px solid #ddd;
-}
-
-tr:hover{
-    background:#fafafa;
-}
-
-.sem-vendas{
-    text-align:center;
-    padding:25px;
-    color:#777;
-}
-
-.total-filtrado{
-    margin-top:20px;
-    background:white;
-    border:1px solid #ddd;
-    border-radius:8px;
-    padding:20px;
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.total-filtrado .titulo{
-    font-size:16px;
-    font-weight:bold;
-}
-
-.total-filtrado .valor{
-    font-size:26px;
-    font-weight:bold;
-}
-
-.botao{
-    padding:10px 18px;
-    border:1px solid #555;
-    background:white;
-    border-radius:5px;
-    cursor:pointer;
-    font-weight:bold;
-}
-
-.navegacao{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-bottom:20px;
-}
-
-.botao:hover{
-    background:#eee;
-}
-
-.topo{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:15px;
-}
-
-@media(max-width:700px){
-
-    .dashboard{
-        grid-template-columns:1fr;
-    }
-
-    .filtros{
-        grid-template-columns:1fr;
-    }
-
-    .total-filtrado{
-        flex-direction:column;
-        align-items:flex-start;
-        gap:10px;
-    }
-
-}
-
+.filtros-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media(max-width:768px){ .filtros-grid{ grid-template-columns:1fr; } }
 </style>
-
 </head>
-
 <body>
-
-<div class="container">
-
-<div class="topo">
-
-    <h1>ACOMPANHAMENTO DE NOTAS</h1>
-
-    <button
-    class="botao"
-    onclick="window.location.href='/'">
-
-        INÍCIO
-
-    </button>
-
-</div>
-
-<nav class="navegacao" aria-label="Navegação principal">
-    <button class="botao" onclick="window.location.href='/nota_dobrada'">NOVA VENDA</button>
-    <button class="botao" onclick="window.location.href='/editar_venda'">EDITAR VENDA</button>
-    <button class="botao" onclick="window.location.href='/dashboard'">DASHBOARD</button>
-</nav>
-
-
-<h2>VENDAS DE HOJE</h2>
-
-<div class="dashboard">
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link ativa" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a></div>
+        {% if pode_visualizar_comissao %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ 'Gestão' if pode_visualizar_comissao else 'Vendedor' }}</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+    <div class="pagina-titulo"><h1>Acompanhamento de Notas</h1><p class="pagina-sub">Vendas de hoje e histórico filtrado — atualização automática a cada 30s</p></div>
 
     <div class="card">
-
-        <h3>QUANTIDADE DE VENDAS</h3>
-
-        <div
-        class="numero"
-        id="quantidadeHoje">
-
-            0
-
+        <div class="card-header"><h2 class="card-title">Vendas de hoje</h2><span class="badge badge-pronta" id="badgeHoje">0 vendas</span></div>
+        <div class="stat-grid" style="margin-bottom:0">
+            <div class="stat-card"><h3>Quantidade</h3><div class="stat-numero" id="quantidadeHoje">0</div></div>
+            {% if pode_visualizar_comissao %}<div class="stat-card stat-warning"><h3>Comissão (2%)</h3><div class="stat-numero" id="comissaoHoje" style="font-size:1.35rem">R$ 0,00</div></div>{% endif %}
+            <div class="stat-card stat-success"><h3>Valor total</h3><div class="stat-numero" id="totalHoje" style="font-size:1.35rem">R$ 0,00</div></div>
         </div>
-
     </div>
 
-    <div class="card">
+    <div class="card mt-3">
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>Venda</th><th>Cliente</th><th>Vendedor</th><th>Condição</th><th>Valor</th>{% if pode_visualizar_comissao %}<th>Comissão</th>{% endif %}<th style="min-width:210px">Ações</th></tr></thead><tbody id="listaHoje"></tbody></table></div>
+    </div>
 
-        <h3>VALOR TOTAL VENDIDO</h3>
-
-        <div
-        class="numero"
-        id="totalHoje">
-
-            R$ 0,00
-
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Filtros</h2><button class="btn btn-outline btn-sm" onclick="document.getElementById('mesFiltro').value='';document.getElementById('vendedorFiltro').value='';document.getElementById('condicaoFiltro').value='';aplicarFiltros()">Limpar</button></div>
+        <div class="filtros-grid">
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Mês</label><input type="month" class="form-input" id="mesFiltro" onchange="aplicarFiltros()"></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Vendedor</label><select class="form-select" id="vendedorFiltro" onchange="aplicarFiltros()"><option value="">Todos os vendedores</option></select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Condição</label><select class="form-select" id="condicaoFiltro" onchange="aplicarFiltros()"><option value="">Todas</option><option value="dinheiro">DINHEIRO</option><option value="cartadebito">CARTAO DEBITO</option><option value="cartocredito">CARTAO CREDITO</option><option value="pix">PIX SICOOB</option><option value="pixinter">PIX INTER</option><option value="avista">À vista</option><option value="aprazo">A prazo</option></select></div>
         </div>
-
     </div>
 
-</div>
-
-
-<h2>VENDAS REALIZADAS HOJE</h2>
-
-<div class="tabela-box">
-
-<table>
-
-<thead>
-
-<tr>
-
-    <th>VENDA</th>
-    <th>CLIENTE</th>
-    <th>VENDEDOR</th>
-    <th>CONDIÇÃO</th>
-    <th>VALOR</th>
-
-</tr>
-
-</thead>
-
-<tbody id="listaHoje"></tbody>
-
-</table>
-
-</div>
-
-
-<h2>ACOMPANHAMENTO DE VENDAS</h2>
-
-<div class="filtros">
-
-    <div class="filtro">
-
-        <label>MÊS</label>
-
-        <input
-        type="month"
-        id="mesFiltro"
-        onchange="aplicarFiltros()">
-
+    <div class="stat-grid mt-3">
+        <div class="stat-card"><h3>Filtradas — qtd.</h3><div class="stat-numero" id="quantidadeFiltrada">0</div></div>
+        {% if pode_visualizar_comissao %}<div class="stat-card stat-warning"><h3>Comissão filtrada</h3><div class="stat-numero" id="comissaoFiltrada" style="font-size:1.25rem">R$ 0,00</div></div>{% endif %}
+        <div class="stat-card stat-success"><h3>Valor filtrado</h3><div class="stat-numero" id="totalFiltrado" style="font-size:1.25rem">R$ 0,00</div></div>
     </div>
 
-
-    <div class="filtro">
-
-        <label>VENDEDOR</label>
-
-        <select
-        id="vendedorFiltro"
-        onchange="aplicarFiltros()">
-
-            <option value="">
-                TODOS OS VENDEDORES
-            </option>
-
-        </select>
-
-    </div>
-
-
-    <div class="filtro">
-
-        <label>CONDIÇÃO DE VENDA</label>
-
-        <select
-        id="condicaoFiltro"
-        onchange="aplicarFiltros()">
-
-            <option value="">
-                TODAS AS CONDIÇÕES
-            </option>
-
-            <option value="avista">
-                À VISTA
-            </option>
-
-            <option value="aprazo">
-                A PRAZO
-            </option>
-
-        </select>
-
-    </div>
-
-</div>
-
-
-<div
-class="dashboard"
-style="margin-top:20px;">
-
-    <div class="card">
-
-        <h3>QUANTIDADE DE VENDAS FILTRADAS</h3>
-
-        <div
-        class="numero"
-        id="quantidadeFiltrada">
-
-            0
-
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Resultado das vendas</h2><span class="text-muted" style="font-size:.82rem" id="infoFiltradas"></span></div>
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>Data</th><th>Venda</th><th>Cliente</th><th>Vendedor</th><th>Condição</th><th>Valor</th>{% if pode_visualizar_comissao %}<th>Comissão</th>{% endif %}<th style="min-width:210px">Ações</th></tr></thead><tbody id="listaFiltrada"></tbody></table></div>
+        <div class="card mt-3" style="background:var(--cor-fundo);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div><div class="font-bold">Total das vendas filtradas</div><div class="text-muted" style="font-size:.85rem"><span id="quantidadeFinal">0</span> vendas</div></div>
+            <div class="font-bold" style="font-size:1.5rem" id="somatoriaFinal">R$ 0,00</div>
         </div>
-
     </div>
-
-
-    <div class="card">
-
-        <h3>VALOR TOTAL FILTRADO</h3>
-
-        <div
-        class="numero"
-        id="totalFiltrado">
-
-            R$ 0,00
-
-        </div>
-
-    </div>
-
+</main>
 </div>
-
-
-<h2>RESULTADO DAS VENDAS</h2>
-
-<div class="tabela-box">
-
-<table>
-
-<thead>
-
-<tr>
-
-    <th>DATA</th>
-    <th>VENDA</th>
-    <th>CLIENTE</th>
-    <th>VENDEDOR</th>
-    <th>CONDIÇÃO</th>
-    <th>VALOR</th>
-
-</tr>
-
-</thead>
-
-<tbody id="listaFiltrada"></tbody>
-
-</table>
-
-</div>
-
-
-<div class="total-filtrado">
-
-    <div>
-
-        <div class="titulo">
-            TOTAL DAS VENDAS FILTRADAS
-        </div>
-
-        <div>
-
-            Quantidade:
-
-            <span id="quantidadeFinal">
-                0
-            </span>
-
-            vendas
-
-        </div>
-
-    </div>
-
-    <div
-    class="valor"
-    id="somatoriaFinal">
-
-        R$ 0,00
-
-    </div>
-
-</div>
-
-</div>
-
-
+<div id="areaImpressao" style="display:none"></div>
+<style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:5mm; } }</style>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
 <script>
-
-let vendas = [];
-
-
-/* FORMATAR MOEDA */
-
-function formatarMoeda(valor){
-
-    return Number(valor || 0).toLocaleString(
-        "pt-BR",
-        {
-            style:"currency",
-            currency:"BRL"
-        }
-    );
-
-}
-
-
-/* FORMATAR DATA */
-
-function formatarData(data){
-
-    if(!data){
-        return "";
-    }
-
-    const partes =
-        data.split("-");
-
-    if(partes.length !== 3){
-        return data;
-    }
-
-    return partes[2] + "/" +
-           partes[1] + "/" +
-           partes[0];
-
-}
-
-
-/* CONDIÇÃO */
-
-function nomeCondicao(condicao){
-
-    if(condicao === "avista"){
-        return "À VISTA";
-    }
-
-    if(condicao === "aprazo"){
-        return "A PRAZO";
-    }
-
-    return condicao || "";
-
-}
-
-
-/* CARREGAR VENDAS */
-
+let vendas=[]; const podeVisualizarComissao={{ "true" if pode_visualizar_comissao else "false" }}; const S=window.SistemaUtil;
+function fmtMoeda(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function fmtData(d){ if(!d) return ""; const p=d.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d; }
+function nomeCondicao(c){ if(c==="dinheiro")return"DINHEIRO"; if(c==="cartadebito")return"CARTAO DEBITO"; if(c==="cartocredito")return"CARTAO CREDITO"; if(c==="pix"||c==="sicoob")return"PIX SICOOB"; if(c==="pixinter")return"PIX INTER"; if(c==="pixmaq")return"PIX MAQUINA"; if(c==="avista")return"À vista"; if(c==="aprazo")return"A prazo"; return c||""; }
 async function carregarVendas(){
-
-    try{
-
-        const resposta =
-            await fetch("/api/vendas");
-
-        if(!resposta.ok){
-
-            throw new Error(
-                "Erro ao carregar vendas"
-            );
-
-        }
-
-        vendas =
-            await resposta.json();
-
-        atualizarHoje();
-
-        aplicarFiltros();
-
-    }
-    catch(erro){
-
-        console.error(erro);
-
-        alert(
-            "Não foi possível carregar as vendas do servidor."
-        );
-
-    }
-
+    try{ const r=await fetch("/api/vendas"); if(!r.ok) throw new Error(); vendas=await r.json(); atualizarHoje(); aplicarFiltros(); }
+    catch(e){ S.Toast.erro("Não foi possível carregar as vendas."); }
 }
-
-
-/* CARREGAR VENDEDORES */
-
 async function carregarVendedores(){
-
-    try{
-
-        const resposta =
-            await fetch("/api/vendedores");
-
-        const usuarios =
-            await resposta.json();
-
-        const select =
-            document
-            .getElementById("vendedorFiltro");
-
-        select.innerHTML =
-            '<option value="">TODOS OS VENDEDORES</option>';
-
-        usuarios.forEach(function(usuario){
-
-            let nome = "";
-
-            if(typeof usuario === "string"){
-
-                nome = usuario;
-
-            }
-            else{
-
-                nome =
-                    usuario.nome ||
-                    usuario.usuario ||
-                    "";
-
-            }
-
-            if(nome){
-
-                const option =
-                    document.createElement("option");
-
-                option.value =
-                    nome;
-
-                option.textContent =
-                    nome;
-
-                select.appendChild(option);
-
-            }
-
-        });
-
-    }
-    catch(erro){
-
-        console.error(
-            "Erro ao carregar vendedores:",
-            erro
-        );
-
-    }
-
+    try{ const r=await fetch("/api/vendedores"); const usuarios=await r.json();
+        const sel=document.getElementById("vendedorFiltro"); sel.innerHTML='<option value="">Todos os vendedores</option>';
+        usuarios.forEach(u=>{ const nome=typeof u==="string"?u:(u.nome||u.usuario||""); if(nome){ const o=document.createElement("option"); o.value=nome; o.textContent=nome; sel.appendChild(o);} });
+    }catch(e){ console.error(e); }
 }
-
-
-/* DASHBOARD HOJE */
-
+const LOGO_URL_ACOMP = "{{ url_for('static', filename='logo.png') }}";
+function fmtVendaAcomp(n){ return "SL" + String(n||0).padStart(4,"0"); }
+function acoesHTML(v){
+    const editar = `<button class="btn btn-outline btn-sm" onclick="editarVenda(${v.id})">✏ Editar</button>`;
+    const imprimir = `<button class="btn btn-outline btn-sm" onclick="imprimirVenda(${v.id})">🖨</button>`;
+    const excluir = podeVisualizarComissao ? `<button class="btn btn-danger btn-sm" onclick="excluirVenda(${v.id},'${v.numero}')">Excluir</button>` : ``;
+    return `<td style="display:flex;gap:6px;flex-wrap:wrap">${editar}${imprimir}${excluir}</td>`;
+}
 function atualizarHoje(){
-
-    const hoje =
-        new Date()
-        .toISOString()
-        .split("T")[0];
-
-
-    const vendasHoje =
-        vendas.filter(function(venda){
-
-            return venda.data === hoje;
-
-        });
-
-
-    let total = 0;
-
-
-    vendasHoje.forEach(function(venda){
-
-        total +=
-            Number(venda.total) || 0;
-
-    });
-
-
-    document
-    .getElementById("quantidadeHoje")
-    .innerText =
-        vendasHoje.length;
-
-
-    document
-    .getElementById("totalHoje")
-    .innerText =
-        formatarMoeda(total);
-
-
-    const lista =
-        document
-        .getElementById("listaHoje");
-
-
-    lista.innerHTML = "";
-
-
-    if(vendasHoje.length === 0){
-
-        lista.innerHTML = `
-            <tr>
-                <td
-                colspan="5"
-                class="sem-vendas">
-
-                    Nenhuma venda registrada hoje.
-
-                </td>
-            </tr>
-        `;
-
-        return;
-
-    }
-
-
-    vendasHoje.forEach(function(venda){
-
-        lista.innerHTML += `
-
-            <tr>
-
-                <td>
-                    ${venda.numero || ""}
-                </td>
-
-                <td>
-                    ${venda.cliente || ""}
-                </td>
-
-                <td>
-                    ${venda.vendedor || ""}
-                </td>
-
-                <td>
-                    ${nomeCondicao(venda.condicao)}
-                </td>
-
-                <td>
-                    ${formatarMoeda(venda.total)}
-                </td>
-
-            </tr>
-
-        `;
-
-    });
-
+    const hoje=new Date().toISOString().split("T")[0];
+    const vendasHoje=vendas.filter(v=>v.data===hoje);
+    let total=0,comissao=0; vendasHoje.forEach(v=>{ total+=Number(v.total)||0; comissao+=Number(v.comissao)||0; });
+    document.getElementById("quantidadeHoje").innerText=vendasHoje.length;
+    document.getElementById("totalHoje").innerText=fmtMoeda(total);
+    document.getElementById("badgeHoje").innerText=`${vendasHoje.length} vendas hoje`;
+    if(podeVisualizarComissao) document.getElementById("comissaoHoje").innerText=fmtMoeda(comissao);
+    const lista=document.getElementById("listaHoje"); lista.innerHTML="";
+    const colunas = podeVisualizarComissao ? 7 : 6;
+    if(vendasHoje.length===0){ lista.innerHTML=`<tr><td colspan="${colunas}" style="text-align:center;padding:24px;color:var(--cor-texto-muted)">Nenhuma venda hoje.</td></tr>`; return; }
+    vendasHoje.forEach(v=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td class="font-mono font-bold">${fmtVendaAcomp(v.numero)}</td><td>${v.cliente||""}</td><td>${v.vendedor||""}</td><td>${nomeCondicao(v.condicao)}</td><td class="font-bold">${fmtMoeda(v.total)}</td>${podeVisualizarComissao?`<td>${fmtMoeda(v.comissao)}</td>`:``}${acoesHTML(v)}`; lista.appendChild(tr); });
 }
-
-
-/* APLICAR FILTROS */
-
 function aplicarFiltros(){
-
-    const mes =
-        document
-        .getElementById("mesFiltro")
-        .value;
-
-
-    const vendedor =
-        document
-        .getElementById("vendedorFiltro")
-        .value;
-
-
-    const condicao =
-        document
-        .getElementById("condicaoFiltro")
-        .value;
-
-
-    let vendasFiltradas =
-        [...vendas];
-
-
-    if(mes){
-
-        vendasFiltradas =
-            vendasFiltradas.filter(
-                function(venda){
-
-                    return (
-                        venda.data || ""
-                    ).startsWith(mes);
-
-                }
-            );
-
-    }
-
-
-    if(vendedor){
-
-        vendasFiltradas =
-            vendasFiltradas.filter(
-                function(venda){
-
-                    return venda.vendedor === vendedor;
-
-                }
-            );
-
-    }
-
-
-    if(condicao){
-
-        vendasFiltradas =
-            vendasFiltradas.filter(
-                function(venda){
-
-                    return venda.condicao === condicao;
-
-                }
-            );
-
-    }
-
-
-    let total = 0;
-
-
-    vendasFiltradas.forEach(function(venda){
-
-        total +=
-            Number(venda.total) || 0;
-
-    });
-
-
-    document
-    .getElementById("quantidadeFiltrada")
-    .innerText =
-        vendasFiltradas.length;
-
-
-    document
-    .getElementById("totalFiltrado")
-    .innerText =
-        formatarMoeda(total);
-
-
-    document
-    .getElementById("quantidadeFinal")
-    .innerText =
-        vendasFiltradas.length;
-
-
-    document
-    .getElementById("somatoriaFinal")
-    .innerText =
-        formatarMoeda(total);
-
-
-    const lista =
-        document
-        .getElementById("listaFiltrada");
-
-
-    lista.innerHTML = "";
-
-
-    if(vendasFiltradas.length === 0){
-
-        lista.innerHTML = `
-
-            <tr>
-
-                <td
-                colspan="6"
-                class="sem-vendas">
-
-                    Nenhuma venda encontrada
-                    com os filtros selecionados.
-
-                </td>
-
-            </tr>
-
-        `;
-
-        return;
-
-    }
-
-
-    vendasFiltradas.forEach(function(venda){
-
-        lista.innerHTML += `
-
-            <tr>
-
-                <td>
-                    ${formatarData(venda.data)}
-                </td>
-
-                <td>
-                    ${venda.numero || ""}
-                </td>
-
-                <td>
-                    ${venda.cliente || ""}
-                </td>
-
-                <td>
-                    ${venda.vendedor || ""}
-                </td>
-
-                <td>
-                    ${nomeCondicao(venda.condicao)}
-                </td>
-
-                <td>
-                    ${formatarMoeda(venda.total)}
-                </td>
-
-            </tr>
-
-        `;
-
-    });
-
+    const mes=document.getElementById("mesFiltro").value;
+    const vendedor=document.getElementById("vendedorFiltro").value;
+    const condicao=document.getElementById("condicaoFiltro").value;
+    let filtradas=[...vendas];
+    if(mes) filtradas=filtradas.filter(v=>(v.data||"").startsWith(mes));
+    if(vendedor) filtradas=filtradas.filter(v=>v.vendedor===vendedor);
+    if(condicao) filtradas=filtradas.filter(v=>v.condicao===condicao);
+    let total=0,comissao=0; filtradas.forEach(v=>{ total+=Number(v.total)||0; comissao+=Number(v.comissao)||0; });
+    document.getElementById("quantidadeFiltrada").innerText=filtradas.length;
+    document.getElementById("totalFiltrado").innerText=fmtMoeda(total);
+    if(podeVisualizarComissao) document.getElementById("comissaoFiltrada").innerText=fmtMoeda(comissao);
+    document.getElementById("quantidadeFinal").innerText=filtradas.length;
+    document.getElementById("somatoriaFinal").innerText=fmtMoeda(total);
+    document.getElementById("infoFiltradas").innerText=filtradas.length?`${filtradas.length} vendas encontradas`:"";
+    const lista=document.getElementById("listaFiltrada"); lista.innerHTML="";
+    const colunas2 = podeVisualizarComissao ? 8 : 7;
+    if(filtradas.length===0){ lista.innerHTML=`<tr><td colspan="${colunas2}" style="text-align:center;padding:24px;color:var(--cor-texto-muted)">Nenhuma venda com os filtros selecionados.</td></tr>`; return; }
+    filtradas.forEach(v=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${fmtData(v.data)}</td><td class="font-mono font-bold">${fmtVendaAcomp(v.numero)}</td><td>${v.cliente||""}</td><td>${v.vendedor||""}</td><td>${nomeCondicao(v.condicao)}</td><td class="font-bold">${fmtMoeda(v.total)}</td>${podeVisualizarComissao?`<td>${fmtMoeda(v.comissao)}</td>`:``}${acoesHTML(v)}`; lista.appendChild(tr); });
 }
-
-
-/* MÊS ATUAL */
-
-function definirMesAtual(){
-
-    const hoje =
-        new Date();
-
-    const ano =
-        hoje.getFullYear();
-
-    const mes =
-        String(
-            hoje.getMonth() + 1
-        ).padStart(2,"0");
-
-
-    document
-    .getElementById("mesFiltro")
-    .value =
-        ano + "-" + mes;
-
+function editarVenda(id){ window.location.href='/editar_venda?editar='+id; }
+async function imprimirVenda(id){
+    S.mostrarLoading("Gerando impressão...");
+    try{
+        const r=await fetch('/api/vendas/'+id); const v=await r.json(); if(!r.ok) throw new Error(v.erro||'Erro');
+        const r2=await fetch('/api/vendas/'+id); // garante itens
+        // monta impressão simples 2 vias
+        const area=document.getElementById('areaImpressao');
+        area.innerHTML='';
+        const pagina=document.createElement('div'); pagina.style.cssText='width:200mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
+        function viaHTML(isSegunda){
+            let html=`<div style="width:190mm;min-height:142mm;padding:2mm 4mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:13px;display:flex;flex-direction:column;page-break-inside:avoid;box-sizing:border-box">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL_ACOMP}" style="height:22px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtVendaAcomp(v.numero)}</span></div>
+                <div style="border-top:1px solid #000;margin:8px 0"></div>
+                <div><b>CLIENTE:</b> ${v.cliente||''}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${fmtVendaAcomp(v.numero)}</div><div><b>CONDIÇÃO:</b> <span style="display:inline-block;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:999px;font-size:9px;font-weight:800">${(v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'').toUpperCase())}</span> ${v.condicao==="aprazo" ? '<span style="font-size:9px;color:#92400e">· VENC '+(v.vencimento ? v.vencimento.split("-").reverse().join("/") : "30 DIAS")+"</span>" : ""}</div><div><b>VENDEDOR:</b> ${v.vendedor||''}</div><div><b>DATA:</b> ${(v.data||'').split('-').reverse().join('/')}</div></div>
+                <div><b>OBS:</b> ${v.observacao||''}</div>
+                <div style="border-top:1px solid #000;margin:8px 0"></div>
+                <div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>`;
+            (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); html+=`<div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;padding:4px 0;border-bottom:1px solid #e8edf2"><span>${it.quantidade}</span><span>${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
+            html+=`<div style="width:68mm;margin-left:auto;margin-top:auto;padding-top:10px;text-align:right"><div style="display:flex;justify-content:space-between"><b>TOTAL:</b><span>R$ ${Number(v.total).toFixed(2).replace('.',',')}</span></div><div style="display:flex;justify-content:space-between"><b>DESCONTO:</b><span>${v.desconto||0}%</span></div><div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:6px"><b>TOTAL FINAL:</b><b>R$ ${Number(v.total).toFixed(2).replace('.',',')}</b></div></div>`;
+            if(v.condicao==='aprazo'){ html+=`<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">${isSegunda ? 'ASSINATURA DO CLIENTE — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>${v.vencimento ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+v.vencimento.split('-').reverse().join('/')+'</div>' : ''}</div>`; }
+            html+=`</div>`;
+            return html;
+        }
+        const via1=document.createElement('div'); via1.innerHTML=viaHTML(false); via1.firstElementChild.style.margin='0 auto 0';
+        const via2=document.createElement('div'); via2.innerHTML=viaHTML(true);
+        pagina.appendChild(via1.firstElementChild); pagina.appendChild(via2.firstElementChild);
+        area.appendChild(pagina);
+        area.style.display='block';
+        window.print();
+        setTimeout(()=> area.style.display='none', 500);
+    }catch(e){ S.Toast.erro(e.message||'Erro ao imprimir'); } finally{ S.esconderLoading(); }
 }
-
-
-/* ATUALIZAR AUTOMATICAMENTE */
-
-setInterval(
-    carregarVendas,
-    30000
-);
-
-
-/* INICIAR */
-
-async function iniciar(){
-
-    definirMesAtual();
-
-    await carregarVendedores();
-
-    await carregarVendas();
-
+async function excluirVenda(id,numero){
+    const ok=await S.confirmacao({titulo:"Excluir venda",mensagem:`Excluir a venda <b>#${numero}</b>?`,tipo:"danger",textoSim:"Excluir"}); if(!ok) return;
+    S.mostrarLoading("Excluindo...");
+    try{ const r=await fetch("/api/vendas/"+id,{method:"DELETE"}); const res=await r.json(); if(!r.ok){ S.Toast.erro(res.erro||"Erro ao excluir."); return; } S.Toast.sucesso(res.mensagem||"Venda excluída!"); await carregarVendas(); }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
 }
-
-iniciar();
-
+function definirMesAtual(){ const h=new Date(); document.getElementById("mesFiltro").value=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,"0")}`; }
+S.initSidebar(); (async()=>{ definirMesAtual(); await carregarVendedores(); await carregarVendas(); setInterval(carregarVendas,30000); })();
 </script>
-
 </body>
 </html>

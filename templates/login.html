@@ -1,121 +1,278 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Login - Sistema OS</title>
-
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
+.login-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #123a7a 0%, #1a3a8a 100%);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
 
-body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
-    margin: 0;
+.login-card {
+    position: relative;
+    z-index: 1;
+    background: var(--cor-painel);
+    border-radius: var(--raio-xl);
+    box-shadow: var(--sombra-xl);
+    padding: 36px;
+    width: 100%;
+    max-width: 420px;
+    animation: modalEntrar 0.4s ease;
+}
+
+.login-logo {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.login-logo img {
+    max-height: 64px;
+    object-fit: contain;
+}
+
+.setor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.setor-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 18px 10px;
+    border: 2px solid var(--cor-borda);
+    border-radius: var(--raio-lg);
+    background: #fff;
+    cursor: pointer;
+    transition: all var(--transicao);
+    text-align: center;
+}
+
+.setor-btn .setor-icone {
+    font-size: 1.6rem;
+}
+
+.setor-btn .setor-nome {
+    font-weight: 800;
+    font-size: 0.82rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--cor-texto);
+}
+
+.setor-btn.selected {
+    border-color: var(--cor-primaria);
+    background: var(--cor-primaria-light);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+
+.setor-btn:hover {
+    border-color: var(--cor-primaria);
+}
+
+.login-senha-box {
+    margin-top: 20px;
+    display: none;
+    animation: telaEntrar 0.3s ease;
+}
+
+.login-senha-box.show {
+    display: block;
+}
+
+.login-senha-box .setor-info {
+    text-align: center;
+    font-weight: 800;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--cor-primaria);
+    margin-bottom: 14px;
+}
+
+.senha-digit {
     display: flex;
     justify-content: center;
-    align-items: center;
-    height: 100vh;
+    gap: 12px;
+    margin-bottom: 18px;
 }
 
-.login {
-    background: white;
-    width: 350px;
-    padding: 35px;
-    border-radius: 10px;
-    box-sizing: border-box;
-    box-shadow: 0 0 15px #ccc;
-}
-
-h1 {
+.senha-digit input {
+    width: 52px;
+    height: 60px;
     text-align: center;
-    margin-bottom: 30px;
+    font-size: 1.8rem;
+    font-weight: 800;
+    border: 2px solid var(--cor-borda-forte);
+    border-radius: var(--raio);
+    caret-color: var(--cor-primaria);
+    background: #fff;
+    color: var(--cor-texto);
 }
 
-label {
-    display: block;
-    margin-top: 15px;
-    font-weight: bold;
+.senha-digit input:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
 }
 
-input {
+.login-btn {
     width: 100%;
-    padding: 12px;
-    margin-top: 5px;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-}
-
-button {
-    width: 100%;
-    margin-top: 25px;
+    margin-top: 4px;
     padding: 13px;
-    border: none;
-    border-radius: 5px;
-    background: #007bff;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
+    font-size: 0.95rem;
+    letter-spacing: .05em;
 }
 
-button:hover {
-    background: #0056b3;
+.login-erro {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--cor-perigo-light);
+    color: #991b1b;
+    padding: 12px 16px;
+    border-radius: var(--raio);
+    font-size: 0.9rem;
+    margin-bottom: 18px;
+    animation: telaEntrar 0.3s ease;
 }
 
-.erro {
-    background: #ffe0e0;
-    color: #b00000;
-    padding: 10px;
-    margin-bottom: 15px;
-    border-radius: 5px;
+.login-footer {
     text-align: center;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--cor-borda);
+    color: var(--cor-texto-muted);
+    font-size: 0.8rem;
 }
-
 </style>
 </head>
+<body class="login-body">
 
-<body>
+<div class="login-card">
 
-<div class="login">
+    <div class="login-logo">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="">
+    </div>
 
-<h1>SISTEMA DE OS</h1>
+    {% if erro %}
+    <div class="login-erro">
+        <span>⚠</span>
+        <span>{{ erro }}</span>
+    </div>
+    {% endif %}
 
-{% if erro %}
-<div class="erro">
-    {{ erro }}
+    <form method="POST" autocomplete="off" id="formLogin">
+        <input type="hidden" id="usuario" name="usuario" value="">
+
+        <div class="setor-grid">
+            <button type="button" class="setor-btn" data-setor="VENDAS" onclick="selecionarSetor(this)">
+                <span class="setor-icone">🛒</span>
+                <span class="setor-nome">Vendas</span>
+            </button>
+            <button type="button" class="setor-btn" data-setor="GERENCIA" onclick="selecionarSetor(this)">
+                <span class="setor-icone">📊</span>
+                <span class="setor-nome">Gerência</span>
+            </button>
+            <button type="button" class="setor-btn" data-setor="FINANCEIRO" onclick="selecionarSetor(this)">
+                <span class="setor-icone">💰</span>
+                <span class="setor-nome">Financeiro</span>
+            </button>
+            <button type="button" class="setor-btn" data-setor="DONO" onclick="selecionarSetor(this)">
+                <span class="setor-icone">👑</span>
+                <span class="setor-nome">Dono</span>
+            </button>
+        </div>
+
+        <div class="login-senha-box" id="senhaBox">
+            <div class="setor-info" id="setorInfo">Vendas</div>
+            <div class="senha-digit" id="senhaDigit">
+                <input type="password" inputmode="numeric" maxlength="1" class="digito" data-i="0" autocomplete="off">
+                <input type="password" inputmode="numeric" maxlength="1" class="digito" data-i="1" autocomplete="off">
+                <input type="password" inputmode="numeric" maxlength="1" class="digito" data-i="2" autocomplete="off">
+                <input type="password" inputmode="numeric" maxlength="1" class="digito" data-i="3" autocomplete="off">
+            </div>
+            <input type="hidden" id="senha" name="senha" value="">
+            <button type="submit" class="btn btn-primary btn-lg login-btn" id="btnEntrar">
+                ENTRAR
+            </button>
+        </div>
+
+    </form>
+
+    <div class="login-footer">
+        © Colatina - ES
+    </div>
+
 </div>
-{% endif %}
 
-<form method="POST">
+<script>
+(function(){
+    const NOMES = {VENDAS:'Vendas', GERENCIA:'Gerência', FINANCEIRO:'Financeiro', DONO:'Dono'};
+    var setorAtual = null;
 
-<label>Usuário</label>
+    function selecionarSetor(botao){
+        document.querySelectorAll('.setor-btn').forEach(b=>b.classList.remove('selected'));
+        botao.classList.add('selected');
+        setorAtual = botao.getAttribute('data-setor');
+        document.getElementById('usuario').value = setorAtual;
+        document.getElementById('setorInfo').textContent = NOMES[setorAtual] || setorAtual;
+        document.getElementById('senhaBox').classList.add('show');
+        document.querySelector('.digito').focus();
+    }
+    window.selecionarSetor = selecionarSetor;
 
-<input
-type="text"
-name="usuario"
-placeholder="Digite seu usuário"
-required
-autocomplete="username">
+    const digitos = Array.from(document.querySelectorAll('.digito'));
+    digitos.forEach(dig=>{
+        dig.addEventListener('input', function(){
+            this.value = this.value.replace(/\D/g,'').slice(0,1);
+            atualizarSenha();
+            const prox = digitos[Number(this.dataset.i)+1];
+            if(this.value && prox) prox.focus();
+        });
+        dig.addEventListener('keydown', function(e){
+            if(e.key === 'Backspace' && !this.value){
+                const ant = digitos[Number(this.dataset.i)-1];
+                if(ant){ ant.focus(); ant.value=''; atualizarSenha(); }
+                e.preventDefault();
+            }
+        });
+        dig.addEventListener('paste', function(e){
+            e.preventDefault();
+            const txt = (e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,4);
+            for(let i=0;i<txt.length;i++){ if(digitos[i]) digitos[i].value=txt[i]; }
+            atualizarSenha();
+            const ult = digitos[Math.min(txt.length,3)];
+            if(ult) ult.focus();
+        });
+    });
+    function atualizarSenha(){
+        document.getElementById('senha').value = digitos.map(d=>d.value).join('');
+    }
 
-<label>Senha</label>
-
-<input
-type="password"
-name="senha"
-placeholder="Digite sua senha"
-required
-autocomplete="current-password">
-
-<button type="submit">
-ENTRAR
-</button>
-
-</form>
-
-</div>
+    document.getElementById('formLogin').addEventListener('submit', function(e){
+        if(!setorAtual || document.getElementById('senha').value.length !== 4){
+            e.preventDefault();
+            if(!setorAtual){
+                const box = document.getElementById('senhaBox').classList.add('show');
+            }
+            return;
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

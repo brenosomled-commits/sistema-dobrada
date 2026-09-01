@@ -3,306 +3,128 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Dashboard - Ordem de Serviço</title>
-
+<title>Dashboard - Sistema OS</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
-
-body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
-    margin: 0;
-    padding: 20px;
-}
-
-.container {
-    max-width: 1100px;
-    margin: auto;
-}
-
-.logo {
-    display: block;
-    max-width: 250px;
-    max-height: 100px;
-    margin: 0 auto 15px;
-    object-fit: contain;
-}
-
-h1 {
-    text-align: center;
-}
-
-.menu {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 30px;
-    flex-wrap: wrap;
-}
-
-button {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 15px;
-}
-
-.cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.card {
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    text-align: center;
-}
-
-.card h3 {
-    margin-top: 0;
-}
-
-.numero {
-    font-size: 40px;
-    font-weight: bold;
-}
-
-.andamento {
-    border-bottom: 6px solid #f0ad00;
-}
-
-.pronta {
-    border-bottom: 6px solid #007bff;
-}
-
-.finalizada {
-    border-bottom: 6px solid #28a745;
-}
-
-.total {
-    border-bottom: 6px solid #555;
-}
-
-.painel {
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-}
-
-.ordem {
-    display: grid;
-    grid-template-columns: 100px 1fr 180px 140px;
-    gap: 15px;
-    padding: 15px;
-    border-bottom: 1px solid #ddd;
-    align-items: center;
-}
-
-.status {
-    padding: 7px 12px;
-    border-radius: 20px;
-    color: white;
-    text-align: center;
-    font-weight: bold;
-}
-
-.status-andamento {
-    background: #f0ad00;
-}
-
-.status-pronta {
-    background: #007bff;
-}
-
-.status-finalizada {
-    background: #28a745;
-}
-
-@media (max-width: 700px) {
-
-    .cards {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .ordem {
-        grid-template-columns: 1fr;
-        gap: 5px;
-    }
-
-}
-
+.dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+@media (max-width: 1024px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .dashboard-grid { grid-template-columns: 1fr; } }
+.ranking-linha { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--cor-borda); gap: 12px; }
+.ranking-linha:last-child { border-bottom: none; }
+.ranking-pos { width: 32px; height: 32px; border-radius: 50%; background: var(--cor-fundo); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.ranking-info { flex: 1; min-width: 0; }
+.ranking-nome { font-weight: 600; font-size: 0.9rem; }
+.ranking-meta { font-size: 0.78rem; color: var(--cor-texto-secundario); }
 </style>
 </head>
-
 <body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Operação</div>
+            <a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a>
+            <a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a>
+            <a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Vendas</div>
+            <a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a>
+            <a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a>
+            <a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a>
+        </div>
+        {% if papel in ["GERENTE","DONO"] %}
+        <div class="sidebar-section">
+            <div class="sidebar-section-label">Sistema</div>
+            <a class="sidebar-link ativa" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a>
+            <a class="sidebar-link" href="/usuarios"><span class="link-icon">👥</span> Gerenciar Logins</a>
+            <a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a>
+        </div>
+        {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div>
+            <div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div></div>
+        </div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
 
-<div class="container">
+<main class="conteudo">
+    <div class="pagina-titulo">
+        <h1>Dashboard</h1>
+        <p class="pagina-sub">Visão gerencial — ordens e vendas</p>
+    </div>
 
-<img
-src="{{ url_for('static', filename='logo.png') }}"
-class="logo">
+    <div class="dashboard-grid">
+        <div class="stat-card"><h3>Total de OS</h3><div class="stat-numero" id="totalOS">0</div></div>
+        <div class="stat-card stat-warning"><h3>Em Andamento</h3><div class="stat-numero" id="andamentoOS">0</div></div>
+        <div class="stat-card stat-info"><h3>Prontas</h3><div class="stat-numero" id="prontaOS">0</div></div>
+        <div class="stat-card stat-success"><h3>Finalizadas</h3><div class="stat-numero" id="finalizadaOS">0</div></div>
+    </div>
 
-<h1>DASHBOARD</h1>
+    <div class="dashboard-grid">
+        <div class="stat-card" style="border-top-color:#4b79a1"><h3>Vendas</h3><div class="stat-numero" id="totalVendas">0</div><div class="stat-sub">no período</div></div>
+        <div class="stat-card" style="border-top-color:var(--cor-sucesso)"><h3>Arrecadação</h3><div class="stat-numero" id="arrecadacaoTotal" style="font-size:1.4rem">R$ 0,00</div></div>
+        <div class="stat-card" style="border-top-color:var(--cor-aviso)"><h3>Comissão</h3><div class="stat-numero" id="comissaoTotal" style="font-size:1.4rem">R$ 0,00</div><div class="stat-sub">2% sobre vendas</div></div>
+        <div class="stat-card" style="border-top-color:#6f42c1"><h3>Melhor Vendedor</h3><div class="stat-numero" id="melhorVendedor" style="font-size:1.15rem">-</div><div class="stat-sub" id="melhorVendedorSub"></div></div>
+    </div>
 
-<div class="menu">
+    <div class="card">
+        <div class="card-header"><h2 class="card-title">🏆 Ranking de Vendedores</h2><span class="badge badge-pronta">Top 5</span></div>
+        <div id="rankingVendedores"><div class="empty-state"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
+    </div>
 
-<button onclick="window.location.href='/'">
-INÍCIO
-</button>
-
-<button onclick="window.location.href='/'">
-NOVA OS
-</button>
-
-<button onclick="window.location.href='/nota_dobrada'">
- NOVA VENDA
-</button>
-
-<button onclick="window.location.href='/acompanhamento_notas'">
- ACOMPANHAR NOTAS
-</button>
-
-<button onclick="window.location.href='/?consulta=1'">
-CONSULTAR OS
-</button>
-
-<button onclick="location.reload()">
-ATUALIZAR
-</button>
-
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Últimas Ordens de Serviço</h2><a class="btn btn-outline btn-sm" href="/?consulta=1">Ver todas</a></div>
+        <div id="ultimasOrdens"><div class="empty-state"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
+    </div>
+</main>
 </div>
-
-
-<div class="cards">
-
-<div class="card total">
-<h3>TOTAL DE OS</h3>
-<div class="numero" id="totalOS">0</div>
-</div>
-
-<div class="card andamento">
-<h3>EM ANDAMENTO</h3>
-<div class="numero" id="andamentoOS">0</div>
-</div>
-
-<div class="card pronta">
-<h3>PRONTAS</h3>
-<div class="numero" id="prontaOS">0</div>
-</div>
-
-<div class="card finalizada">
-<h3>FINALIZADAS</h3>
-<div class="numero" id="finalizadaOS">0</div>
-</div>
-
-</div>
-
-
-<div class="painel">
-
-<h2>ÚLTIMAS ORDENS DE SERVIÇO</h2>
-
-<div id="ultimasOrdens">
-
-Carregando...
-
-</div>
-
-</div>
-
-</div>
-
-
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
 <script>
-
-function classeStatus(status) {
-
-    if (status === "Em andamento")
-        return "status-andamento";
-
-    if (status === "Pronta")
-        return "status-pronta";
-
-    if (status === "Finalizada")
-        return "status-finalizada";
-
-    return "";
-
-}
-
-
-async function carregarDashboard() {
-
-    const resposta = await fetch("/ordens");
-
-    const ordens = await resposta.json();
-
-
-    document.getElementById("totalOS").innerText =
-        ordens.length;
-
-
-    document.getElementById("andamentoOS").innerText =
-        ordens.filter(
-            ordem => ordem.status === "Em andamento"
-        ).length;
-
-
-    document.getElementById("prontaOS").innerText =
-        ordens.filter(
-            ordem => ordem.status === "Pronta"
-        ).length;
-
-
-    document.getElementById("finalizadaOS").innerText =
-        ordens.filter(
-            ordem => ordem.status === "Finalizada"
-        ).length;
-
-
-    const lista =
-        document.getElementById("ultimasOrdens");
-
-    lista.innerHTML = "";
-
-
-    const ultimas =
-        ordens.slice(0, 10);
-
-
-    ultimas.forEach(function(ordem) {
-
-        const div =
-            document.createElement("div");
-
-        div.className = "ordem";
-
-        div.innerHTML = `
-            <b>OS #${String(ordem.numero).padStart(5, "0")}</b>
-
-            <span>${ordem.cliente || "-"}</span>
-
-            <span>${ordem.data_entrada}</span>
-
-            <span class="status ${classeStatus(ordem.status)}">
-                ${ordem.status}
-            </span>
-        `;
-
-        lista.appendChild(div);
-
+(function(){
+const S=window.SistemaUtil;
+function classeStatus(s){ if(s==="Em andamento")return"badge-andamento"; if(s==="Pronta")return"badge-pronta"; if(s==="Finalizada")return"badge-finalizada"; return ""; }
+function fmtMoeda(v){ return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v||0)); }
+async function carregarResumoVendas(){
+    const r=await fetch("/api/dashboard/resumo"); const resumo=await r.json();
+    document.getElementById("totalVendas").innerText=resumo.total_vendas||0;
+    document.getElementById("arrecadacaoTotal").innerText=fmtMoeda(resumo.total_arrecadado);
+    document.getElementById("comissaoTotal").innerText=fmtMoeda(resumo.total_comissao);
+    const melhor=resumo.melhor_vendedor;
+    document.getElementById("melhorVendedor").innerText=melhor?melhor.vendedor:"-";
+    document.getElementById("melhorVendedorSub").innerText=melhor?`${melhor.vendas} vendas · ${fmtMoeda(melhor.total_vendas)}`:"";
+    const ranking=document.getElementById("rankingVendedores"); ranking.innerHTML="";
+    if(!resumo.por_vendedor||resumo.por_vendedor.length===0){ ranking.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><h3>Nenhuma venda registrada</h3></div>'; return; }
+    resumo.por_vendedor.slice(0,5).forEach((item,i)=>{
+        const linha=document.createElement("div"); linha.className="ranking-linha";
+        linha.innerHTML=`<div class="ranking-pos">${i+1}</div><div class="ranking-info"><div class="ranking-nome">${item.vendedor}</div><div class="ranking-meta">${item.vendas} vendas · ${fmtMoeda(item.total_comissao)} comissão</div></div><div class="font-bold">${fmtMoeda(item.total_vendas)}</div>`;
+        ranking.appendChild(linha);
     });
-
 }
-
-
-carregarDashboard();
-
+async function carregarDashboard(){
+    const r=await fetch("/ordens"); const ordens=await r.json();
+    document.getElementById("totalOS").innerText=ordens.length;
+    document.getElementById("andamentoOS").innerText=ordens.filter(o=>o.status==="Em andamento").length;
+    document.getElementById("prontaOS").innerText=ordens.filter(o=>o.status==="Pronta").length;
+    document.getElementById("finalizadaOS").innerText=ordens.filter(o=>o.status==="Finalizada").length;
+    const lista=document.getElementById("ultimasOrdens"); lista.innerHTML="";
+    const ultimas=ordens.slice(0,8);
+    if(ultimas.length===0){ lista.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><h3>Nenhuma ordem</h3></div>'; return; }
+    ultimas.forEach(ordem=>{
+        const div=document.createElement("div"); div.className="item-card"; div.style.cursor="pointer";
+        div.onclick=()=>window.location.href="/?consulta=1";
+        div.innerHTML=`<div class="item-info"><div class="item-titulo">OS #${String(ordem.numero).padStart(5,"0")} · ${ordem.cliente||"Sem cliente"}</div><div class="item-sub">${S.formatarDataBrasil(ordem.data_entrada)} · ${ordem.responsavel||"Sem responsável"}</div></div><span class="badge ${classeStatus(ordem.status)}">${ordem.status}</span><div class="item-valor">${S.formatarMoeda(ordem.total)}</div>`;
+        lista.appendChild(div);
+    });
+}
+(async function(){ S.initSidebar(); await carregarDashboard(); await carregarResumoVendas(); })();
+})();
 </script>
-
 </body>
 </html>
