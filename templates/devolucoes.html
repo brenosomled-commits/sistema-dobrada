@@ -224,6 +224,7 @@
             <button type="button" class="btn btn-primary" style="min-width:190px;background:var(--cor-texto);border-color:var(--cor-texto)" onclick="registrarEImprimir()">💾🖨 Salvar e Imprimir</button>
         </div>
     </div>
+<div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
 <div id="areaImpressaoDev"></div>
@@ -545,7 +546,7 @@ function montarNotaDevolucao(dev){
         return `<div class="via-impressao">${etiquetaDev(isSegunda)}
             <div style="display:flex;justify-content:space-between;align-items:center">
                 ${logo}
-                <span><b>NOTA DE DEVOLUÇÃO</b> DEV${String(dev.numero).padStart(4,"0")}</span>
+                <span><b>NOTA DE DEVOLUÇÃO — SEM VALOR FISCAL</b> DEV${String(dev.numero).padStart(4,"0")}</span>
             </div>
             <div class="nota-linha"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
