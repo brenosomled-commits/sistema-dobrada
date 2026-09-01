@@ -143,7 +143,7 @@
         </div>
 
         <div class="card mt-3" id="cardRegistros">
-            <div class="card-header"><h2 class="card-title">Entregas registradas</h2><div style="display:flex;gap:8px"><select id="filtroStatus" class="form-select" style="width:auto;min-height:36px" onchange="filtrar()"><option value="">Todos status</option><option>Pendente</option><option>Em rota</option><option>Entregue</option><option>Falha</option><option>Cancelada</option><option>Reagendada</option></select><button class="btn btn-ghost btn-sm" onclick="carregar()">↻</button></div></div>
+            <div class="card-header"><h2 class="card-title">Entregas registradas</h2><div style="display:flex;gap:8px;align-items:center"><label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="alertaSonoro" checked style="accent-color:var(--cor-primaria)"> 🔔 Alerta</label><select id="filtroStatus" class="form-select" style="width:auto;min-height:36px" onchange="filtrar()"><option value="">Todos status</option><option>Pendente</option><option>Em rota</option><option>Entregue</option><option>Falha</option><option>Cancelada</option><option>Reagendada</option></select><button class="btn btn-ghost btn-sm" onclick="carregar()">↻</button></div></div>
             <div class="campo-busca" style="margin-bottom:12px"><span class="busca-icon">🔍</span><input type="text" class="form-input" id="buscar" placeholder="Buscar cliente, endereço, entregador..." oninput="filtrar()"></div>
             <div id="lista"><div class="empty-state" style="padding:16px"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
         </div>
@@ -155,6 +155,26 @@
 <script>
 const S=window.SistemaUtil; S.initSidebar();
 let listaVendas=[], listaOS=[], entregas=[], rotaAtual=[], editandoId=null;
+let ultimaQtd=-1, ultimoIds=new Set(), audioCtx=null;
+function tocarAlerta(){
+    if(!document.getElementById("alertaSonoro")?.checked) return;
+    try{
+        if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        if(audioCtx.state==="suspended") audioCtx.resume();
+        const beep=(freq,dur,delay)=>{
+            const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+            o.type="sine"; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination);
+            g.gain.setValueAtTime(0.85,audioCtx.currentTime+delay);
+            g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+delay+dur);
+            o.start(audioCtx.currentTime+delay); o.stop(audioCtx.currentTime+delay+dur);
+        };
+        beep(880,0.18,0); beep(1200,0.18,0.2); beep(880,0.35,0.4);
+        if("vibrate" in navigator) navigator.vibrate([180,80,180]);
+    }catch(e){}
+    try{ if("Notification" in window && Notification.permission==="granted"){ new Notification("🚚 Nova entrega",{body:"Nova entrega registrada no sistema"}); } }catch(e){}
+}
+if("Notification" in window && Notification.permission==="default"){ try{ Notification.requestPermission(); }catch(e){} }
+document.addEventListener("click", function primeiraInteracao(){ if(!audioCtx) try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} document.removeEventListener("click", primeiraInteracao); }, {once:true});
 function definirDataHoje(){ const h=new Date(); document.getElementById("dataEntrega").value=h.toISOString().split("T")[0]; document.getElementById("dataRota").value=h.toISOString().split("T")[0]; }
 function trocarModo(modo){
     document.getElementById("modoEntrega").value=modo;
@@ -186,7 +206,7 @@ async function carregarOrigem(){
     }catch(e){}
 }
 function statusBadge(s){ return `<span class="badge-entrega badge-${s}">${s}</span>`; }
-async function carregar(){ try{ const r=await fetch("/api/entregas"); entregas=r.ok?await r.json():[]; filtrar(); carregarRota(); }catch(e){} }
+async function carregar(){ try{ const r=await fetch("/api/entregas"); const lista=r.ok?await r.json():[]; const ids=new Set(lista.map(e=>e.id)); const ehPrimeira=ultimaQtd===-1; const novas=lista.filter(e=>!ultimoIds.has(e.id)); if(!ehPrimeira && novas.length>0){ tocarAlerta(); if(novas.length===1) S.Toast.info("🚚 Nova entrega: "+(novas[0].cliente||"ENT"+String(novas[0].numero).padStart(4,"0"))); else S.Toast.info("🚚 "+novas.length+" novas entregas"); } entregas=lista; ultimaQtd=lista.length; ultimoIds=ids; filtrar(); carregarRota(); }catch(e){} }
 function filtrar(){
     const termo=(document.getElementById("buscar").value||"").toLowerCase().trim(), status=document.getElementById("filtroStatus").value;
     const lista=entregas.filter(e=>{
@@ -289,7 +309,7 @@ function imprimirEntrega(id){
         area.innerHTML=`<div class="pagina-impressao">${viaHTML(false)}${recorte}${viaHTML(true)}</div>`; window.print();
     });
 }
-document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); });
+document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
 </script>
 <script>
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js").catch(()=>{}); }); }
