@@ -406,7 +406,10 @@ async function novaVenda(){
 }
 const LOGO_URL = "{{ url_for('static', filename='logo.png') }}";
 function venc30(dataStr){ if(!dataStr) return '30 DIAS'; const d=new Date(dataStr+'T12:00:00'); d.setDate(d.getDate()+30); const dd=d.toISOString().split('T')[0].split('-'); return dd[2]+'/'+dd[1]+'/'+dd[0]; }
-function gerarCabecalho(){
+function etiquetaVia(isSegunda){
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 8px -2px;padding:4px 10px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>`;
+}
+function gerarCabecalho(isSegunda=false){
     const cliente = document.getElementById("cliente").value;
     const venda = document.getElementById("venda").value;
     const vendedor = document.getElementById("vendedor").value;
@@ -417,7 +420,7 @@ function gerarCabecalho(){
     const vencimento = document.getElementById("vencimento").value || "";
     const condicaoRaw = document.getElementById("condicao").value;
     const tipoEntrega = document.querySelector('input[name="tipoEntrega"]:checked')?.value || "RETIRAR";
-    return `
+    return etiquetaVia(isSegunda) + `
         <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL}" style="height:22px;object-fit:contain" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL</span></div>
         <div style="border-top:1px solid #000;margin:8px 0"></div>
         <div><b>CLIENTE:</b> ${cliente}</div>
@@ -452,7 +455,7 @@ async function prepararImpressao(){
         const grupo = itens.slice(i, i + itensPorVia);
         const pagina = document.createElement("div"); pagina.className = "pagina-impressao";
         const primeiraVia = document.createElement("div"); primeiraVia.className = "via-impressao";
-        primeiraVia.innerHTML = gerarCabecalho();
+        primeiraVia.innerHTML = gerarCabecalho(false);
         grupo.forEach(item => { primeiraVia.innerHTML += gerarLinhaProduto(item); });
         if(i + itensPorVia >= itens.length) primeiraVia.innerHTML += gerarResumo();
         primeiraVia.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
@@ -461,10 +464,14 @@ async function prepararImpressao(){
             const assinaturaHTML = `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700;letter-spacing:.04em">ASSINATURA DO CLIENTE — VENDA A PRAZO</div>${document.getElementById("vencimento").value ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
             primeiraVia.innerHTML += assinaturaHTML;
         }
-        const segundaVia = primeiraVia.cloneNode(true); segundaVia.className = "via-impressao";
-        // garante que a segunda via também tem assinatura mesmo se clone já tinha, reforça
-        if(condicaoAtual === "aprazo" && !segundaVia.innerHTML.includes('ASSINATURA DO CLIENTE')){
-            segundaVia.innerHTML += `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">ASSINATURA DO CLIENTE — VIA DA LOJA</div></div>`;
+        const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
+        segundaVia.innerHTML = gerarCabecalho(true);
+        grupo.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
+        if(i + itensPorVia >= itens.length) segundaVia.innerHTML += gerarResumo();
+        segundaVia.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+        if(condicaoAtual === "aprazo"){
+            const assinaturaHTML2 = `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700;letter-spacing:.04em">ASSINATURA DO CLIENTE — VIA DA LOJA — VENDA A PRAZO</div>${document.getElementById("vencimento").value ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+            segundaVia.innerHTML += assinaturaHTML2;
         }
         pagina.appendChild(primeiraVia);
         pagina.appendChild(recorteVia());
@@ -476,9 +483,8 @@ async function prepararImpressao(){
 
 function recorteVia(){
     const el=document.createElement('div');
-    el.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0;';
-    el.innerHTML='<div style="flex:1;border-top:2px dashed #4b5563"></div><span style="font-size:9px;font-weight:700;color:#374151;letter-spacing:.08em;text-transform:uppercase">Recorte — Via do Cliente / Via da Loja</span><div style="flex:1;border-top:2px dashed #4b5563"></div>';
-    el.style.cssText+=';page-break-inside:avoid;';
+    el.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:7px 0;page-break-inside:avoid;';
+    el.innerHTML='<div style="flex:1;border-top:2px dashed #111827"></div><span style="display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;color:#111827;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap"><span style="font-size:13px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:2px dashed #111827"></div>';
     return el;
 }
 async function carregarVendedores(){
@@ -510,7 +516,7 @@ async function reimprimirDobrada(id){
         const area=document.getElementById('areaImpressao'); area.innerHTML='';
         const pagina=document.createElement('div'); pagina.className='pagina-impressao';
         function viaHTML(isSegunda){
-            let h=`<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL}" style="height:20px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtVenda(v.numero)}</span></div><div style="border-top:1px solid #000;margin:8px 0"></div><div><b>CLIENTE:</b> ${v.cliente||''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${fmtVenda(v.numero)}</div><div><b>VENDEDOR:</b> ${v.vendedor||''}</div><div><b>DATA:</b> ${(v.data||'').split('-').reverse().join('/')}</div><div><b>CONDIÇÃO:</b> ${(v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'').toUpperCase())}</b>${v.condicao==='aprazo' && v.vencimento ? ' · VENC: '+v.vencimento.split('-').reverse().join('/') : ''}</div></div><div style="border-top:1px solid #000;margin:8px 0"></div><div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR</span><span>SUBTOTAL</span></div>`;
+            let h=`<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL}" style="height:20px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtVenda(v.numero)}</span></div><div style="border-top:1px solid #000;margin:8px 0"></div><div><b>CLIENTE:</b> ${v.cliente||''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${fmtVenda(v.numero)}</div><div><b>VENDEDOR:</b> ${v.vendedor||''}</div><div><b>DATA:</b> ${(v.data||'').split('-').reverse().join('/')}</div><div><b>CONDIÇÃO:</b> ${(v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'').toUpperCase())}</b>${v.condicao==='aprazo' && v.vencimento ? ' · VENC: '+v.vencimento.split('-').reverse().join('/') : ''}</div></div><div style="border-top:1px solid #000;margin:8px 0"></div><div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR</span><span>SUBTOTAL</span></div>`;
             (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); h+=`<div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;padding:4px 0;border-bottom:1px solid #e8edf2"><span>${it.quantidade}</span><span>${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
             h+=`<div style="width:68mm;margin-left:auto;margin-top:auto;padding-top:10px;text-align:right"><div style="display:flex;justify-content:space-between"><b>TOTAL:</b><span>R$ ${Number(v.total).toFixed(2).replace('.',',')}</span></div><div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:6px"><b>TOTAL FINAL:</b><b>R$ ${Number(v.total).toFixed(2).replace('.',',')}</b></div></div>`;
             if(v.condicao==='aprazo'){

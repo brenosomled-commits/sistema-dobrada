@@ -199,6 +199,7 @@ async function imprimirVenda(id){
         const pagina=document.createElement('div'); pagina.style.cssText='width:200mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
         function viaHTML(isSegunda){
             let html=`<div style="width:190mm;min-height:142mm;padding:2mm 4mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:13px;page-break-inside:avoid;box-sizing:border-box">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>
                 <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL_ACOMP}" style="height:22px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtNum("VENDA",v.numero)}</span></div>
                 <div style="border-top:1px solid #000;margin:8px 0"></div>
                 <div><b>CLIENTE:</b> ${v.cliente||''}</div>
@@ -214,8 +215,8 @@ async function imprimirVenda(id){
         const via1=document.createElement('div'); via1.innerHTML=viaHTML(false); via1.firstElementChild.style.margin='0 auto 0';
         const via2=document.createElement('div'); via2.innerHTML=viaHTML(true);
         const recorte=document.createElement('div');
-        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0;page-break-inside:avoid;';
-        recorte.innerHTML='<div style="flex:1;border-top:2px dashed #4b5563"></div><span style="font-size:9px;font-weight:700;color:#374151;letter-spacing:.08em;text-transform:uppercase">Recorte — Via do Cliente / Via da Loja</span><div style="flex:1;border-top:2px dashed #4b5563"></div>';
+        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:7px 0;page-break-inside:avoid;';
+        recorte.innerHTML='<div style="flex:1;border-top:2px dashed #111827"></div><span style="display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;color:#111827;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap"><span style="font-size:13px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:2px dashed #111827"></div>';
         pagina.appendChild(via1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(via2.firstElementChild);
         area.appendChild(pagina); area.style.display='block'; window.print();
         setTimeout(()=> area.style.display='none', 500);
