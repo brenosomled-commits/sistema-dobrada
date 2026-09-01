@@ -221,6 +221,7 @@
         <div class="area-acoes">
             <button type="button" class="btn btn-outline" onclick="limparFormulario()">Limpar</button>
             <button type="button" class="btn btn-danger" style="min-width:180px" id="btnSalvarDevolucao" onclick="registrarDevolucao()">↩️ Registrar devolução</button>
+            <button type="button" class="btn btn-primary" style="min-width:190px;background:var(--cor-texto);border-color:var(--cor-texto)" onclick="registrarEImprimir()">💾🖨 Salvar e Imprimir</button>
         </div>
     </div>
 </main>
@@ -455,6 +456,33 @@ async function registrarDevolucao(){
     }finally{
         S.esconderLoading();
     }
+}
+async function registrarEImprimir(){
+    const modo = document.getElementById("modoDevolucao").value;
+    const motivo = document.getElementById("motivo").value;
+    const vendaId = document.getElementById("vendaSelect").value;
+    if(modo==="vinculada" && !vendaId){ S.Toast.erro("Selecione a venda original."); return; }
+    if(modo==="avulsa" && !document.getElementById("vendedorAvulso").value){ S.Toast.erro("Selecione o vendedor responsável."); return; }
+    if(!motivo){ S.Toast.erro("Informe o motivo da devolução."); return; }
+    const itens = [];
+    document.querySelectorAll(".nota-item-editor").forEach(item=>{
+        const sel = item.querySelector(".selecionar");
+        if(sel && !sel.checked) return;
+        const descricao = item.querySelector(".descricao").value.trim();
+        if(descricao) itens.push({ descricao, quantidade: Number(item.querySelector(".quantidade").value)||1, valor: Number(item.querySelector(".valor").value)||0 });
+    });
+    if(itens.length===0){ S.Toast.erro("Selecione pelo menos um item para devolver."); return; }
+    const dados={ venda_id: modo==="vinculada" && vendaId ? Number(vendaId) : null, motivo, observacao: document.getElementById("observacao").value.trim(), data: document.getElementById("data").value||undefined, vendedor: modo==="avulsa" ? document.getElementById("vendedorAvulso").value : undefined, itens };
+    const editando=editandoId!==null, url=editando?"/api/devolucoes/"+editandoId:"/api/devolucoes", metodo=editando?"PUT":"POST";
+    S.mostrarLoading("Salvando e imprimindo...");
+    try{
+        const r=await fetch(url,{method:metodo,headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
+        const res=await r.json(); if(!r.ok) throw new Error(res.erro||"Erro");
+        S.Toast.sucesso(res.mensagem||"Devolução salva!");
+        const idImp = editando ? editandoId : res.id;
+        limparFormulario(); await carregarDevolucoes();
+        if(idImp) setTimeout(()=> abrirNotaDevolucao(idImp), 600);
+    }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
 }
 
 async function carregarDevolucoes(){

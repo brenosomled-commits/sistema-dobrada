@@ -138,6 +138,7 @@
         <div class="area-acoes" style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap">
             <button type="button" class="btn btn-outline" onclick="limpar()">Limpar</button>
             <button type="button" class="btn btn-primary" style="min-width:180px" id="btnSalvar" onclick="salvar()">💾 Salvar entrega</button>
+            <button type="button" class="btn btn-primary" style="min-width:190px;background:var(--cor-texto);border-color:var(--cor-texto)" onclick="salvarEImprimir()">💾🖨 Salvar e Imprimir</button>
         </div>
 
         <div class="card mt-3">
@@ -247,6 +248,27 @@ async function salvar(){
     S.mostrarLoading(editandoId?"Atualizando...":"Salvando...");
     try{ const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)}); const j=await r.json(); if(!r.ok) throw new Error(j.erro); S.Toast.sucesso(j.mensagem); limpar(); carregar(); }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
 }
+async function salvarEImprimir(){
+    const modo=document.getElementById("modoEntrega").value;
+    const tipo=document.getElementById("tipoOrigem").value, origemId=document.getElementById("origemSelect").value;
+    if(modo==="vinculada" && !origemId){ S.Toast.erro("Selecione a origem vinculada."); return; }
+    const cliente=document.getElementById("cliente").value.trim(), endereco=document.getElementById("endereco").value.trim();
+    if(!cliente){ S.Toast.erro("Informe o cliente."); return; }
+    if(!endereco){ S.Toast.erro("Informe o endereço."); return; }
+    if(!document.getElementById("entregador").value){ S.Toast.erro("Selecione o entregador."); return; }
+    if(!document.getElementById("dataEntrega").value){ S.Toast.erro("Informe a data da entrega."); return; }
+    const dados={ cliente, telefone:document.getElementById("telefone").value.trim(), endereco, bairro:document.getElementById("bairro").value.trim(), entregador:document.getElementById("entregador").value, data_entrega:document.getElementById("dataEntrega").value, horario:document.getElementById("horario").value.trim(), taxa:Number(document.getElementById("taxa").value)||0, status:document.getElementById("status").value, observacao:document.getElementById("observacao").value.trim(), comprovante:document.getElementById("comprovante").value.trim(), venda_id: modo==="vinculada"&&tipo==="venda"?Number(origemId):null, ordem_id: modo==="vinculada"&&tipo==="os"?Number(origemId):null };
+    const url=editandoId?"/api/entregas/"+editandoId:"/api/entregas", method=editandoId?"PUT":"POST";
+    S.mostrarLoading("Salvando e imprimindo...");
+    try{
+        const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
+        const j=await r.json(); if(!r.ok) throw new Error(j.erro);
+        S.Toast.sucesso(j.mensagem);
+        const idParaImprimir = editandoId || j.id;
+        limpar(); await carregar();
+        if(idParaImprimir) setTimeout(()=> imprimirEntrega(idParaImprimir), 600);
+    }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
+}
 async function editarEntrega(id){
     try{ const r=await fetch("/api/entregas/"+id); const e=await r.json(); if(!r.ok) throw new Error(e.erro); editandoId=id;
         if(e.venda_id){ trocarModo("vinculada"); document.getElementById("tipoOrigem").value="venda"; await carregarOrigens(); document.getElementById("origemSelect").value=String(e.venda_id); document.getElementById("origemCard").style.display="block"; } else if(e.ordem_id){ trocarModo("vinculada"); document.getElementById("tipoOrigem").value="os"; await carregarOrigens(); document.getElementById("origemSelect").value=String(e.ordem_id); document.getElementById("origemCard").style.display="block"; } else trocarModo("avulsa");
@@ -282,33 +304,34 @@ function imprimirEntrega(id){
     fetch("/api/entregas/"+id).then(r=>r.json()).then(e=>{
         const area=document.getElementById("areaImpressaoEntrega");
         const dataHora = (e.data_entrega ? e.data_entrega.split("-").reverse().join("/") : "") + (e.horario ? " " + e.horario : (e.criacao ? " " + e.criacao.split(" ")[1] : ""));
-        function viaZebra(){
+                function viaZebra(){
             const taxaFmt = "R$ " + Number(e.taxa||0).toFixed(2).replace(".",",");
-            const qrUrl = window.location.origin + "/m/entrega/" + e.id;
+            // Estrutura conforme cupom termico 80mm - largura util 72-76mm, altura auto
             return `<div class="via-impressao" style="color:#000;font-family:Arial,Helvetica,sans-serif">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;border-bottom:1.5px solid #000;padding-bottom:4px;margin-bottom:4px">
-                    <div style="text-align:center;flex:1">
-                        <div style="font-weight:900;font-size:11pt;letter-spacing:.02em">NOTA DE ENTREGA</div>
-                        <div style="font-weight:800;font-size:10pt;margin-top:1px">ENT${String(e.numero).padStart(4,"0")}</div>
-                        <div style="font-size:6.5pt;margin-top:1px">${dataHora.trim()||"-"} — ${e.status||""}</div>
+                <div style="text-align:center;padding-bottom:4px;border-bottom:1px solid #000;margin-bottom:4px">
+                    <div style="font-weight:900;font-size:11pt;letter-spacing:.03em">SOMLED</div>
+                    <div style="font-size:7pt;letter-spacing:.08em">NOTA DE ENTREGA</div>
+                    <div style="margin-top:3px;display:inline-block;border:1px solid #000;padding:2px 8px;font-weight:800;font-size:10pt">ENT${String(e.numero).padStart(4,"0")}</div>
+                    <div style="font-size:6.5pt;margin-top:2px">${dataHora.trim()||"-"}</div>
+                </div>
+                <div style="font-size:7pt;line-height:1.45">
+                    <div><span style="font-weight:700">CLIENTE:</span> ${e.cliente||"-"}</div>
+                    <div><span style="font-weight:700">TELEFONE:</span> ${e.telefone||"-"}</div>
+                    <div><span style="font-weight:700">ENDEREÇO:</span> ${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</div>
+                    <div><span style="font-weight:700">ENTREGADOR:</span> ${e.entregador||"-"}</div>
+                    <div style="display:flex;gap:10px"><span><span style="font-weight:700">TAXA:</span> ${taxaFmt}</span><span><span style="font-weight:700">STATUS:</span> ${e.status||""}</span></div>
+                </div>
+                ${e.observacao ? `<div style="margin-top:4px;padding:3px 4px;border:1px solid #000;background:#fff;font-size:7pt"><span style="font-weight:800">OBSERVAÇÕES:</span> ${e.observacao}</div>` : ""}
+                <div style="margin-top:5px;border:1px solid #000">
+                    <div style="display:grid;grid-template-columns:12mm 1fr;background:#fff;color:#000;font-weight:700;font-size:7pt;text-align:center;border-bottom:1px solid #000"><span style="padding:3px 2px;border-right:1px solid #000">QTD.</span><span style="padding:3px 2px">PRODUTO / DESCRIÇÃO</span></div>
+                    <div style="min-height:28mm">
+                        ${(e.itens && e.itens.length ? e.itens : Array(5).fill(0).map(()=>({quantidade:"", descricao:""}))).slice(0,12).map(it=>`<div style="display:grid;grid-template-columns:12mm 1fr;min-height:7mm;border-bottom:1px dotted #999;font-size:7pt;align-items:center"><span style="text-align:center;border-right:1px dotted #999;padding:2px">${it.quantidade||""}</span><span style="padding:2px 4px">${it.descricao||""}</span></div>`).join("")}
                     </div>
-                    <div style="width:22mm;height:22mm;border:1px solid #000;padding:1px;background:#fff;flex-shrink:0"><div id="qr-entrega" style="width:20mm;height:20mm"></div></div>
                 </div>
-                <div style="font-size:6pt;text-align:center;margin-bottom:3px;letter-spacing:.04em">Bipe o QR para atualizar o status</div>
-                <div style="font-size:7pt;line-height:1.35">
-                    <div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">CLIENTE:</span><span style="flex:1">${e.cliente||""}${e.telefone ? " — " + e.telefone : ""}</span></div>
-                    <div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">ENDEREÇO:</span><span style="flex:1">${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</span></div>
-                    <div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">ENTREGADOR:</span><span style="flex:1">${e.entregador||"-"}</span></div>
-                    <div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">TAXA:</span><span>${taxaFmt}</span><span style="margin-left:auto;font-weight:700">STATUS:</span><span>${e.status||""}</span></div>
-                    ${e.observacao ? `<div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">OBS.:</span><span style="flex:1">${e.observacao}</span></div>` : ""}
-                    ${e.comprovante ? `<div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">COMPROV.:</span><span style="flex:1">${e.comprovante}</span></div>` : ""}
-                </div>
-                <div style="margin-top:4px;border:1px solid #000">
-                    <div style="display:grid;grid-template-columns:12mm 1fr 20mm;background:#000;color:#fff;font-weight:700;font-size:6.5pt;text-align:center"><span style="padding:3px 2px;border-right:1px solid #fff">QTD</span><span style="padding:3px 2px;border-right:1px solid #fff">DESCRIÇÃO</span><span style="padding:3px 2px">OBS</span></div>
-                    ${[0,1,2,3,4].map(()=>`<div style="display:grid;grid-template-columns:12mm 1fr 20mm;min-height:6.5mm;border-bottom:1px dashed #000"><span style="border-right:1px dashed #000"></span><span style="border-right:1px dashed #000"></span><span></span></div>`).join("")}
-                </div>
-                <div style="margin-top:6px;text-align:center"><div style="border-top:1px solid #000;width:58mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt">Recebi os produtos em perfeitas condições.</div></div>
-                <div style="margin-top:3px;text-align:center;font-size:5pt;color:#000;border-top:1px dashed #000;padding-top:2px;word-break:break-all">${qrUrl}</div>
+                <div style="margin-top:4px;font-size:7pt"><span style="font-weight:700">COMPROVANTE:</span> ${e.comprovante||"—"}</div>
+                <div style="margin-top:8px;text-align:center"><div style="border-top:1px solid #000;width:62mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;margin-top:1px">RECEBI OS PRODUTOS EM PERFEITAS CONDIÇÕES.</div></div>
+                <div style="margin-top:6px;display:flex;justify-content:center"><div id="qr-entrega" style="width:22mm;height:22mm;border:1px solid #000;padding:1px;background:#fff"></div></div>
+                <div style="font-size:5pt;text-align:center;margin-top:1px;word-break:break-all">${window.location.origin}/m/entrega/${e.id}</div>
             </div>`;
         }
         area.innerHTML=`<div class="pagina-impressao">${viaZebra()}</div>`;

@@ -230,6 +230,60 @@
         });
     }
 
+    // ===================== NOTIFICAÇÃO GLOBAL DE ENTREGAS (todas as máquinas + PWA) =====================
+
+    (function(){
+        if(window.location.pathname==="/entregas") return;
+        let primeiro=true;
+        let ultimoIds=new Set(JSON.parse(localStorage.getItem("entregas_ids")||"[]"));
+        let audioCtx=null;
+        function beepGlobal(){
+            try{
+                if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+                if(audioCtx.state==="suspended") audioCtx.resume();
+                const beep=(f,d,dl)=>{
+                    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+                    o.type="sine"; o.frequency.value=f; o.connect(g); g.connect(audioCtx.destination);
+                    g.gain.setValueAtTime(0.85,audioCtx.currentTime+dl);
+                    g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+dl+d);
+                    o.start(audioCtx.currentTime+dl); o.stop(audioCtx.currentTime+dl+d);
+                };
+                beep(880,0.18,0); beep(1200,0.18,0.2); beep(880,0.35,0.4);
+                if("vibrate" in navigator) navigator.vibrate([180,80,180]);
+            }catch(e){}
+            try{
+                const txt="Nova entrega"; 
+                if("speechSynthesis" in window){ const u=new SpeechSynthesisUtterance(txt); u.lang="pt-BR"; u.rate=1; speechSynthesis.cancel(); speechSynthesis.speak(u); }
+            }catch(e){}
+            try{ if("Notification" in window && Notification.permission==="granted"){ new Notification("🚚 Nova entrega",{body:"Nova entrega registrada — verifique em Entregas"}); } }catch(e){}
+        }
+        if("Notification" in window && Notification.permission==="default"){ try{ Notification.requestPermission(); }catch(e){} }
+        document.addEventListener("click", function prim(){ if(!audioCtx) try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} document.removeEventListener("click", prim); }, {once:true});
+        async function verificar(){
+            try{
+                const r=await fetch("/api/entregas",{credentials:"same-origin"});
+                if(!r.ok) return;
+                const ct=r.headers.get("content-type")||"";
+                if(!ct.includes("application/json")) return;
+                const lista=await r.json();
+                if(!Array.isArray(lista)) return;
+                const ids=new Set(lista.map(e=>e.id));
+                if(primeiro){ ultimoIds=ids; localStorage.setItem("entregas_ids", JSON.stringify([...ids])); primeiro=false; return; }
+                const novas=lista.filter(e=>!ultimoIds.has(e.id));
+                if(novas.length>0){
+                    beepGlobal();
+                    const msg=novas.length===1 ? "🚚 Nova entrega: "+(novas[0].cliente||"ENT"+String(novas[0].numero).padStart(4,"0")) : "🚚 "+novas.length+" novas entregas";
+                    Toast.info(msg, 6000);
+                }
+                ultimoIds=ids;
+                localStorage.setItem("entregas_ids", JSON.stringify([...ids]));
+            }catch(e){}
+        }
+        setTimeout(verificar, 4000);
+        setInterval(verificar, 15000);
+        window.addEventListener("storage", function(e){ if(e.key==="entregas_ids") try{ ultimoIds=new Set(JSON.parse(e.newValue||"[]")); }catch(_){} });
+    })();
+
     // ===================== EXPORTAÇÕES =====================
 
     window.SistemaUtil = {

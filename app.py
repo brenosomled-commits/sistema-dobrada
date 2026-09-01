@@ -759,7 +759,7 @@ def _criar_banco_postgres():
     """)
 
     cursor.execute(
-        "UPDATE vendas SET comissao = ROUND(CAST(COALESCE(total, 0) * %s AS numeric), 2)",
+        "UPDATE vendas SET comissao = ROUND(CAST(COALESCE(total, 0) * %s / 100 AS numeric), 2)",
         (COMISSAO_PERCENTUAL,)
     )
 
