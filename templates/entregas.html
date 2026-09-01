@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <title>Entregas</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 .nota-wrap{ max-width:960px; margin:0 auto; }
 .nota-via{ background:var(--cor-painel); border:1px solid var(--cor-borda); border-radius:16px; box-shadow:var(--sombra); overflow:hidden; }
@@ -32,6 +33,7 @@
 .badge-entrega{ padding:3px 10px; border-radius:999px; font-weight:800; font-size:.70rem; letter-spacing:.05em; text-transform:uppercase; }
 .badge-Pendente{ background:#fef3c7; color:#92400e; }
 .badge-Em\ rota{ background:#dbeafe; color:#1e40af; }
+.badge-SAIU\ PARA\ ROTA{ background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
 .badge-Entregue{ background:#d1fae5; color:#065f46; }
 .badge-Falha{ background:#fee2e2; color:#991b1b; }
 .badge-Cancelada{ background:#f3f4f6; color:#6b7280; text-decoration:line-through; }
@@ -126,7 +128,7 @@
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
                     <div class="campo-nota"><label for="taxa">Taxa (R$)</label><input type="number" id="taxa" min="0" step="0.01" placeholder="0,00"></div>
-                    <div class="campo-nota"><label for="status">Status</label><select id="status"><option value="Pendente">Pendente</option><option value="Em rota">Em rota</option><option value="Entregue">Entregue</option><option value="Falha">Falha</option><option value="Cancelada">Cancelada</option><option value="Reagendada">Reagendada</option></select></div>
+                    <div class="campo-nota"><label for="status">Status</label><select id="status"><option value="Pendente">Pendente</option><option value="SAIU PARA ROTA">SAIU PARA ROTA</option><option value="Em rota">Em rota</option><option value="Entregue">Entregue</option><option value="Falha">Falha</option><option value="Cancelada">Cancelada</option><option value="Reagendada">Reagendada</option></select></div>
                     <div class="campo-nota"><label for="comprovante">Comprovante</label><input type="text" id="comprovante" placeholder="Assinatura / código"></div>
                 </div>
                 <div class="campo-nota" style="margin-top:12px"><label for="observacao">Observação</label><textarea id="observacao" placeholder="Ponto de referência, instruções..."></textarea></div>
@@ -144,7 +146,7 @@
         </div>
 
         <div class="card mt-3" id="cardRegistros">
-            <div class="card-header"><h2 class="card-title">Entregas registradas</h2><div style="display:flex;gap:8px;align-items:center"><label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="alertaSonoro" checked style="accent-color:var(--cor-primaria)"> 🔔 Alerta</label><select id="filtroStatus" class="form-select" style="width:auto;min-height:36px" onchange="filtrar()"><option value="">Todos status</option><option>Pendente</option><option>Em rota</option><option>Entregue</option><option>Falha</option><option>Cancelada</option><option>Reagendada</option></select><button class="btn btn-ghost btn-sm" onclick="carregar()">↻</button></div></div>
+            <div class="card-header"><h2 class="card-title">Entregas registradas</h2><div style="display:flex;gap:8px;align-items:center"><label style="display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer"><input type="checkbox" id="alertaSonoro" checked style="accent-color:var(--cor-primaria)"> 🔔 Alerta</label><select id="filtroStatus" class="form-select" style="width:auto;min-height:36px" onchange="filtrar()"><option value="">Todos status</option><option>Pendente</option><option>SAIU PARA ROTA</option><option>Em rota</option><option>Entregue</option><option>Falha</option><option>Cancelada</option><option>Reagendada</option></select><button class="btn btn-ghost btn-sm" onclick="carregar()">↻</button></div></div>
             <div class="campo-busca" style="margin-bottom:12px"><span class="busca-icon">🔍</span><input type="text" class="form-input" id="buscar" placeholder="Buscar cliente, endereço, entregador..." oninput="filtrar()"></div>
             <div id="lista"><div class="empty-state" style="padding:16px"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
         </div>
@@ -228,7 +230,7 @@ function filtrar(){
     cont.innerHTML="";
     lista.forEach(e=>{
         const div=document.createElement("div"); div.className="entrega-card";
-        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-outline btn-sm" onclick="imprimirEntrega(${e.id})">🖨</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
+        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="SAIU PARA ROTA"?"selected":""}>SAIU PARA ROTA</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-outline btn-sm" onclick="imprimirEntrega(${e.id})">🖨</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
         cont.appendChild(div);
     });
 }
@@ -282,13 +284,18 @@ function imprimirEntrega(id){
         const dataHora = (e.data_entrega ? e.data_entrega.split("-").reverse().join("/") : "") + (e.horario ? " " + e.horario : (e.criacao ? " " + e.criacao.split(" ")[1] : ""));
         function viaZebra(){
             const taxaFmt = "R$ " + Number(e.taxa||0).toFixed(2).replace(".",",");
+            const qrUrl = window.location.origin + "/m/entrega/" + e.id;
             return `<div class="via-impressao" style="color:#000;font-family:Arial,Helvetica,sans-serif">
-                <div style="text-align:center;border-bottom:1.5px solid #000;padding-bottom:4px;margin-bottom:4px">
-                    <div style="font-weight:900;font-size:12pt;letter-spacing:.02em">NOTA DE ENTREGA</div>
-                    <div style="font-weight:800;font-size:11pt;margin-top:1px">ENT${String(e.numero).padStart(4,"0")}</div>
-                    <div style="font-size:7pt;margin-top:1px">${dataHora.trim()||"-"} — ${e.status||""}</div>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;border-bottom:1.5px solid #000;padding-bottom:4px;margin-bottom:4px">
+                    <div style="text-align:center;flex:1">
+                        <div style="font-weight:900;font-size:11pt;letter-spacing:.02em">NOTA DE ENTREGA</div>
+                        <div style="font-weight:800;font-size:10pt;margin-top:1px">ENT${String(e.numero).padStart(4,"0")}</div>
+                        <div style="font-size:6.5pt;margin-top:1px">${dataHora.trim()||"-"} — ${e.status||""}</div>
+                    </div>
+                    <div style="width:22mm;height:22mm;border:1px solid #000;padding:1px;background:#fff;flex-shrink:0"><div id="qr-entrega" style="width:20mm;height:20mm"></div></div>
                 </div>
-                <div style="font-size:7.5pt;line-height:1.35">
+                <div style="font-size:6pt;text-align:center;margin-bottom:3px;letter-spacing:.04em">Bipe o QR para atualizar o status</div>
+                <div style="font-size:7pt;line-height:1.35">
                     <div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">CLIENTE:</span><span style="flex:1">${e.cliente||""}${e.telefone ? " — " + e.telefone : ""}</span></div>
                     <div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">ENDEREÇO:</span><span style="flex:1">${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</span></div>
                     <div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">ENTREGADOR:</span><span style="flex:1">${e.entregador||"-"}</span></div>
@@ -296,15 +303,26 @@ function imprimirEntrega(id){
                     ${e.observacao ? `<div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">OBS.:</span><span style="flex:1">${e.observacao}</span></div>` : ""}
                     ${e.comprovante ? `<div style="display:flex;gap:6px"><span style="font-weight:700;min-width:18mm">COMPROV.:</span><span style="flex:1">${e.comprovante}</span></div>` : ""}
                 </div>
-                <div style="margin-top:5px;border:1px solid #000">
-                    <div style="display:grid;grid-template-columns:12mm 1fr 20mm;background:#000;color:#fff;font-weight:700;font-size:7pt;text-align:center"><span style="padding:3px 2px;border-right:1px solid #fff">QTD</span><span style="padding:3px 2px;border-right:1px solid #fff">DESCRIÇÃO</span><span style="padding:3px 2px">OBS</span></div>
-                    ${[0,1,2,3,4].map(()=>`<div style="display:grid;grid-template-columns:12mm 1fr 20mm;min-height:7mm;border-bottom:1px dashed #000"><span style="border-right:1px dashed #000"></span><span style="border-right:1px dashed #000"></span><span></span></div>`).join("")}
+                <div style="margin-top:4px;border:1px solid #000">
+                    <div style="display:grid;grid-template-columns:12mm 1fr 20mm;background:#000;color:#fff;font-weight:700;font-size:6.5pt;text-align:center"><span style="padding:3px 2px;border-right:1px solid #fff">QTD</span><span style="padding:3px 2px;border-right:1px solid #fff">DESCRIÇÃO</span><span style="padding:3px 2px">OBS</span></div>
+                    ${[0,1,2,3,4].map(()=>`<div style="display:grid;grid-template-columns:12mm 1fr 20mm;min-height:6.5mm;border-bottom:1px dashed #000"><span style="border-right:1px dashed #000"></span><span style="border-right:1px dashed #000"></span><span></span></div>`).join("")}
                 </div>
-                <div style="margin-top:8px;text-align:center"><div style="border-top:1px solid #000;width:58mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt">Recebi os produtos em perfeitas condições.</div></div>
-                <div style="margin-top:4px;text-align:center;font-size:5.5pt;color:#000;border-top:1px dashed #000;padding-top:2px">ELGIN i9 — 80mm — ${e.cliente||""} — ENT${String(e.numero).padStart(4,"0")}</div>
+                <div style="margin-top:6px;text-align:center"><div style="border-top:1px solid #000;width:58mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt">Recebi os produtos em perfeitas condições.</div></div>
+                <div style="margin-top:3px;text-align:center;font-size:5pt;color:#000;border-top:1px dashed #000;padding-top:2px;word-break:break-all">${qrUrl}</div>
             </div>`;
         }
-        area.innerHTML=`<div class="pagina-impressao">${viaZebra()}</div>`; window.print();
+        area.innerHTML=`<div class="pagina-impressao">${viaZebra()}</div>`;
+        setTimeout(()=>{
+            const qrEl=document.getElementById("qr-entrega");
+            if(qrEl && window.QRCode){
+                qrEl.innerHTML="";
+                new QRCode(qrEl, {text: window.location.origin + "/m/entrega/" + e.id, width: 76, height: 76, correctLevel: QRCode.CorrectLevel.M});
+                // ajustar canvas/img para 20mm
+                const c=qrEl.querySelector("canvas, img");
+                if(c){ c.style.width="20mm"; c.style.height="20mm"; }
+            }
+            window.print();
+        }, 350);
     });
 }
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });

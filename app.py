@@ -529,6 +529,33 @@ def _criar_banco_sqlite():
     if not cursor.fetchone():
         cursor.execute("INSERT INTO controle_entregas (id, ultimo_numero) VALUES (1, 0)")
 
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN qr_token TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN data_saida TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN data_entregue TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS entrega_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entrega_id INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            data_hora TEXT NOT NULL,
+            usuario TEXT,
+            FOREIGN KEY (entrega_id) REFERENCES entregas(id)
+        )
+    """)
+
     # Índices mantêm as telas de triagem e acompanhamento rápidas quando a
     # base crescer.
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_ordens_numero ON ordens(numero DESC)")
@@ -816,6 +843,29 @@ def _criar_banco_postgres():
     cursor.execute("SELECT id FROM controle_entregas WHERE id = 1")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO controle_entregas (id, ultimo_numero) VALUES (%s, %s)", (1, 0))
+
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS qr_token TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS data_saida TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS data_entregue TEXT")
+    except Exception:
+        pass
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS entrega_historico (
+            id SERIAL PRIMARY KEY,
+            entrega_id INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            data_hora TEXT NOT NULL,
+            usuario TEXT,
+            FOREIGN KEY (entrega_id) REFERENCES entregas(id)
+        )
+    """)
 
     # Índices
     try:
@@ -1403,6 +1453,10 @@ def salvar_os():
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
+    if not str(dados.get("cliente", "")).strip():
+        return jsonify({"erro": "Informe o cliente da OS."}), 400
+    if not str(dados.get("responsavel", "")).strip():
+        return jsonify({"erro": "Selecione o responsável."}), 400
     if not str(dados.get("data_entrada", "")).strip() or not str(dados.get("problema", "")).strip():
         return jsonify({"erro": "Data de entrada e problema são obrigatórios."}), 400
     itens, erro = validar_itens(dados.get("itens"), "nome")
@@ -1598,8 +1652,12 @@ def atualizar_os(id):
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
-    if not str(dados.get("problema", "")).strip():
-        return jsonify({"erro": "Problema é obrigatório."}), 400
+    if not str(dados.get("cliente", "")).strip():
+        return jsonify({"erro": "Informe o cliente da OS."}), 400
+    if not str(dados.get("responsavel", "")).strip():
+        return jsonify({"erro": "Selecione o responsável."}), 400
+    if not str(dados.get("data_entrada", "")).strip() or not str(dados.get("problema", "")).strip():
+        return jsonify({"erro": "Data de entrada e problema são obrigatórios."}), 400
     itens, erro = validar_itens(dados.get("itens"), "nome")
     if erro:
         return jsonify({"erro": erro}), 400
@@ -1811,9 +1869,21 @@ def salvar_venda():
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
+    if not str(dados.get("vendedor", "")).strip():
+        return jsonify({"erro": "Selecione o vendedor."}), 400
+    if not str(dados.get("data", "")).strip():
+        return jsonify({"erro": "Informe a data da venda."}), 400
+    if not str(dados.get("condicao", "")).strip():
+        return jsonify({"erro": "Selecione a condição de pagamento."}), 400
+    if str(dados.get("condicao", "")).strip()=="aprazo" and not str(dados.get("vencimento", "")).strip():
+        return jsonify({"erro": "Informe o vencimento para vendas a prazo."}), 400
+    if not str(dados.get("cliente", "")).strip():
+        return jsonify({"erro": "Informe o cliente."}), 400
     itens, erro = validar_itens(dados.get("itens", []), "descricao")
     if erro:
         return jsonify({"erro": erro}), 400
+    if not itens:
+        return jsonify({"erro": "Adicione pelo menos um produto."}), 400
     try:
         desconto = float(dados.get("desconto", 0))
     except (TypeError, ValueError):
@@ -2146,9 +2216,21 @@ def atualizar_venda(id):
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
+    if not str(dados.get("vendedor", "")).strip():
+        return jsonify({"erro": "Selecione o vendedor."}), 400
+    if not str(dados.get("data", "")).strip():
+        return jsonify({"erro": "Informe a data da venda."}), 400
+    if not str(dados.get("condicao", "")).strip():
+        return jsonify({"erro": "Selecione a condição de pagamento."}), 400
+    if str(dados.get("condicao", "")).strip()=="aprazo" and not str(dados.get("vencimento", "")).strip():
+        return jsonify({"erro": "Informe o vencimento para vendas a prazo."}), 400
+    if not str(dados.get("cliente", "")).strip():
+        return jsonify({"erro": "Informe o cliente."}), 400
     itens, erro = validar_itens(dados.get("itens", []), "descricao")
     if erro:
         return jsonify({"erro": erro}), 400
+    if not itens:
+        return jsonify({"erro": "Adicione pelo menos um produto."}), 400
     try:
         desconto = float(dados.get("desconto", 0))
     except (TypeError, ValueError):
@@ -2525,7 +2607,7 @@ def cancelar_devolucao(id):
 # =========================
 # ENTREGAS — SISTEMA DE ENTREGA
 # =========================
-STATUSES_ENTREGA = ["Pendente","Em rota","Entregue","Falha","Cancelada","Reagendada"]
+STATUSES_ENTREGA = ["Pendente","SAIU PARA ROTA","Em rota","Entregue","Falha","Cancelada","Reagendada"]
 
 @app.route("/entregas")
 @login_obrigatorio
@@ -2598,7 +2680,11 @@ def criar_entrega():
         return jsonify({"erro":"Informe o cliente."}),400
     if not endereco:
         return jsonify({"erro":"Informe o endereço."}),400
-    entregador=str(dados.get("entregador") or "").strip() or session["usuario"]
+    if not str(dados.get("entregador") or "").strip():
+        return jsonify({"erro":"Selecione o entregador."}),400
+    if not str(dados.get("data_entrega") or "").strip():
+        return jsonify({"erro":"Informe a data da entrega."}),400
+    entregador=str(dados.get("entregador") or "").strip()
     status=str(dados.get("status") or "Pendente").strip()
     if status not in STATUSES_ENTREGA:
         status="Pendente"
@@ -2622,15 +2708,18 @@ def criar_entrega():
     row=cur.fetchone()
     novo=(row["ultimo_numero"] if row else 0)+1
     from datetime import datetime
+    import secrets
     criacao=datetime.now().strftime("%Y-%m-%d %H:%M")
-    cur.execute("""INSERT INTO entregas (numero, venda_id, ordem_id, cliente, telefone, endereco, bairro, entregador, data_entrega, horario, taxa, status, observacao, comprovante, criacao)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (novo, venda_id, ordem_id, cliente, str(dados.get("telefone") or ""), endereco, str(dados.get("bairro") or ""), entregador, str(dados.get("data_entrega") or ""), str(dados.get("horario") or ""), taxa, status, str(dados.get("observacao") or ""), str(dados.get("comprovante") or ""), criacao))
+    qr_token=secrets.token_hex(6)
+    cur.execute("""INSERT INTO entregas (numero, venda_id, ordem_id, cliente, telefone, endereco, bairro, entregador, data_entrega, horario, taxa, status, observacao, comprovante, criacao, qr_token)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (novo, venda_id, ordem_id, cliente, str(dados.get("telefone") or ""), endereco, str(dados.get("bairro") or ""), entregador, str(dados.get("data_entrega") or ""), str(dados.get("horario") or ""), taxa, status, str(dados.get("observacao") or ""), str(dados.get("comprovante") or ""), criacao, qr_token))
     eid=cur.lastrowid
+    cur.execute("INSERT INTO entrega_historico (entrega_id, status, data_hora, usuario) VALUES (?, ?, ?, ?)", (eid, status, criacao, session.get("usuario","")))
     cur.execute("UPDATE controle_entregas SET ultimo_numero=? WHERE id=1",(novo,))
     conexao.commit()
     conexao.close()
-    return jsonify({"mensagem":"Entrega criada!","id":eid,"numero":novo})
+    return jsonify({"mensagem":"Entrega criada!","id":eid,"numero":novo, "qr_token": qr_token})
 
 @app.route("/api/entregas/<int:id>", methods=["PUT"])
 @login_obrigatorio
@@ -2703,6 +2792,7 @@ def excluir_entrega(id):
     if not cur.fetchone():
         conexao.close()
         return jsonify({"erro":"Entrega não encontrada."}),404
+    cur.execute("DELETE FROM entrega_historico WHERE entrega_id=?",(id,))
     cur.execute("DELETE FROM entregas WHERE id=?",(id,))
     conexao.commit()
     conexao.close()
@@ -2715,13 +2805,66 @@ def rota_entregas():
     conexao=conectar()
     cur=conexao.cursor()
     if data:
-        cur.execute("SELECT * FROM entregas WHERE data_entrega=? AND status IN ('Pendente','Em rota','Reagendada') ORDER BY bairro, endereco", (data,))
+        cur.execute("SELECT * FROM entregas WHERE data_entrega=? AND status IN ('Pendente','SAIU PARA ROTA','Em rota','Reagendada') ORDER BY bairro, endereco", (data,))
     else:
-        cur.execute("SELECT * FROM entregas WHERE status IN ('Pendente','Em rota','Reagendada') ORDER BY data_entrega, bairro, endereco")
+        cur.execute("SELECT * FROM entregas WHERE status IN ('Pendente','SAIU PARA ROTA','Em rota','Reagendada') ORDER BY data_entrega, bairro, endereco")
     rows=cur.fetchall()
     conexao.close()
     out=[dict(r) if hasattr(r,"keys") else {k: r[i] for i,k in enumerate([c[0] for c in cur.description])} for r in rows]
     return jsonify(out)
+
+@app.route("/m/entrega/<int:id>")
+@login_obrigatorio
+def pagina_entrega_mobile(id):
+    conexao=conectar()
+    cur=conexao.cursor()
+    cur.execute("SELECT * FROM entregas WHERE id=?", (id,))
+    row=cur.fetchone()
+    if not row:
+        conexao.close()
+        return "Entrega não encontrada", 404
+    entrega=dict(row) if hasattr(row,"keys") else {k: row[i] for i,k in enumerate([c[0] for c in cur.description])}
+    # historico
+    cur.execute("SELECT * FROM entrega_historico WHERE entrega_id=? ORDER BY id DESC", (id,))
+    hist=[dict(r) if hasattr(r,"keys") else {k: r[i] for i,k in enumerate([c[0] for c in cur.description])} for r in cur.fetchall()]
+    conexao.close()
+    return render_template("entrega_mobile.html", entrega=entrega, historico=hist, usuario=session.get("usuario",""))
+
+@app.route("/api/entregas/<int:id>/avancar", methods=["POST"])
+@login_obrigatorio
+def avancar_entrega(id):
+    conexao=conectar()
+    cur=conexao.cursor()
+    cur.execute("SELECT * FROM entregas WHERE id=?", (id,))
+    row=cur.fetchone()
+    if not row:
+        conexao.close()
+        return jsonify({"erro":"Entrega não encontrada."}),404
+    entrega=dict(row) if hasattr(row,"keys") else {k: row[i] for i,k in enumerate([c[0] for c in cur.description])}
+    status_atual=(entrega.get("status") or "Pendente").strip()
+    if status_atual=="Entregue":
+        conexao.close()
+        return jsonify({"erro":"Entrega já realizada."}),400
+    if status_atual=="Cancelada" or status_atual=="Falha":
+        conexao.close()
+        return jsonify({"erro":"Entrega cancelada/falha não pode avançar."}),400
+    from datetime import datetime
+    agora=datetime.now().strftime("%Y-%m-%d %H:%M")
+    usuario=session.get("usuario","")
+    if status_atual=="Pendente":
+        novo="SAIU PARA ROTA"
+        cur.execute("UPDATE entregas SET status=?, data_saida=? WHERE id=?", (novo, agora, id))
+    elif status_atual in ("SAIU PARA ROTA","Em rota"):
+        novo="Entregue"
+        cur.execute("UPDATE entregas SET status=?, data_entregue=? WHERE id=?", (novo, agora, id))
+    else:
+        # Reagendada ou outro -> vai para SAIU PARA ROTA
+        novo="SAIU PARA ROTA"
+        cur.execute("UPDATE entregas SET status=?, data_saida=? WHERE id=?", (novo, agora, id))
+    cur.execute("INSERT INTO entrega_historico (entrega_id, status, data_hora, usuario) VALUES (?, ?, ?, ?)", (id, novo, agora, usuario))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem":f"Status alterado para {novo}!", "status": novo, "data_hora": agora})
 
 
 # =========================

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#000">
+<title>Entrega ENT{{ "%04d"|format(entrega.numero) }}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827;padding:12px}
+.card{background:#fff;border:1px solid #000;border-radius:10px;padding:14px;margin-bottom:12px}
+.header{background:#000;color:#fff;padding:8px 12px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:9pt;letter-spacing:.06em}
+.badge{padding:2px 10px;border-radius:999px;font-weight:800;font-size:8pt}
+.badge-Pendente{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+.badge-SAIU{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd}
+.badge-Entregue{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+.btn{width:100%;padding:16px;border:none;border-radius:12px;font-weight:900;font-size:12pt;letter-spacing:.02em;cursor:pointer}
+.btn-rota{background:#f59e0b;color:#fff}
+.btn-entrega{background:#059669;color:#fff}
+.btn:disabled{opacity:.6}
+.info{font-size:9pt;line-height:1.4}
+.info b{font-size:7pt;letter-spacing:.04em}
+.historico{font-size:7.5pt;color:#374151}
+</style>
+</head>
+<body>
+<div class="header"><span>ENTREGA ENT{{ "%04d"|format(entrega.numero) }}</span><span>{{ entrega.status }}</span></div>
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span class="badge badge-{{ 'SAIU' if 'SAIU' in entrega.status else entrega.status }}">{{ entrega.status }}</span><span style="font-size:8pt;color:#6b7280">{{ entrega.data_entrega or "" }} {{ entrega.horario or "" }}</span></div>
+<div class="info">
+<div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>CLIENTE:</b><span>{{ entrega.cliente }} {{ entrega.telefone and "— " + entrega.telefone or "" }}</span></div>
+<div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>ENDEREÇO:</b><span>{{ entrega.endereco }} {{ entrega.bairro and "— " + entrega.bairro or "" }}</span></div>
+<div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>ENTREGADOR:</b><span>{{ entrega.entregador }}</span></div>
+<div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>TAXA:</b><span>R$ {{ "%.2f"|format(entrega.taxa or 0) }}</span></div>
+{% if entrega.observacao %}<div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>OBS.:</b><span>{{ entrega.observacao }}</span></div>{% endif %}
+{% if entrega.comprovante %}<div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>COMPROV.:</b><span>{{ entrega.comprovante }}</span></div>{% endif %}
+</div>
+</div>
+
+{% if entrega.status == "Pendente" %}
+<div class="card" style="text-align:center">
+<div style="font-size:9pt;margin-bottom:10px">Entrega pendente. Clique para sair para rota.</div>
+<button class="btn btn-rota" onclick="avancar()">🚚 SAIU PARA ROTA</button>
+</div>
+{% elif entrega.status == "SAIU PARA ROTA" or entrega.status == "Em rota" %}
+<div class="card" style="text-align:center">
+<div style="font-size:9pt;margin-bottom:6px">Em rota desde <b>{{ entrega.data_saida or "" }}</b></div>
+<div style="font-size:8pt;color:#6b7280;margin-bottom:10px">Ao chegar ao cliente, confirme a entrega.</div>
+<button class="btn btn-entrega" onclick="avancar()">✅ CONFIRMAR ENTREGA</button>
+</div>
+{% elif entrega.status == "Entregue" %}
+<div class="card" style="text-align:center;background:#ecfdf5;border-color:#059669">
+<div style="font-weight:900;font-size:12pt;color:#065f46">ENTREGA REALIZADA ✓</div>
+<div style="font-size:8.5pt;margin-top:6px">Data: <b>{{ entrega.data_entregue or entrega.data_saida or "" }}</b></div>
+<div style="font-size:8.5pt">Entregador: <b>{{ entrega.entregador }}</b></div>
+<div style="font-size:7.5pt;color:#065f46;margin-top:8px">Não é possível alterar novamente.</div>
+</div>
+{% else %}
+<div class="card" style="text-align:center"><div style="font-size:9pt">Status: <b>{{ entrega.status }}</b></div></div>
+{% endif %}
+
+<div class="card historico">
+<div style="font-weight:800;font-size:8pt;margin-bottom:6px">HISTÓRICO</div>
+{% for h in historico %}
+<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed #e5e7eb"><span><b>{{ h.status }}</b> — {{ h.usuario or "-" }}</span><span>{{ h.data_hora }}</span></div>
+{% else %}
+<div style="color:#6b7280">Sem histórico</div>
+{% endfor %}
+</div>
+
+<div style="text-align:center;margin-top:8px"><a href="/entregas" style="font-size:8pt;color:#6b7280">← Voltar</a></div>
+
+<script>
+async function avancar(){
+    const btn=document.querySelector(".btn"); if(btn){ btn.disabled=true; btn.innerText="Processando..."; }
+    try{
+        const r=await fetch("/api/entregas/{{ entrega.id }}/avancar",{method:"POST",headers:{"Content-Type":"application/json"}});
+        const j=await r.json();
+        if(!r.ok) throw new Error(j.erro||"Erro");
+        alert(j.mensagem);
+        location.reload();
+    }catch(e){ alert(e.message); if(btn) btn.disabled=false; }
+}
+</script>
+</body>
+</html>
