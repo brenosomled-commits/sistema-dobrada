@@ -82,8 +82,8 @@
         <div class="stat-card" style="border-top-color:#6f42c1"><h3>Melhor Vendedor</h3><div class="stat-numero" id="melhorVendedor" style="font-size:1.15rem">-</div><div class="stat-sub" id="melhorVendedorSub"></div></div>
     </div>
 
-    <div class="card">
-        <div class="card-header"><h2 class="card-title">🏆 Ranking de Vendedores</h2><span class="badge badge-pronta">Top 5</span></div>
+     <div class="card">
+        <div class="card-header"><h2 class="card-title">🏆 Ranking de Vendedores</h2><span class="badge badge-pronta" id="badgeRankingMes">Mês atual</span></div>
         <div id="rankingVendedores"><div class="empty-state"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
     </div>
 
@@ -100,7 +100,9 @@ const S=window.SistemaUtil;
 function classeStatus(s){ if(s==="Em andamento")return"badge-andamento"; if(s==="Pronta")return"badge-pronta"; if(s==="Finalizada")return"badge-finalizada"; return ""; }
 function fmtMoeda(v){ return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v||0)); }
 async function carregarResumoVendas(){
-    const r=await fetch("/api/dashboard/resumo"); const resumo=await r.json();
+    const hoje=new Date(); const mesAtual=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,"0")}`;
+    const badge=document.getElementById("badgeRankingMes"); if(badge) badge.innerText=mesAtual.split("-").reverse().join("/") + " · Top 5";
+    const r=await fetch("/api/dashboard/resumo?mes="+mesAtual); const resumo=await r.json();
     document.getElementById("totalVendas").innerText=resumo.total_vendas||0;
     document.getElementById("arrecadacaoTotal").innerText=fmtMoeda(resumo.total_arrecadado);
     document.getElementById("comissaoTotal").innerText=fmtMoeda(resumo.total_comissao);

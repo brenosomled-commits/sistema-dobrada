@@ -129,12 +129,13 @@
 .entrega-impressao{ margin-top:8px; display:flex; gap:20px; justify-content:center; font-size:12px; font-weight:bold; }
 .marcador-caixa{ width:12px; height:12px; border:1px solid #000; display:inline-flex; align-items:center; justify-content:center; font-size:10px; line-height:1; }
 @media print{
-    @page{ size:A4 portrait; margin:4mm; }
+    @page{ size:A4 portrait; margin:3mm; }
     body{ background:#fff; }
     body > .layout{ display:none!important; }
     #areaImpressao{ display:block!important; }
-    .pagina-impressao{ min-height:0; page-break-after:auto; }
-    .via-impressao{ min-height:142mm; height:auto; padding:2mm 4mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; }
+    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+    .pagina-impressao:last-child{ page-break-after:auto; }
+    .via-impressao{ min-height:133mm; max-height:138mm; height:auto; padding:1.5mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; }
     .via-impressao + .via-impressao{ border-top:none; }
     .nota-tabela-cabecalho *{ text-transform:uppercase; }
     .nota-item-impressao *{ text-transform:uppercase; }
@@ -483,8 +484,8 @@ async function prepararImpressao(){
 
 function recorteVia(){
     const el=document.createElement('div');
-    el.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:7px 0;page-break-inside:avoid;';
-    el.innerHTML='<div style="flex:1;border-top:2px dashed #111827"></div><span style="display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;color:#111827;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap"><span style="font-size:13px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:2px dashed #111827"></div>';
+    el.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
+    el.innerHTML='<div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div>';
     return el;
 }
 async function carregarVendedores(){

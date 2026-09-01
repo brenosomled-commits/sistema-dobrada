@@ -1941,11 +1941,16 @@ def acompanhar_unificado():
 @app.route("/api/dashboard/resumo")
 @login_obrigatorio
 def resumo_dashboard():
+    from datetime import datetime
+    mes = (request.args.get("mes") or "").strip()
+    if not mes:
+        mes = datetime.now().strftime("%Y-%m")
     conexao = conectar()
     cursor = conexao.cursor()
 
     arredondar = "ROUND(COALESCE(%s, 0)::numeric, 2)" if USAR_POSTGRES else "ROUND(COALESCE(%s, 0), 2)"
-
+    filtro = f"{mes}%" 
+    placeholder = "%s" if USAR_POSTGRES else "?"
     cursor.execute("""
         SELECT
             COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
@@ -1953,10 +1958,10 @@ def resumo_dashboard():
             %s AS total_vendas,
             %s AS total_comissao
         FROM vendas
-        WHERE COALESCE(vendedor, '') <> ''
+        WHERE COALESCE(vendedor, '') <> '' AND COALESCE(data,'') LIKE %s
         GROUP BY vendedor
         ORDER BY total_vendas DESC, vendas DESC, vendedor ASC
-    """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"))
+    """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)", placeholder), (filtro,))
 
     vendas_por_vendedor = cursor.fetchall()
     conexao.close()

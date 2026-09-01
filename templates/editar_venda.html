@@ -147,7 +147,7 @@ async function imprimirVenda(id){
         area.innerHTML='';
         const pagina=document.createElement('div'); pagina.style.cssText='width:200mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
         function viaHTML(isSegunda){
-            let h=`<div style="width:190mm;min-height:142mm;padding:2mm 4mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:13px;display:flex;flex-direction:column;page-break-inside:avoid;box-sizing:border-box">
+            let h=`<div style="width:190mm;min-height:133mm;max-height:138mm;padding:1.5mm 3mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:11px;display:flex;flex-direction:column;page-break-inside:avoid;box-sizing:border-box">
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>
                 <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL_EDIT}" style="height:22px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtVenda(v.numero)}</span></div>
                 <div style="border-top:1px solid #000;margin:8px 0"></div>
@@ -171,8 +171,8 @@ async function imprimirVenda(id){
         v1.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
         v2.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
         const recorte=document.createElement('div');
-        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:7px 0;page-break-inside:avoid;';
-        recorte.innerHTML='<div style="flex:1;border-top:2px dashed #111827"></div><span style="display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;color:#111827;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap"><span style="font-size:13px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:2px dashed #111827"></div>';
+        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
+        recorte.innerHTML='<div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div>';
         pagina.appendChild(v1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(v2.firstElementChild);
         area.appendChild(pagina); area.style.display='block'; window.print(); setTimeout(()=> area.style.display='none',500);
     }catch(e){ S.Toast.erro(e.message||'Erro ao imprimir'); } finally{ S.esconderLoading(); }
@@ -254,7 +254,7 @@ function cancelarEdicao(){ vendaEditando=null; document.getElementById("formular
 })();
 
 </script>
-<div id="areaImpressao" style="display:none"></div><style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:5mm; } }</style><script>
+<div id="areaImpressao" style="display:none"></div><style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:3mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style><script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
     navigator.serviceWorker.register("/sw.js").catch(function(e){ console.warn("SW:", e); });
