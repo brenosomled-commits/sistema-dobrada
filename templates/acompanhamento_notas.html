@@ -87,7 +87,7 @@
 </main>
 </div>
 <div id="areaImpressao" style="display:none"></div>
-<style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:5mm; } }</style>
+<style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:3mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style>
 <script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
 <script>
 let itens=[]; const podeVisualizarComissao={{ "true" if pode_visualizar_comissao else "false" }}; const S=window.SistemaUtil;

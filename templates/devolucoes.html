@@ -102,7 +102,7 @@
 }
 .devolucao-card .acao-nota:hover{ border-color:var(--cor-primaria); color:var(--cor-primaria); background:var(--cor-primaria-light); }
 
-/* IMPRESSÃO DA NOTA DE DEVOLUÇÃO */
+/* IMPRESSÃO DA NOTA DE DEVOLUÇÃO — 2 VIAS SINCRONIZADA COM VENDAS */
 #areaImpressaoDev{display:none}
 .pagina-impressao{ width:200mm; min-height:287mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
 .via-impressao{ width:190mm; min-height:132mm; padding:6mm 8mm; border:1px solid #000; overflow:hidden; margin:3mm auto 0; background:#fff; display:flex; flex-direction:column; font-size:13px; }
@@ -111,12 +111,13 @@
 .nota-tabela-cabecalho{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; font-weight:700; font-size:.78rem; border-bottom:1px solid #000; padding:6px 0 5px; text-transform:uppercase; }
 .nota-item-impressao{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; padding:4px 0; font-size:13px; border-bottom:1px solid #e8edf2; text-transform:uppercase; }
 @media print{
-    @page{ size:A4 portrait; margin:5mm; }
+    @page{ size:A4 portrait; margin:3mm; }
     body{ background:#fff; }
     body > .layout{ display:none!important; }
     #areaImpressaoDev{ display:block!important; }
+    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    .via-impressao{ height:auto; min-height:0; margin:0 auto; overflow:visible; }
+    .via-impressao{ min-height:133mm; max-height:138mm; height:auto; padding:1.5mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; }
 }
 </style>
 </head>
@@ -501,6 +502,9 @@ function abrirNotaDevolucao(id){
         });
 }
 
+function etiquetaDev(isSegunda){
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#7f1d1d'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>`;
+}
 function montarNotaDevolucao(dev){
     const area = document.getElementById("areaImpressaoDev");
     const logo = "<span style=\"display:flex;align-items:center;gap:8px\"><img src=\"" + LOGO_URL + "\" style=\"height:22px\" onerror=\"this.style.display='none'\"></span>";
@@ -509,13 +513,11 @@ function montarNotaDevolucao(dev){
         const sub = (Number(it.quantidade) || 0) * (Number(it.valor) || 0);
         itensHtml += `<div class="nota-item-impressao"><span>${it.quantidade}</span><span>${it.descricao||""}</span><span>R$ ${fmtMoedaV(it.valor)}</span><span>R$ ${fmtMoedaV(sub)}</span></div>`;
     });
-
-    const nota = `
-    <div class="pagina-impressao">
-        <div class="via-impressao">
+    function viaDevHTML(isSegunda){
+        return `<div class="via-impressao">${etiquetaDev(isSegunda)}
             <div style="display:flex;justify-content:space-between;align-items:center">
                 ${logo}
-                <span><b>NOTA DE DEVOLUÇÃO</b></span>
+                <span><b>NOTA DE DEVOLUÇÃO</b> DEV${String(dev.numero).padStart(4,"0")}</span>
             </div>
             <div class="nota-linha"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
@@ -535,12 +537,15 @@ function montarNotaDevolucao(dev){
                     <div style="display:flex;justify-content:space-between;font-weight:800"><span>TOTAL DEVOLVIDO:</span><span>R$ ${fmtMoedaV(dev.total)}</span></div>
                 </div>
             </div>
-            <div style="margin-top:18px;text-align:center">
-                <div style="width:90mm;border-top:1px solid #000;margin:0 auto 4px"></div>
-                <div style="font-size:10px;font-weight:700">ASSINATURA DO CLIENTE</div>
+            <div style="margin-top:14px;text-align:center">
+                <div style="width:90mm;border-top:1.5px solid #000;margin:0 auto 4px"></div>
+                <div style="font-size:10px;font-weight:700">${isSegunda ? 'ASSINATURA DO CLIENTE — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>
             </div>
-        </div>
-    </div>`;
+            <div style="margin-top:8px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:4px;letter-spacing:.06em">DOCUMENTO SEM VALOR FISCAL — DEVOLUÇÃO</div>
+        </div>`;
+    }
+    const recorte = `<div style="width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;"><div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div></div>`;
+    const nota = `<div class="pagina-impressao">${viaDevHTML(false)}${recorte}${viaDevHTML(true)}</div>`;
     area.innerHTML = nota;
     window.print();
 }
