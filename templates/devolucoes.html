@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <title>Devolução </title>
 <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
@@ -633,6 +640,13 @@ document.addEventListener("DOMContentLoaded", function(){
     carregarVendedoresAvulso();
     carregarDevolucoes();
 });
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js").catch(function(e){ console.warn("SW:", e); });
+  });
+}
 </script>
 </body>
 </html>

@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <title>Acompanhamento Unificado </title>
 <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
@@ -206,7 +213,10 @@ async function imprimirVenda(id){
         }
         const via1=document.createElement('div'); via1.innerHTML=viaHTML(false); via1.firstElementChild.style.margin='0 auto 0';
         const via2=document.createElement('div'); via2.innerHTML=viaHTML(true);
-        pagina.appendChild(via1.firstElementChild); pagina.appendChild(via2.firstElementChild);
+        const recorte=document.createElement('div');
+        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0;page-break-inside:avoid;';
+        recorte.innerHTML='<div style="flex:1;border-top:2px dashed #4b5563"></div><span style="font-size:9px;font-weight:700;color:#374151;letter-spacing:.08em;text-transform:uppercase">Recorte — Via do Cliente / Via da Loja</span><div style="flex:1;border-top:2px dashed #4b5563"></div>';
+        pagina.appendChild(via1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(via2.firstElementChild);
         area.appendChild(pagina); area.style.display='block'; window.print();
         setTimeout(()=> area.style.display='none', 500);
     }catch(e){ S.Toast.erro(e.message||'Erro ao imprimir'); } finally{ S.esconderLoading(); }
@@ -223,6 +233,13 @@ async function excluirOS(id,numero){
 }
 function definirMesAtual(){ const h=new Date(); document.getElementById("mesFiltro").value=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,"0")}`; }
 S.initSidebar(); (async()=>{ definirMesAtual(); await carregarItens(); carregarProfissionais(); setInterval(carregarItens,30000); })();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js").catch(function(e){ console.warn("SW:", e); });
+  });
+}
 </script>
 </body>
 </html>

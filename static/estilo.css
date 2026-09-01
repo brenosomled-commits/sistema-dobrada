@@ -4,30 +4,30 @@
 
 :root {
     --cor-primaria: #1a56db;
-    --cor-primaria-hover: #1648b8;
-    --cor-primaria-light: #dbe4fa;
-    --cor-sucesso: #047857;
-    --cor-sucesso-light: #b9f0d7;
-    --cor-aviso: #b45309;
-    --cor-aviso-light: #fde68a;
-    --cor-perigo: #b91c1c;
-    --cor-perigo-light: #fecaca;
-    --cor-info: #1d4ed8;
-    --cor-info-light: #c7d8fd;
+    --cor-primaria-hover: #1442b0;
+    --cor-primaria-light: #c9d6f8;
+    --cor-sucesso: #03624b;
+    --cor-sucesso-light: #9ce8c8;
+    --cor-aviso: #9a5600;
+    --cor-aviso-light: #fdd568;
+    --cor-perigo: #a21616;
+    --cor-perigo-light: #fdb4b4;
+    --cor-info: #1a4ac0;
+    --cor-info-light: #b6c9f7;
 
-    --cor-fundo: #eef2f7;
+    --cor-fundo: #dfe6ef;
     --cor-painel: #ffffff;
-    --cor-borda: #cbd5e1;
-    --cor-borda-forte: #94a3b8;
-    --cor-texto: #0f172a;
-    --cor-texto-secundario: #334155;
-    --cor-texto-muted: #475569;
+    --cor-borda: #b3bfd1;
+    --cor-borda-forte: #7d8ca1;
+    --cor-texto: #0b1120;
+    --cor-texto-secundario: #1e2a3d;
+    --cor-texto-muted: #334155;
 
-    --sombra-sm: 0 1px 2px rgba(0,0,0,.05);
-    --sombra: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
-    --sombra-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
-    --sombra-lg: 0 10px 15px rgba(0,0,0,.1), 0 4px 6px rgba(0,0,0,.05);
-    --sombra-xl: 0 20px 25px rgba(0,0,0,.1), 0 10px 10px rgba(0,0,0,.04);
+    --sombra-sm: 0 1px 3px rgba(15,23,42,.12);
+    --sombra: 0 1px 3px rgba(15,23,42,.14), 0 1px 2px rgba(15,23,42,.10);
+    --sombra-md: 0 4px 8px rgba(15,23,42,.12), 0 2px 4px rgba(15,23,42,.10);
+    --sombra-lg: 0 10px 16px rgba(15,23,42,.14), 0 4px 6px rgba(15,23,42,.09);
+    --sombra-xl: 0 20px 26px rgba(15,23,42,.14), 0 10px 12px rgba(15,23,42,.08);
 
     --raio-sm: 6px;
     --raio: 8px;
@@ -206,7 +206,7 @@ a:hover {
 .form-textarea {
     width: 100%;
     padding: 10px 14px;
-    border: 1px solid var(--cor-borda);
+    border: 1px solid var(--cor-borda-forte);
     border-radius: var(--raio);
     font-size: 0.9rem;
     font-family: var(--fonte);
@@ -264,7 +264,7 @@ a:hover {
     border: 1px solid var(--cor-borda);
     border-radius: var(--raio-lg);
     padding: 24px;
-    box-shadow: var(--sombra-sm);
+    box-shadow: var(--sombra);
 }
 
 .card-header {
@@ -296,7 +296,7 @@ a:hover {
     border-radius: var(--raio-lg);
     padding: 20px;
     text-align: center;
-    box-shadow: var(--sombra-sm);
+    box-shadow: var(--sombra);
     border-top: 3px solid var(--cor-borda-forte);
     transition: transform var(--transicao), box-shadow var(--transicao);
 }
@@ -317,6 +317,7 @@ a:hover {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--cor-texto-secundario);
+    font-weight: 700;
     margin-bottom: 8px;
 }
 
@@ -348,15 +349,15 @@ a:hover {
 }
 
 .tabela th {
-    background: var(--cor-fundo);
+    background: #e7eef7;
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
     color: var(--cor-texto-secundario);
     padding: 12px 16px;
     text-align: left;
-    border-bottom: 1px solid var(--cor-borda);
+    border-bottom: 2px solid var(--cor-borda);
     white-space: nowrap;
 }
 
@@ -364,6 +365,7 @@ a:hover {
     padding: 12px 16px;
     border-bottom: 1px solid var(--cor-borda);
     font-size: 0.9rem;
+    font-weight: 500;
     vertical-align: middle;
 }
 
@@ -473,6 +475,7 @@ a:hover {
     left: 0;
     bottom: 0;
     z-index: 100;
+    box-shadow: 1px 0 8px rgba(15,23,42,.06);
     transition: transform 0.3s ease;
 }
 
@@ -514,11 +517,11 @@ a:hover {
 
 .sidebar-section-label {
     font-size: 0.65rem;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--cor-texto-muted);
-    padding: 8px 12px 4px;
+    color: var(--cor-texto-secundario);
+    padding: 10px 12px 4px;
 }
 
 .sidebar-link {
@@ -529,7 +532,7 @@ a:hover {
     border-radius: var(--raio);
     color: var(--cor-texto-secundario);
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     transition: all var(--transicao);
     text-decoration: none;
@@ -541,20 +544,21 @@ a:hover {
 }
 
 .sidebar-link:hover {
-    background: var(--cor-fundo);
+    background: #e9eef6;
     color: var(--cor-texto);
 }
 
 .sidebar-link.ativa {
-    background: var(--cor-primaria-light);
-    color: var(--cor-primaria);
-    font-weight: 600;
+    background: var(--cor-primaria);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: var(--sombra-sm);
 }
 
 .sidebar-link .link-icon {
     width: 20px;
     height: 20px;
-    opacity: 0.7;
+    opacity: 0.95;
 }
 
 .sidebar-footer {
@@ -591,7 +595,7 @@ a:hover {
 
 .sidebar-user .user-name {
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--cor-texto);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -600,7 +604,8 @@ a:hover {
 
 .sidebar-user .user-role {
     font-size: 0.7rem;
-    color: var(--cor-texto-muted);
+    font-weight: 600;
+    color: var(--cor-texto-secundario);
     text-transform: uppercase;
 }
 
@@ -680,6 +685,7 @@ a:hover {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    box-shadow: var(--sombra-sm);
     transition: all var(--transicao);
     cursor: pointer;
 }
@@ -695,7 +701,7 @@ a:hover {
 }
 
 .item-card .item-titulo {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.95rem;
     margin-bottom: 2px;
 }
@@ -706,7 +712,7 @@ a:hover {
 }
 
 .item-card .item-valor {
-    font-weight: 700;
+    font-weight: 800;
     font-size: 1.1rem;
     white-space: nowrap;
 }
@@ -811,12 +817,12 @@ a:hover {
 .loading-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(255,255,255,.8);
+    background: rgba(255,255,255,.85);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(3px);
 }
 
 .spinner {
@@ -1140,4 +1146,92 @@ a:hover {
 @keyframes telaEntrar {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   MOBILE / PWA - APARÊNCIA DE APLICATIVO
+   ============================================ */
+
+html {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    overscroll-behavior: none;
+}
+
+input, select, textarea, button {
+    font-size: 16px;
+}
+
+@media (max-width: 1024px) {
+
+    .conteudo {
+        padding: 16px 14px;
+        padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    }
+
+    .sidebar {
+        width: 280px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar.aberta {
+        box-shadow: 0 0 0 100vmax rgba(15, 23, 42, .55);
+    }
+
+    .item-card, .stat-card, .card {
+        border-radius: 12px;
+    }
+
+    .btn {
+        padding: 12px 16px;
+    }
+
+    .btn-sm {
+        padding: 8px 12px;
+    }
+
+    .stat-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .tabela-container {
+        border-radius: 12px;
+    }
+
+    /* rolagem com snap suave nas áreas centrais */
+    .conteudo, .sidebar-nav {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .pagina-titulo h1 { font-size: 1.3rem; }
+
+    .toolbar { gap: 8px; }
+
+    .btn-block {
+        min-height: 46px;
+    }
+
+    .form-input, .form-select, .form-textarea {
+        padding: 12px 14px;
+    }
+
+    .toast {
+        min-width: 0;
+        width: calc(100vw - 32px);
+        font-size: 0.85rem;
+    }
+}
+
+/* barra de status pwa colorida nos navegadores */
+@media (display-mode: standalone) {
+
+    .sidebar { border-right-color: var(--cor-borda); }
+
+    .conteudo { padding-top: 18px; }
 }

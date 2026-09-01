@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <title>Nota Dobrada </title>
 <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
@@ -459,10 +466,20 @@ async function prepararImpressao(){
         if(condicaoAtual === "aprazo" && !segundaVia.innerHTML.includes('ASSINATURA DO CLIENTE')){
             segundaVia.innerHTML += `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">ASSINATURA DO CLIENTE — VIA DA LOJA</div></div>`;
         }
-        pagina.appendChild(primeiraVia); pagina.appendChild(segundaVia); area.appendChild(pagina);
+        pagina.appendChild(primeiraVia);
+        pagina.appendChild(recorteVia());
+        pagina.appendChild(segundaVia); area.appendChild(pagina);
     }
     window.print();
     setTimeout(function(){ novaVenda(); }, 500);
+}
+
+function recorteVia(){
+    const el=document.createElement('div');
+    el.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0;';
+    el.innerHTML='<div style="flex:1;border-top:2px dashed #4b5563"></div><span style="font-size:9px;font-weight:700;color:#374151;letter-spacing:.08em;text-transform:uppercase">Recorte — Via do Cliente / Via da Loja</span><div style="flex:1;border-top:2px dashed #4b5563"></div>';
+    el.style.cssText+=';page-break-inside:avoid;';
+    return el;
 }
 async function carregarVendedores(){
     try{ const r = await fetch("/api/vendedores"); const usuarios = await r.json();
@@ -506,7 +523,8 @@ async function reimprimirDobrada(id){
         const v2=document.createElement('div'); v2.innerHTML=viaHTML(true);
         v1.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
         v2.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        pagina.appendChild(v1.firstElementChild); pagina.appendChild(v2.firstElementChild);
+        const recorte = recorteVia();
+        pagina.appendChild(v1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(v2.firstElementChild);
         area.appendChild(pagina); area.style.display='block'; window.print(); setTimeout(()=> area.style.display='none',500);
     }catch(e){ S.Toast.erro(e.message||'Erro ao reimprimir'); } finally{ S.esconderLoading(); }
 }
@@ -520,6 +538,13 @@ document.addEventListener("input", salvarRascunho);
 document.addEventListener("change", salvarRascunho);
 document.getElementById("venda").addEventListener("input", syncBadge);
 iniciar();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js").catch(function(e){ console.warn("SW:", e); });
+  });
+}
 </script>
 </body>
 </html>

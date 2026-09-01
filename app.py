@@ -868,6 +868,18 @@ def api_public_usuarios():
     return jsonify([{"usuario": u["usuario"], "papel": u["papel"]} for u in usuarios])
 
 
+@app.route("/manifest.webmanifest")
+def servir_manifest():
+    from flask import send_from_directory
+    return send_from_directory("static", "manifest.webmanifest", mimetype="application/manifest+json")
+
+
+@app.route("/sw.js")
+def servir_sw():
+    from flask import send_from_directory
+    return send_from_directory("static", "sw.js", mimetype="application/javascript")
+
+
 # =========================
 # LOGIN
 # =========================
