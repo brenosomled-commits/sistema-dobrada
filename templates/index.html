@@ -346,6 +346,28 @@
         </div>
     </div>
 
+    <div class="stat-grid">
+        <div class="stat-card" style="border-top-color:#0ea5e9">
+            <h3>Vendas Hoje</h3>
+            <div class="stat-numero" id="vendasHoje">0</div>
+            <div class="stat-sub" id="vendasHojeSub">R$ 0,00</div>
+        </div>
+        <div class="stat-card" style="border-top-color:#f59e0b">
+            <h3>Entregas Hoje</h3>
+            <div class="stat-numero" id="entregasHoje">0</div>
+            <div class="stat-sub" id="entregasHojeSub">0 pendentes</div>
+        </div>
+        <div class="stat-card" style="border-top-color:#8b5cf6">
+            <h3>Entregas Pendentes</h3>
+            <div class="stat-numero" id="entregasPendentes">0</div>
+            <div class="stat-sub">em rota + pendentes</div>
+        </div>
+        <div class="stat-card stat-success">
+            <h3>Faturamento Hoje</h3>
+            <div class="stat-numero" id="faturamentoHoje" style="font-size:1.25rem">R$ 0,00</div>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">Últimas Ordens de Serviço</h2>
@@ -660,26 +682,46 @@ async function carregarDashboard() {
 
         if (ultimas.length === 0) {
             lista.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><h3>Nenhuma ordem de serviço</h3><p>Cadastre a primeira OS para começar.</p></div>';
-            return;
+        } else {
+            ultimas.forEach(ordem => {
+                const div = document.createElement("div");
+                div.className = "item-card";
+                div.onclick = () => verDetalhes(ordem.id);
+                div.innerHTML = `
+                    <div class="item-info">
+                        <div class="item-titulo">OS #${String(ordem.numero).padStart(5, "0")} · ${ordem.cliente || "Sem cliente"}</div>
+                        <div class="item-sub">${S.formatarDataBrasil(ordem.data_entrada)} · ${ordem.responsavel || "Sem responsável"}</div>
+                    </div>
+                    <span class="badge ${classeStatus(ordem.status)}">${ordem.status}</span>
+                    <div class="item-valor">${S.formatarMoeda(ordem.total)}</div>
+                `;
+                lista.appendChild(div);
+            });
         }
-
-        ultimas.forEach(ordem => {
-            const div = document.createElement("div");
-            div.className = "item-card";
-            div.onclick = () => verDetalhes(ordem.id);
-            div.innerHTML = `
-                <div class="item-info">
-                    <div class="item-titulo">OS #${String(ordem.numero).padStart(5, "0")} · ${ordem.cliente || "Sem cliente"}</div>
-                    <div class="item-sub">${S.formatarDataBrasil(ordem.data_entrada)} · ${ordem.responsavel || "Sem responsável"}</div>
-                </div>
-                <span class="badge ${classeStatus(ordem.status)}">${ordem.status}</span>
-                <div class="item-valor">${S.formatarMoeda(ordem.total)}</div>
-            `;
-            lista.appendChild(div);
-        });
     } catch (erro) {
         console.error(erro);
     }
+    // Vendas e Entregas do dia — só o mais importante
+    try{
+        const hoje = new Date().toISOString().split("T")[0];
+        const [rv, re] = await Promise.all([fetch("/api/vendas").then(r=>r.ok?r.json():[]).catch(()=>[]), fetch("/api/entregas").then(r=>r.ok?r.json():[]).catch(()=>[])]);
+        const vendasHoje = (rv||[]).filter(v=> (v.data||"").slice(0,10)===hoje);
+        const faturamentoHoje = vendasHoje.reduce((s,v)=> s + (Number(v.total)||0), 0);
+        const elVendas = document.getElementById("vendasHoje");
+        if(elVendas){ elVendas.innerText = vendasHoje.length; }
+        const elVendasSub = document.getElementById("vendasHojeSub");
+        if(elVendasSub){ elVendasSub.innerText = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(faturamentoHoje); }
+        const elFat = document.getElementById("faturamentoHoje");
+        if(elFat){ elFat.innerText = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(faturamentoHoje); }
+        const entregasHoje = (re||[]).filter(e=> (e.data_entrega||"").slice(0,10)===hoje);
+        const pendentes = (re||[]).filter(e=> ["Pendente","Em rota","Reagendada"].includes(e.status));
+        const elEntHoje = document.getElementById("entregasHoje");
+        if(elEntHoje){ elEntHoje.innerText = entregasHoje.length; }
+        const elEntHojeSub = document.getElementById("entregasHojeSub");
+        if(elEntHojeSub){ elEntHojeSub.innerText = pendentes.filter(e=> (e.data_entrega||"").slice(0,10)===hoje).length + " pendentes hoje"; }
+        const elPend = document.getElementById("entregasPendentes");
+        if(elPend){ elPend.innerText = pendentes.length; }
+    }catch(e){ console.error("vendas/entregas hoje", e); }
 }
 
 /* ===================== NOVA OS ===================== */
