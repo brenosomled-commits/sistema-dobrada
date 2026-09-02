@@ -2131,8 +2131,8 @@ def resumo_dashboard():
         SELECT
             COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
             COUNT(*) AS vendas,
-            ROUND(COALESCE(SUM(total), 0), 2) AS total_vendas,
-            ROUND(COALESCE(SUM(comissao), 0), 2) AS total_comissao
+            ROUND(CAST(COALESCE(SUM(total), 0) AS NUMERIC), 2) AS total_vendas,
+            ROUND(CAST(COALESCE(SUM(comissao), 0) AS NUMERIC), 2) AS total_comissao
         FROM vendas
         WHERE COALESCE(vendedor, '') <> '' AND COALESCE(data,'') LIKE ?
         GROUP BY vendedor
@@ -2404,8 +2404,8 @@ def api_comissoes():
             SELECT
                 COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
                 COUNT(*) AS vendas,
-                ROUND(COALESCE(SUM(total), 0), 2) AS total_vendas,
-                ROUND(COALESCE(SUM(comissao), 0), 2) AS total_comissao
+                ROUND(CAST(COALESCE(SUM(total), 0) AS NUMERIC), 2) AS total_vendas,
+                ROUND(CAST(COALESCE(SUM(comissao), 0) AS NUMERIC), 2) AS total_comissao
             FROM vendas
             WHERE COALESCE(vendedor,'') <> '' AND COALESCE(data,'') LIKE ? AND upper(vendedor)=upper(?)
             GROUP BY vendedor
@@ -2415,8 +2415,8 @@ def api_comissoes():
         cursor.execute("""
             SELECT
                 COUNT(*) AS qtd,
-                ROUND(COALESCE(SUM(total), 0), 2) AS total,
-                ROUND(COALESCE(SUM(comissao), 0), 2) AS comissao
+                ROUND(CAST(COALESCE(SUM(total), 0) AS NUMERIC), 2) AS total,
+                ROUND(CAST(COALESCE(SUM(comissao), 0) AS NUMERIC), 2) AS comissao
             FROM vendas
             WHERE COALESCE(data,'') LIKE ? AND upper(vendedor)=upper(?)
         """, (filtro_mes, vendedor_filtro))
@@ -2426,8 +2426,8 @@ def api_comissoes():
             SELECT
                 COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
                 COUNT(*) AS vendas,
-                ROUND(COALESCE(SUM(total), 0), 2) AS total_vendas,
-                ROUND(COALESCE(SUM(comissao), 0), 2) AS total_comissao
+                ROUND(CAST(COALESCE(SUM(total), 0) AS NUMERIC), 2) AS total_vendas,
+                ROUND(CAST(COALESCE(SUM(comissao), 0) AS NUMERIC), 2) AS total_comissao
             FROM vendas
             WHERE COALESCE(vendedor,'') <> '' AND COALESCE(data,'') LIKE ?
             GROUP BY vendedor
@@ -2437,8 +2437,8 @@ def api_comissoes():
         cursor.execute("""
             SELECT
                 COUNT(*) AS qtd,
-                ROUND(COALESCE(SUM(total), 0), 2) AS total,
-                ROUND(COALESCE(SUM(comissao), 0), 2) AS comissao
+                ROUND(CAST(COALESCE(SUM(total), 0) AS NUMERIC), 2) AS total,
+                ROUND(CAST(COALESCE(SUM(comissao), 0) AS NUMERIC), 2) AS comissao
             FROM vendas
             WHERE COALESCE(data,'') LIKE ?
         """, (filtro_mes,))
