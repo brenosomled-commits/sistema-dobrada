@@ -2909,12 +2909,6 @@ def avancar_entrega(id):
     conexao.close()
     return jsonify({"mensagem":f"Status alterado para {novo}!", "status": novo, "data_hora": agora})
 
-@app.route("/gerenciar_impressora")
-@admin_obrigatorio
-def pagina_gerenciar_impressora():
-    papel = obter_papel_usuario(session["usuario"])
-    return render_template("gerenciar_impressora.html", usuario=session["usuario"], papel=papel)
-
 @app.route("/api/configuracoes")
 @login_obrigatorio
 def listar_configuracoes():
