@@ -86,11 +86,15 @@ class CursorUnificado:
             if cabecalho == "BEGIN IMMEDIATE":
                 sql_adaptado = "BEGIN"
             elif cabecalho[:6] == "INSERT":
-                sql_adaptado = sql_adaptado.rstrip().rstrip(";") + " RETURNING id"
+                # JOIN_ADICIONA_RETURNING: quando o INSERT usa ON CONFLICT/DO NOTHING
+                # o RETURNING id pode falhar (ex.: tabela sem coluna "id"), então
+                # só adicionamos RETURNING quando não há ON CONFLICT.
+                if " ON CONFLICT " not in sql_adaptado.upper():
+                    sql_adaptado = sql_adaptado.rstrip().rstrip(";") + " RETURNING id"
 
             self._cursor.execute(sql_adaptado, params or ())
 
-            if cabecalho[:6] == "INSERT":
+            if cabecalho[:6] == "INSERT" and " ON CONFLICT " not in sql_adaptado.upper():
                 linha = self._cursor.fetchone()
                 if linha is None:
                     self._lastrowid = None

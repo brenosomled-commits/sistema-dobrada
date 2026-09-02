@@ -2941,7 +2941,10 @@ def atualizar_configuracao(chave):
     cur=conexao.cursor()
     cur.execute("UPDATE configuracoes SET valor=? WHERE chave=?", (valor, chave))
     if cur.rowcount==0:
-        cur.execute("INSERT INTO configuracoes (chave, valor) VALUES (?, ?)", (chave, valor))
+        if USAR_POSTGRES:
+            cur.execute("INSERT INTO configuracoes (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO NOTHING", (chave, valor))
+        else:
+            cur.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)", (chave, valor))
     conexao.commit()
     conexao.close()
     return jsonify({"mensagem":"Configuração atualizada!", "chave": chave, "valor": valor})
