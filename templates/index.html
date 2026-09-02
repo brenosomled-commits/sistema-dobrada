@@ -724,7 +724,7 @@ async function carregarDashboard() {
         const elFat = document.getElementById("faturamentoHoje");
         if(elFat){ elFat.innerText = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(faturamentoHoje); }
         const entregasHoje = (re||[]).filter(e=> (e.data_entrega||"").slice(0,10)===hoje);
-        const pendentes = (re||[]).filter(e=> ["Pendente","Em rota","Reagendada"].includes(e.status));
+        const pendentes = (re||[]).filter(e=> ["Pendente","SAIU PARA ROTA","Em rota","Reagendada"].includes(e.status));
         const elEntHoje = document.getElementById("entregasHoje");
         if(elEntHoje){ elEntHoje.innerText = entregasHoje.length; }
         const elEntHojeSub = document.getElementById("entregasHojeSub");

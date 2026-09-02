@@ -26,7 +26,7 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827;pad
 <body>
 <div class="header"><span>ENTREGA ENT{{ "%04d"|format(entrega.numero) }}</span><span>{{ entrega.status }}</span></div>
 <div class="card">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span class="badge badge-{{ 'SAIU' if 'SAIU' in entrega.status else entrega.status }}">{{ entrega.status }}</span><span style="font-size:8pt;color:#6b7280">{{ entrega.data_entrega or "" }} {{ entrega.horario or "" }}</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span class="badge badge-{{ 'SAIU' if 'SAIU' in entrega.status else entrega.status }}">{{ entrega.status }}</span><span style="font-size:8pt;color:#6b7280">{{ entrega.data_entrega|fmt_data }} {{ entrega.horario or "" }}</span></div>
 <div class="info">
 <div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>CLIENTE:</b><span>{{ entrega.cliente }} {{ entrega.telefone and "— " + entrega.telefone or "" }}</span></div>
 <div style="display:grid;grid-template-columns:22mm 1fr;gap:4px"><b>ENDEREÇO:</b><span>{{ entrega.endereco }} {{ entrega.bairro and "— " + entrega.bairro or "" }}</span></div>
@@ -44,14 +44,14 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827;pad
 </div>
 {% elif entrega.status == "SAIU PARA ROTA" or entrega.status == "Em rota" %}
 <div class="card" style="text-align:center">
-<div style="font-size:9pt;margin-bottom:6px">Em rota desde <b>{{ entrega.data_saida or "" }}</b></div>
+<div style="font-size:9pt;margin-bottom:6px">Em rota desde <b>{{ entrega.data_saida|fmt_data }}</b></div>
 <div style="font-size:8pt;color:#6b7280;margin-bottom:10px">Ao chegar ao cliente, confirme a entrega.</div>
 <button class="btn btn-entrega" onclick="avancar()">✅ CONFIRMAR ENTREGA</button>
 </div>
 {% elif entrega.status == "Entregue" %}
 <div class="card" style="text-align:center;background:#ecfdf5;border-color:#059669">
 <div style="font-weight:900;font-size:12pt;color:#065f46">ENTREGA REALIZADA ✓</div>
-<div style="font-size:8.5pt;margin-top:6px">Data: <b>{{ entrega.data_entregue or entrega.data_saida or "" }}</b></div>
+<div style="font-size:8.5pt;margin-top:6px">Data: <b>{{ (entrega.data_entregue or entrega.data_saida or "")|fmt_data }}</b></div>
 <div style="font-size:8.5pt">Entregador: <b>{{ entrega.entregador }}</b></div>
 <div style="font-size:7.5pt;color:#065f46;margin-top:8px">Não é possível alterar novamente.</div>
 </div>
@@ -62,7 +62,7 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827;pad
 <div class="card historico">
 <div style="font-weight:800;font-size:8pt;margin-bottom:6px">HISTÓRICO</div>
 {% for h in historico %}
-<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed #e5e7eb"><span><b>{{ h.status }}</b> — {{ h.usuario or "-" }}</span><span>{{ h.data_hora }}</span></div>
+<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed #e5e7eb"><span><b>{{ h.status }}</b> — {{ h.usuario or "-" }}</span><span>{{ h.data_hora|fmt_data }}</span></div>
 {% else %}
 <div style="color:#6b7280">Sem histórico</div>
 {% endfor %}

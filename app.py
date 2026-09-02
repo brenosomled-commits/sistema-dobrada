@@ -2126,20 +2126,18 @@ def resumo_dashboard():
     conexao = conectar()
     cursor = conexao.cursor()
 
-    arredondar = "ROUND(COALESCE(%s, 0)::numeric, 2)" if USAR_POSTGRES else "ROUND(COALESCE(%s, 0), 2)"
     filtro = f"{mes}%" 
-    placeholder = "%s" if USAR_POSTGRES else "?"
     cursor.execute("""
         SELECT
             COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
             COUNT(*) AS vendas,
-            %s AS total_vendas,
-            %s AS total_comissao
+            ROUND(COALESCE(SUM(total), 0), 2) AS total_vendas,
+            ROUND(COALESCE(SUM(comissao), 0), 2) AS total_comissao
         FROM vendas
-        WHERE COALESCE(vendedor, '') <> '' AND COALESCE(data,'') LIKE %s
+        WHERE COALESCE(vendedor, '') <> '' AND COALESCE(data,'') LIKE ?
         GROUP BY vendedor
         ORDER BY total_vendas DESC, vendas DESC, vendedor ASC
-    """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)", placeholder), (filtro,))
+    """, (filtro,))
 
     vendas_por_vendedor = cursor.fetchall()
     conexao.close()
@@ -2401,51 +2399,49 @@ def api_comissoes():
     conexao = conectar()
     cursor = conexao.cursor()
     filtro_mes = f"{mes}%" if mes else "%"
-    arredondar = "ROUND(COALESCE(%s, 0)::numeric, 2)" if USAR_POSTGRES else "ROUND(COALESCE(%s, 0), 2)"
     if vendedor_filtro:
-        # vendedor: só suas vendas
-        cursor.execute(f"""
+        cursor.execute("""
             SELECT
                 COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
                 COUNT(*) AS vendas,
-                {arredondar} AS total_vendas,
-                {arredondar} AS total_comissao
+                ROUND(COALESCE(SUM(total), 0), 2) AS total_vendas,
+                ROUND(COALESCE(SUM(comissao), 0), 2) AS total_comissao
             FROM vendas
             WHERE COALESCE(vendedor,'') <> '' AND COALESCE(data,'') LIKE ? AND upper(vendedor)=upper(?)
             GROUP BY vendedor
             ORDER BY total_comissao DESC, vendas DESC, vendedor ASC
-        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes, vendedor_filtro))
+        """, (filtro_mes, vendedor_filtro))
         por_vendedor = cursor.fetchall()
-        cursor.execute(f"""
+        cursor.execute("""
             SELECT
                 COUNT(*) AS qtd,
-                {arredondar} AS total,
-                {arredondar} AS comissao
+                ROUND(COALESCE(SUM(total), 0), 2) AS total,
+                ROUND(COALESCE(SUM(comissao), 0), 2) AS comissao
             FROM vendas
             WHERE COALESCE(data,'') LIKE ? AND upper(vendedor)=upper(?)
-        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes, vendedor_filtro))
+        """, (filtro_mes, vendedor_filtro))
         tot = cursor.fetchone()
     else:
-        cursor.execute(f"""
+        cursor.execute("""
             SELECT
                 COALESCE(vendedor, 'SEM VENDEDOR') AS vendedor,
                 COUNT(*) AS vendas,
-                {arredondar} AS total_vendas,
-                {arredondar} AS total_comissao
+                ROUND(COALESCE(SUM(total), 0), 2) AS total_vendas,
+                ROUND(COALESCE(SUM(comissao), 0), 2) AS total_comissao
             FROM vendas
             WHERE COALESCE(vendedor,'') <> '' AND COALESCE(data,'') LIKE ?
             GROUP BY vendedor
             ORDER BY total_comissao DESC, vendas DESC, vendedor ASC
-        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes,))
+        """, (filtro_mes,))
         por_vendedor = cursor.fetchall()
-        cursor.execute(f"""
+        cursor.execute("""
             SELECT
                 COUNT(*) AS qtd,
-                {arredondar} AS total,
-                {arredondar} AS comissao
+                ROUND(COALESCE(SUM(total), 0), 2) AS total,
+                ROUND(COALESCE(SUM(comissao), 0), 2) AS comissao
             FROM vendas
             WHERE COALESCE(data,'') LIKE ?
-        """ % (arredondar % "SUM(total)", arredondar % "SUM(comissao)"), (filtro_mes,))
+        """, (filtro_mes,))
         tot = cursor.fetchone()
     conexao.close()
     return jsonify({
@@ -2841,6 +2837,24 @@ def rota_entregas():
     conexao.close()
     out=[dict(r) if hasattr(r,"keys") else {k: r[i] for i,k in enumerate([c[0] for c in cur.description])} for r in rows]
     return jsonify(out)
+
+def _fmt_data_br(d):
+    """Converte YYYY-MM-DD ou YYYY-MM-DD HH:MM para DD/MM/YYYY ou DD/MM/YYYY HH:MM."""
+    if not d:
+        return ""
+    s = str(d).strip()
+    if len(s) >= 10 and s[4] == "-" and s[7] == "-":
+        partes = s.split(" ")
+        data_part = partes[0]
+        p = data_part.split("-")
+        resultado = f"{p[2]}/{p[1]}/{p[0]}"
+        if len(partes) > 1:
+            resultado += " " + partes[1]
+        return resultado
+    return s
+
+app.jinja_env.filters["fmt_data"] = _fmt_data_br
+
 
 @app.route("/m/entrega/<int:id>")
 @login_obrigatorio

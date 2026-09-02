@@ -232,6 +232,8 @@
                     <div id="avisoDesconto" class="aviso-desconto">Desconto acima do limite permitido (máx. <span id="txtMaxDesc">5</span>%)</div>
                     <div class="resumo-linha"><span>Valor do desconto</span><span style="color:var(--cor-perigo)">- R$ <span id="valorDesconto">0,00</span></span></div>
                     <div class="resumo-linha total-final"><span>Total final</span><b>R$ <span id="totalFinal">0,00</span></b></div>
+                    <div id="linhaRecebido" class="resumo-linha" style="display:none"><span>Valor recebido (R$)</span><span style="display:flex;align-items:center;gap:6px"><input type="number" id="valorRecebido" min="0" step="0.01" placeholder="0,00" oninput="calcularTroco()" style="width:100px"></span></div>
+                    <div id="linhaTroco" class="resumo-linha" style="display:none"><span>Troco</span><b style="color:#059669">R$ <span id="valorTroco">0,00</span></b></div>
                 </div>
             </div>
         </div>
@@ -306,16 +308,35 @@ async function gerarNumeroVenda(){
     try{ const r = await fetch("/api/proxima_venda"); const j = await r.json(); document.getElementById("venda").value = fmtVenda(j.numero); syncBadge(); }
     catch(erro){ console.error(erro); document.getElementById("venda").value = ""; }
 }
+function calcularTroco(){
+    const total = Number(document.getElementById("totalFinal").innerText.replace(/\./g,"").replace(",",".")) || 0;
+    const recebido = Number(document.getElementById("valorRecebido").value) || 0;
+    const troco = recebido - total;
+    document.getElementById("valorTroco").innerText = troco < 0 ? "0,00" : troco.toFixed(2).replace(".",",");
+    document.getElementById("linhaTroco").style.display = troco > 0 ? "flex" : "none";
+}
 function atualizarVencimento(){
     const condicao = document.getElementById("condicao").value;
     const data = document.getElementById("data").value;
     const campo = document.getElementById("campoVencimento");
     const vencimento = document.getElementById("vencimento");
+    const linhaRecebido = document.getElementById("linhaRecebido");
+    const linhaTroco = document.getElementById("linhaTroco");
     if(condicao === "aprazo" && data){
         const novaData = new Date(data + "T12:00:00"); novaData.setDate(novaData.getDate() + 30);
         vencimento.value = novaData.toISOString().split("T")[0];
         campo.style.display = "flex"; campo.style.flexDirection="column";
     }else{ campo.style.display = "none"; vencimento.value = ""; }
+    if(condicao === "dinheiro"){
+        linhaRecebido.style.display = "flex";
+        document.getElementById("valorRecebido").value = "";
+        document.getElementById("valorTroco").innerText = "0,00";
+        linhaTroco.style.display = "none";
+    } else {
+        linhaRecebido.style.display = "none";
+        linhaTroco.style.display = "none";
+        document.getElementById("valorRecebido").value = "";
+    }
 }
 function adicionarItem(focarDescricao=false){
     const item = document.createElement("div"); item.className = "nota-item-editor";
@@ -428,7 +449,7 @@ function gerarCabecalho(isSegunda=false){
     const condicaoTxt = condicaoRaw==='aprazo' ? 'A PRAZO' : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[condicaoRaw])||(condicaoRaw||'-').toUpperCase());
     const dataFmt = data ? data.split('-').reverse().join('/') : "-";
     const vencFmt = vencimento ? vencimento.split('-').reverse().join('/') : (condicaoRaw==='aprazo' ? venc30(data) : "-");
-    const validade = "7 DIAS";
+    const validade = "";
     return etiquetaVia(isSegunda) + `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000">
             <div style="flex:1"></div>
@@ -441,7 +462,6 @@ function gerarCabecalho(isSegunda=false){
             <div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${venda}</span></div>
             <div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div>
             <div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${vendedor}</div>
-            <div><span style="font-size:7pt;font-weight:700">VALIDADE:</span> ${validade}</div>
             <div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${obs}</div>
             <div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div>
         </div>
@@ -466,7 +486,16 @@ function gerarLinhaProduto(item){
 function gerarResumo(){
     const descontoPct = document.getElementById("desconto").value || "0";
     const valorDesc = document.getElementById("valorDesconto").innerText;
-    return `<div style="width:86mm;margin-left:auto;margin-top:6px;border:1px solid #000;padding:4px 6px;font-size:8pt;line-height:1.35"><div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL:</span><span>R$ ${document.getElementById("totalItens").innerText}</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">DESCONTO:</span><span>${descontoPct}%</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">VALOR DESCONTO:</span><span>R$ ${valorDesc}</span></div><div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:3px"><span style="font-weight:800">TOTAL FINAL:</span><span style="font-weight:800">R$ ${document.getElementById("totalFinal").innerText}</span></div></div>`;
+    const condicao = document.getElementById("condicao").value;
+    const recebido = document.getElementById("valorRecebido").value;
+    const troco = document.getElementById("valorTroco").innerText;
+    let html = `<div style="width:86mm;margin-left:auto;margin-top:6px;border:1px solid #000;padding:4px 6px;font-size:8pt;line-height:1.35"><div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL:</span><span>R$ ${document.getElementById("totalItens").innerText}</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">DESCONTO:</span><span>${descontoPct}%</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">VALOR DESCONTO:</span><span>R$ ${valorDesc}</span></div><div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:3px"><span style="font-weight:800">TOTAL FINAL:</span><span style="font-weight:800">R$ ${document.getElementById("totalFinal").innerText}</span></div>`;
+    if(condicao === "dinheiro" && recebido){
+        html += `<div style="display:flex;justify-content:space-between"><span style="font-weight:700">RECEBIDO:</span><span>R$ ${Number(recebido).toFixed(2).replace(".",",")}</span></div>`;
+        html += `<div style="display:flex;justify-content:space-between"><span style="font-weight:800">TROCO:</span><span style="font-weight:800">R$ ${troco}</span></div>`;
+    }
+    html += `</div>`;
+    return html;
 }
 async function prepararImpressao(){
     if(!document.getElementById("vendedor").value){ S.Toast.erro("Selecione o vendedor primeiro."); document.getElementById("vendedor").focus(); return; }
@@ -485,20 +514,19 @@ async function prepararImpressao(){
     const primeiraVia = document.createElement("div"); primeiraVia.className = "via-impressao";
     primeiraVia.innerHTML = gerarCabecalho(false);
     itens.forEach(item => { primeiraVia.innerHTML += gerarLinhaProduto(item); });
-        if(i + itensPorVia >= itens.length) primeiraVia.innerHTML += gerarResumo();
-        const resumoHTML = gerarResumo();
-        const assinaturaCliente = `<div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;color:#374151;margin-top:2px">Ao assinar, declaro que estou ciente<br>das condições deste orçamento.</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
-        const assinaturaLoja = `<div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA — VIA DA LOJA</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
-        primeiraVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:4px;flex:1"><div style="flex:1;display:flex;align-items:flex-end">${assinaturaCliente}</div><div>${resumoHTML}</div></div>`;
-        primeiraVia.innerHTML += '<div style="margin-top:2px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
-        segundaVia.innerHTML = gerarCabecalho(true);
-        itens.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
-        segundaVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:4px;flex:1"><div style="flex:1;display:flex;align-items:flex-end">${assinaturaLoja}</div><div>${resumoHTML}</div></div>`;
-        segundaVia.innerHTML += '<div style="margin-top:2px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        pagina.appendChild(primeiraVia);
-        pagina.appendChild(recorteVia());
-        pagina.appendChild(segundaVia); area.appendChild(pagina);
+    const resumoHTML = gerarResumo();
+    const assinaturaCliente = `<div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;color:#374151;margin-top:2px">Ao assinar, declaro que estou ciente<br>das condições deste orçamento.</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+    const assinaturaLoja = `<div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA — VIA DA LOJA</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+    primeiraVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:4px;flex:1"><div style="flex:1;display:flex;align-items:flex-end">${assinaturaCliente}</div><div>${resumoHTML}</div></div>`;
+    primeiraVia.innerHTML += '<div style="margin-top:2px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+    const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
+    segundaVia.innerHTML = gerarCabecalho(true);
+    itens.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
+    segundaVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:4px;flex:1"><div style="flex:1;display:flex;align-items:flex-end">${assinaturaLoja}</div><div>${resumoHTML}</div></div>`;
+    segundaVia.innerHTML += '<div style="margin-top:2px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+    pagina.appendChild(primeiraVia);
+    pagina.appendChild(recorteVia());
+    pagina.appendChild(segundaVia); area.appendChild(pagina);
     window.print();
     setTimeout(function(){ novaVenda(); }, 500);
 }
@@ -545,7 +573,7 @@ async function reimprimirDobrada(id){
             const descontoPct = v.desconto!=null ? v.desconto : 0;
             const valorDesc = (Number(v.total||0) * Number(descontoPct||0) / (100 - Number(descontoPct||0) || 100) * 0).toFixed(2).replace(".",","); // placeholder, será recalculado se necessário
             // cabeçalho compacto 2 colunas
-            let h=`<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 6px -2px;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000"><div style="flex:1"></div><div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div><div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">${fmtVenda(v.numero)}</div></div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35"><div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">${v.cliente||"CONSUMIDOR FINAL"}</span></div><div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condTxt}</span></div><div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${fmtVenda(v.numero)}</span></div><div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div><div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${v.vendedor||"-"}</div><div><span style="font-size:7pt;font-weight:700">VALIDADE:</span> 7 DIAS</div><div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${v.observacao||"-"}</div><div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div></div><div style="border-top:1px solid #000;margin:5px 0 0"></div><div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;font-weight:700;border-bottom:1.2px solid #000;padding:3px 0;font-size:7.5pt;letter-spacing:.02em"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>`;
+            let h=`<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 6px -2px;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000"><div style="flex:1"></div><div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div><div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">${fmtVenda(v.numero)}</div></div></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35"><div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">${v.cliente||"CONSUMIDOR FINAL"}</span></div><div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condTxt}</span></div><div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${fmtVenda(v.numero)}</span></div><div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div><div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${v.vendedor||"-"}</div><div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${v.observacao||"-"}</div><div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div></div><div style="border-top:1px solid #000;margin:5px 0 0"></div><div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;font-weight:700;border-bottom:1.2px solid #000;padding:3px 0;font-size:7.5pt;letter-spacing:.02em"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>`;
             (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); h+=`<div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;padding:1.5px 0;font-size:${_rowFont};border-bottom:1px dotted #d1d5db;min-height:${_rowH};height:${_rowH};align-items:center;overflow:hidden"><span>${it.quantidade}</span><span style="padding-right:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
             const totalItens = Number(v.total||0) / (1 - Number(descontoPct||0)/100 || 1);
             const vDesc = (totalItens * Number(descontoPct||0)/100).toFixed(2).replace(".",",");

@@ -20,6 +20,7 @@ IMMEDIATE" é convertido para "BEGIN", e INSERTs no PostgreSQL ganham
 """
 
 import os
+import time as _time
 
 DRIVER = "postgres" if os.environ.get("DATABASE_URL") else "sqlite"
 
@@ -28,17 +29,24 @@ def banco_eh_postgres():
     return DRIVER == "postgres"
 
 
-def _conexao_postgres():
+def _conexao_postgres(tentativas=3):
     import psycopg
     from psycopg.rows import dict_row
 
-    conexao = psycopg.connect(
-        os.environ["DATABASE_URL"],
-        connect_timeout=10,
-    )
-    conexao.row_factory = dict_row
-    conexao.autocommit = False
-    return conexao
+    ultimo_erro = None
+    for _ in range(tentativas):
+        try:
+            conexao = psycopg.connect(
+                os.environ["DATABASE_URL"],
+                connect_timeout=15,
+            )
+            conexao.row_factory = dict_row
+            conexao.autocommit = False
+            return conexao
+        except Exception as e:
+            ultimo_erro = e
+            _time.sleep(1)
+    raise ultimo_erro
 
 
 def _conexao_sqlite():
