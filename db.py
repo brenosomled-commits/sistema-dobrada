@@ -29,7 +29,8 @@ def banco_eh_postgres():
     return DRIVER == "postgres"
 
 
-def _conexao_postgres(tentativas=3):
+def _criar_conexao_postgres(tentativas=3):
+    """Abre uma conexão PostgreSQL (Neon) com retry, configurada para o app."""
     import psycopg
     from psycopg.rows import dict_row
 
@@ -47,6 +48,52 @@ def _conexao_postgres(tentativas=3):
             ultimo_erro = e
             _time.sleep(1)
     raise ultimo_erro
+
+
+# Pool simples de conexões PostgreSQL para reutilizar no serverless (Vercel).
+# Evita abrir uma conexão nova a cada request, reduzindo o cold start do Neon
+# e os erros de conexão intermitentes. O módulo é recarregado a cada execução
+# fria; quando a instância está "quente" o pool persiste entre requests.
+_POOL_MAX = 3
+_pool = []          # conexões ociosas (postgres)
+_pool_lock = None
+
+
+def _init_pool_lock():
+    import threading
+    global _pool_lock
+    if _pool_lock is None:
+        _pool_lock = threading.Lock()
+
+
+def _conexao_postgres():
+    """Obtém uma conexão: reutiliza uma ociosa do pool ou cria uma nova."""
+    if _pool_lock is None:
+        _init_pool_lock()
+    with _pool_lock:
+        if _pool:
+            conexao = _pool.pop()
+            return conexao
+    return _criar_conexao_postgres()
+
+
+def _devolver_conexao_postgres(conexao):
+    """Devolve a conexão ao pool ou fecha, conforme disponibilidade."""
+    try:
+        conexao.rollback()
+    except Exception:
+        pass
+    if _pool_lock is None:
+        _init_pool_lock()
+    with _pool_lock:
+        _usar_no_pool = not conexao.closed and len(_pool) < _POOL_MAX
+        if _usar_no_pool:
+            _pool.append(conexao)
+        else:
+            try:
+                conexao.close()
+            except Exception:
+                pass
 
 
 def _conexao_sqlite():
@@ -152,7 +199,10 @@ class ConexaoUnificada:
 
     def close(self):
         try:
-            self._conexao.close()
+            if self._driver == "postgres":
+                _devolver_conexao_postgres(self._conexao)
+            else:
+                self._conexao.close()
         except Exception:
             pass
 

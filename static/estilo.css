@@ -3,25 +3,25 @@
    ============================================ */
 
 :root {
-    --cor-primaria: #1a56db;
-    --cor-primaria-hover: #1442b0;
-    --cor-primaria-light: #c9d6f8;
-    --cor-sucesso: #03624b;
-    --cor-sucesso-light: #9ce8c8;
-    --cor-aviso: #9a5600;
-    --cor-aviso-light: #fdd568;
-    --cor-perigo: #a21616;
-    --cor-perigo-light: #fdb4b4;
-    --cor-info: #1a4ac0;
-    --cor-info-light: #b6c9f7;
+    --cor-primaria: #1442b0;
+    --cor-primaria-hover: #0f337f;
+    --cor-primaria-light: #b3c4f0;
+    --cor-sucesso: #047a5c;
+    --cor-sucesso-light: #7fe0b8;
+    --cor-aviso: #8f4f00;
+    --cor-aviso-light: #f9c74f;
+    --cor-perigo: #b91c1c;
+    --cor-perigo-light: #fca5a5;
+    --cor-info: #1450c8;
+    --cor-info-light: #a8bff5;
 
-    --cor-fundo: #dfe6ef;
+    --cor-fundo: #d5deeb;
     --cor-painel: #ffffff;
-    --cor-borda: #b3bfd1;
-    --cor-borda-forte: #7d8ca1;
-    --cor-texto: #0b1120;
-    --cor-texto-secundario: #1e2a3d;
-    --cor-texto-muted: #334155;
+    --cor-borda: #94a3b8;
+    --cor-borda-forte: #55637a;
+    --cor-texto: #000000;
+    --cor-texto-secundario: #111827;
+    --cor-texto-muted: #1f2937;
 
     --sombra-sm: 0 1px 3px rgba(15,23,42,.12);
     --sombra: 0 1px 3px rgba(15,23,42,.14), 0 1px 2px rgba(15,23,42,.10);
@@ -90,21 +90,21 @@ a:hover {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 18px;
+    padding: 12px 22px;
     border: 1px solid transparent;
     border-radius: var(--raio);
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all var(--transicao);
+    transition: background var(--transicao);
     white-space: nowrap;
-    line-height: 1.4;
+    line-height: 1.2;
     text-decoration: none;
     font-family: var(--fonte);
 }
 
-.btn:hover { transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
+.btn:hover { filter: brightness(0.96); }
+.btn:active { filter: brightness(0.92); }
 
 .btn-primary {
     background: var(--cor-primaria);
@@ -168,17 +168,18 @@ a:hover {
 }
 
 .btn-sm {
-    padding: 6px 12px;
-    font-size: 0.8rem;
+    padding: 8px 14px;
+    font-size: 0.85rem;
 }
 
 .btn-lg {
-    padding: 14px 24px;
-    font-size: 1rem;
+    padding: 16px 28px;
+    font-size: 1.05rem;
 }
 
 .btn-block {
     width: 100%;
+    min-height: 48px;
 }
 
 .btn:disabled {
@@ -190,29 +191,29 @@ a:hover {
 /* FORMULARIOS */
 
 .form-group {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .form-label {
     display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    font-weight: 700;
     color: var(--cor-texto);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .form-input,
 .form-select,
 .form-textarea {
     width: 100%;
-    padding: 10px 14px;
+    padding: 11px 14px;
     border: 1px solid var(--cor-borda-forte);
     border-radius: var(--raio);
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-family: var(--fonte);
     color: var(--cor-texto);
     background: #fff;
-    transition: border-color var(--transicao), box-shadow var(--transicao);
+    transition: border-color var(--transicao);
     outline: none;
 }
 
@@ -263,8 +264,7 @@ a:hover {
     background: var(--cor-painel);
     border: 1px solid var(--cor-borda);
     border-radius: var(--raio-lg);
-    padding: 24px;
-    box-shadow: var(--sombra);
+    padding: 18px;
 }
 
 .card-header {
@@ -349,12 +349,12 @@ a:hover {
 }
 
 .tabela th {
-    background: #e7eef7;
+    background: #1e3a8a;
+    color: #ffffff;
     font-size: 0.8rem;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: var(--cor-texto-secundario);
     padding: 12px 16px;
     text-align: left;
     border-bottom: 2px solid var(--cor-borda);
@@ -365,16 +365,16 @@ a:hover {
     padding: 12px 16px;
     border-bottom: 1px solid var(--cor-borda);
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
     vertical-align: middle;
 }
 
-.tabela tr:last-child td {
-    border-bottom: none;
+.tabela tr:nth-child(even) td {
+    background: #f2f6fc;
 }
 
 .tabela tr:hover td {
-    background: var(--cor-fundo);
+    background: #dbe7fa;
 }
 
 .tabela .acao-cell {
@@ -1116,6 +1116,10 @@ a:hover {
     .tabela th { padding: 6px 8px !important; font-size: 0.7rem !important; }
     .tabela td { padding: 6px 8px !important; font-size: 0.78rem !important; }
     .tabela tr { break-inside: avoid; page-break-inside: avoid; }
+    .tabela tr:nth-child(even) td { background: transparent !important; }
+    .tabela tr:hover td { background: transparent !important; }
+
+    #telaDetalhes .tabela th { background: transparent !important; color: #000 !important; }
 
     .os-resumo {
         padding: 8px 12px !important;
