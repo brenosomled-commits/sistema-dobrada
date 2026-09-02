@@ -31,22 +31,22 @@
 <div class="form-group"><label class="form-label">Nome da impressora (Windows)</label><input type="text" class="form-input" id="zebraNome" placeholder="ELGIN i9 (USB)"></div>
 <div class="form-group"><label class="form-label">Largura (mm)</label><select class="form-select" id="zebraLargura"><option value="80">80mm (padrão)</option><option value="58">58mm</option></select></div>
 </div>
-<div class="form-group" style="margin-top:12px"><label class="form-label">Modo automático (sem diálogo)</label><select class="form-select" id="zebraAuto" style="max-width:220px"><option value="1">Ativado — tenta direto na Zebra</option><option value="0">Desativado — sempre mostra diálogo</option></select><div class="form-hint">Quando ativado, o botão 🖨 Zebra tenta imprimir direto via Web Serial. Na primeira vez em cada máquina é necessário selecionar a porta.</div></div>
+<div class="form-group" style="margin-top:12px"><label class="form-label">Tipo de conexão</label><select class="form-select" id="zebraAuto" style="max-width:300px"><option value="network">Universal (impressora padrão do Windows) — recomendado</option><option value="usb">Só via USB local (Web Serial)</option></select><div class="form-hint" id="hintConexao">A Elgin i9 é compartilhada na rede. A impressão universal usa a <b>impressora padrão do Windows</b> de cada máquina — funciona em todos os computadores, inclusive via acesso remoto.</div></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn btn-primary" onclick="salvarConfig()">💾 Salvar</button><button class="btn btn-outline" onclick="testarZebra()">🧪 Testar impressão</button></div>
 </div>
 
 <div class="card mt-3">
-<h3 style="font-size:1rem;margin-bottom:8px">Como deixar automático em todas as máquinas</h3>
-<ol style="margin-left:18px;line-height:1.7;font-size:.9rem;color:var(--cor-texto-secundario)">
-<li>Em cada computador, abra <b>Entregas</b> e clique em <b>🖨 Zebra</b> — na primeira vez selecione <b>ELGIN i9 (USB)</b> ou <b>USB Serial</b> e marque “Lembrar” se aparecer. Depois fica automático.</li>
-<li>Para o botão 🖨 normal (navegador), defina a Elgin como padrão no Windows: <b>Painel de Controle → Dispositivos e Impressoras → botão direito na Elgin i9 → Definir como padrão</b>.</li>
-<li>Mantenha o Chrome/Edge atualizado e use <b>https</b> (Vercel já é https).</li>
-<li>Se o diálogo ainda mostrar “Brother”, é porque a padrão ainda é a Brother — altere no Windows.</li>
+<h3 style="font-size:1rem;margin-bottom:8px">Como deixar universal em todas as máquinas</h3>
+<ol style="margin-left:18px;line-height:1.8;font-size:.9rem;color:var(--cor-texto-secundario)">
+<li>A Elgin i9 já está <b>compartilhada na rede Windows</b>. Em cada computador (local ou via acesso remoto), abra uma entrega e clique em <b>🖨 Zebra</b> — o sistema usa a impressora <b>padrão do Windows</b> daquela máquina.</li>
+<li>Para garantir que seja a Elgin: <b>Painel de Controle → Dispositivos e Impressoras → botão direito na Elgin i9 → Definir como padrão</b>. Faça isso uma vez em cada computador.</li>
+<li>Na primeira impressão em cada máquina, o Windows pode pedir para confirmar a impressora — escolha a <b>Elgin i9</b> e marque <b>“Usar por padrão”</b>, se aparecer.</li>
+<li>Se o diálogo mostrar outra impressora (ex.: Brother), basta trocar para a Elgin no seletor de impressora do próprio diálogo — fica lembrado depois.</li>
 </ol>
 </div>
 
 <div class="card mt-3" style="background:var(--cor-fundo)">
-<div style="font-size:.85rem"><b>Dica:</b> A impressão direta via Web Serial funciona em Chrome/Edge desktop. No celular, use o botão 🖨 normal (80mm) — o sistema já está com <b>@page 80mm auto</b> e cupom negrito.</div>
+<div style="font-size:.85rem"><b>Como funciona a conexão universal:</b> os computadores acessam a Elgin i9 por <b>acesso remoto</b> à impressora <b>compartilhada na rede</b>. O navegador imprime pela <b>impressora padrão do Windows</b>, e o próprio Windows envia para a Elgin compartilhada — funciona em qualquer máquina, sem depender de porta USB local. A opção “Só via USB local” (Web Serial) é apenas para quando a Elgin estiver plugada direto no próprio computador.</div>
 </div>
 </main>
 </div>
@@ -57,28 +57,27 @@ async function carregarConfig(){
     try{ const r=await fetch("/api/configuracoes"); const j=await r.json();
         document.getElementById("zebraNome").value=j.zebra_nome||"ELGIN i9 (USB)";
         document.getElementById("zebraLargura").value=j.zebra_largura||"80";
-        document.getElementById("zebraAuto").value=j.zebra_auto||"1";
+        document.getElementById("zebraAuto").value=j.zebra_auto==="usb"?"usb":"network";
     }catch(e){}
 }
 async function salvarConfig(){
-    const dados={ valor: document.getElementById("zebraNome").value };
     try{
         S.mostrarLoading("Salvando...");
         await fetch("/api/configuracoes/zebra_nome",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:document.getElementById("zebraNome").value})});
         await fetch("/api/configuracoes/zebra_largura",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:document.getElementById("zebraLargura").value})});
         await fetch("/api/configuracoes/zebra_auto",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({valor:document.getElementById("zebraAuto").value})});
-        S.Toast.sucesso("Configuração salva!"); 
+        S.Toast.sucesso("Configuração salva!");
         localStorage.setItem("zebra_auto", document.getElementById("zebraAuto").value);
         localStorage.setItem("zebra_nome", document.getElementById("zebraNome").value);
     }catch(e){ S.Toast.erro("Erro ao salvar"); }finally{ S.esconderLoading(); }
 }
 async function testarZebra(){
-    // cria entrega fake só para teste visual
-    S.Toast.info("Use uma entrega real e clique em 🖨 Zebra para testar. O teste imprime um cupom de exemplo.");
-    // opcional: tenta abrir serial para verificar
     if("serial" in navigator){
-        try{ const ports=await navigator.serial.getPorts(); S.Toast.info(ports.length+" porta(s) pareada(s) nesta máquina"); }catch(e){}
+        try{ const ports=await navigator.serial.getPorts();
+            if(ports.length>0){ S.Toast.info(ports.length+" porta(s) USB local(is) pareada(s) nesta máquina"); return; }
+        }catch(e){}
     }
+    S.Toast.info("Use uma entrega real e clique em 🖨 Zebra — a Elgin i9 compartilhada na rede imprime pela impressora padrão do Windows (universal, funciona via acesso remoto).");
 }
 carregarConfig();
 </script>

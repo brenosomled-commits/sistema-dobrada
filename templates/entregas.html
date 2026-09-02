@@ -247,7 +247,7 @@ function filtrar(){
     cont.innerHTML="";
     lista.forEach(e=>{
         const div=document.createElement("div"); div.className="entrega-card";
-        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="SAIU PARA ROTA"?"selected":""}>SAIU PARA ROTA</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-outline btn-sm" onclick="imprimirEntrega(${e.id})" title="Imprimir via navegador (80mm)">🖨</button><button class="btn btn-outline btn-sm" style="background:#000;color:#fff;border-color:#000" onclick="imprimirZebraDireto(${e.id})" title="Imprimir direto na Elgin i9 sem diálogo (automático)">🖨 Zebra</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
+        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="SAIU PARA ROTA"?"selected":""}>SAIU PARA ROTA</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-outline btn-sm" onclick="imprimirEntrega(${e.id})" title="Imprimir via navegador (80mm)">🖨</button><button class="btn btn-outline btn-sm" style="background:#000;color:#fff;border-color:#000" onclick="imprimirZebraDireto(${e.id})" title="Imprimir na Elgin i9 (impressora padrão do Windows — universal, funciona via acesso remoto)">🖨 Zebra</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
         cont.appendChild(div);
     });
 }
@@ -402,44 +402,39 @@ async function fecharScannerQR(){
     try{ if(_qrScanner){ await _qrScanner.stop(); _qrScanner.clear(); } }catch(e){}
     document.getElementById("qrScanner").style.display="none";
 }
+function fmtDataBR(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
+// Conexão universal com a Elgin i9: usa a impressora padrão do Windows (window.print),
+// que funciona em qualquer máquina, inclusive via acesso remoto à impressora compartilhada.
+// O Web Serial só é usado quando há uma porta Elgin local realmente pareada (USB física).
 async function imprimirZebraDireto(id){
-    const isZebra = true;
     let port=null;
     try{
+        // Só tentamos o caminho direto se houver porta local já pareada nesta máquina (Elgin via USB).
         if("serial" in navigator){
             const ports=await navigator.serial.getPorts();
-            // tenta encontrar Elgin/i9/USB por nome se disponível
-            if(ports.length>0){
-                // prioriza porta que parece ser Elgin/USB
-                port = ports.find(p=> {
-                    const info=p.getInfo ? p.getInfo() : {};
-                    return String(info.usbVendorId||"").toLowerCase().includes("elgin") || String(info.usbProductId||"").includes("");
-                }) || ports[0];
-            } else {
-                S.Toast.info("Na primeira vez selecione a Elgin i9 (USB) — depois fica automático nesta máquina", 5000);
-                port=await navigator.serial.requestPort({filters:[]});
-                // salva escolha implicitamente via getPorts na próxima vez
-            }
+            const elgin = ports.find(p=>{
+                const info = p.getInfo ? p.getInfo() : {};
+                return String(info.usbVendorId||"").toLowerCase().indexOf("elgin")>=0 || String(info.usbProductId||"").indexOf("i9")>=0;
+            });
+            port = elgin || ports[0] || null;
         }
         if(port){
             const r=await fetch("/api/entregas/"+id); const e=await r.json(); if(!r.ok) throw new Error(e.erro||"Entrega não encontrada");
             const ESC="\x1B", GS="\x1D";
-            let txt=ESC+"@"; txt+=ESC+"a\x01"; txt+="SOMLED\n"; txt+="NOTA DE ENTREGA\n"; txt+=`ENT${String(e.numero).padStart(4,"0")}\n`; txt+=`${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}\n`; txt+=ESC+"a\x00"; txt+="--------------------------------\n";
+            let txt=ESC+"@"; txt+=ESC+"a\x01"; txt+="SOMLED\n"; txt+="NOTA DE ENTREGA\n"; txt+=`ENT${String(e.numero).padStart(4,"0")}\n`; txt+=`${fmtDataBR(e.data_entrega)} ${e.horario||""}\n`; txt+=ESC+"a\x00"; txt+="--------------------------------\n";
             txt+=`CLIENTE: ${e.cliente||""}\n`; if(e.telefone) txt+=`TEL: ${e.telefone}\n`; txt+=`END: ${e.endereco||""}${e.bairro?" - "+e.bairro:""}\n`; txt+=`ENTREGADOR: ${e.entregador||"-"}\n`; txt+=`TAXA: R$ ${Number(e.taxa||0).toFixed(2).replace(".",",")}  STATUS: ${e.status||""}\n`; if(e.observacao) txt+=`OBS: ${e.observacao}\n`; txt+="--------------------------------\n"; txt+="QTD  DESCRICAO\n"; txt+="--------------------------------\n";
             const itens=e.itens||[]; if(itens.length===0){ for(let i=0;i<5;i++) txt+="\n"; } else itens.slice(0,12).forEach(it=>{ txt+=`${String(it.quantidade||"").padEnd(4)}${(it.descricao||"").slice(0,28)}\n`; });
             txt+="--------------------------------\n"; txt+=`COMPROVANTE: ${e.comprovante||"-"}\n\n`; txt+="ASSINATURA DO CLIENTE\n"; txt+="-------------------------------\n"; txt+="Recebi em perfeitas condicoes\n\n"; txt+=`ENT${String(e.numero).padStart(4,"0")} ${e.cliente||""}\n`; txt+=window.location.origin+"/m/entrega/"+e.id+"\n\n\n"; txt+=GS+"V\x00";
             await port.open({baudRate:9600}); const writer=port.writable.getWriter(); await writer.write(new TextEncoder().encode(txt)); writer.releaseLock(); await port.close();
             localStorage.setItem("zebra_auto","1");
-            S.Toast.sucesso("Enviado direto para Elgin i9! Próximas impressões serão automáticas.");
-            return;
+            S.Toast.sucesso("Enviado para Elgin i9 via USB!"); return;
         }
     }catch(e){
-        if(e && String(e.message||"").includes("No port")){ S.Toast.aviso("Selecione a Elgin i9 e marque 'Lembrar' se disponível"); return; }
-        console.warn("Zebra direto falhou, caindo para impressão normal", e);
+        if(e && String(e.message||"").indexOf("No port")>=0){ S.Toast.aviso("Impressora USB não encontrada — usando impressora padrão do Windows"); }
+        else console.warn("Impressão direta falhou, usando impressora padrão do Windows", e);
     }
-    // Fallback: impressão normal 80mm — instruções para deixar automático
-    const pref = localStorage.getItem("zebra_auto");
-    if(!pref) S.Toast.info("Dica: no Windows defina Elgin i9 como padrão em Painel de Controle > Impressoras > Definir como padrão. Assim o botão 🖨 normal já vai direto.", 6000);
+    // Universal: usa a impressora padrão do Windows (a Elgin i9 compartilhada na rede).
+    // Funciona em todos os computadores, inclusive via acesso remoto.
     return imprimirEntrega(id);
 }
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });

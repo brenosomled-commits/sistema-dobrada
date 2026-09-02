@@ -304,6 +304,7 @@ function definirDataHoje(){
     document.getElementById("data").value = ano + "-" + mes + "-" + dia;
 }
 function fmtVenda(n){ return "SL" + String(n||0).padStart(4,"0"); }
+function fmtData(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
 async function gerarNumeroVenda(){
     try{ const r = await fetch("/api/proxima_venda"); const j = await r.json(); document.getElementById("venda").value = fmtVenda(j.numero); syncBadge(); }
     catch(erro){ console.error(erro); document.getElementById("venda").value = ""; }
@@ -568,8 +569,8 @@ async function reimprimirDobrada(id){
         const pagina=document.createElement('div'); pagina.className='pagina-impressao';
         function viaHTML(isSegunda){
             const condTxt = (v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'-').toUpperCase());
-            const dataFmt = (v.data||"").split("-").reverse().join("/") || "-";
-            const vencFmt = v.vencimento ? v.vencimento.split("-").reverse().join("/") : (v.condicao==="aprazo" ? "30 DIAS" : "-");
+            const dataFmt = fmtData(v.data) || "-";
+            const vencFmt = v.vencimento ? fmtData(v.vencimento) : (v.condicao==="aprazo" ? "30 DIAS" : "-");
             const descontoPct = v.desconto!=null ? v.desconto : 0;
             const valorDesc = (Number(v.total||0) * Number(descontoPct||0) / (100 - Number(descontoPct||0) || 100) * 0).toFixed(2).replace(".",","); // placeholder, será recalculado se necessário
             // cabeçalho compacto 2 colunas

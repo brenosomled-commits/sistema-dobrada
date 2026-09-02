@@ -95,7 +95,7 @@
 <script>
 let itens=[]; const podeVisualizarComissao={{ "true" if pode_visualizar_comissao else "false" }}; const S=window.SistemaUtil;
 function fmtMoeda(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
-function fmtData(d){ if(!d) return ""; const p=d.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d; }
+function fmtData(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
 function nomeCondicao(c){ if(c==="dinheiro")return"DINHEIRO"; if(c==="cartadebito")return"CARTAO DEBITO"; if(c==="cartocredito")return"CARTAO CREDITO"; if(c==="pix"||c==="sicoob")return"PIX SICOOB"; if(c==="pixinter")return"PIX INTER"; if(c==="pixmaq")return"PIX MAQUINA"; if(c==="avista")return"À vista"; if(c==="aprazo")return"A prazo"; return c||""; }
 function fmtNum(tipo,n){ return tipo==="OS" ? ("OS" + String(n||0).padStart(4,"0")) : ("SL" + String(n||0).padStart(4,"0")); }
 function badgeTipo(tipo){
@@ -202,8 +202,8 @@ async function imprimirVenda(id){
         const pagina=document.createElement('div'); pagina.style.cssText='width:204mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
         function viaHTML(isSegunda){
             const condTxt = (v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'-').toUpperCase());
-            const dataFmt = (v.data||"").split("-").reverse().join("/") || "-";
-            const vencFmt = v.vencimento ? v.vencimento.split("-").reverse().join("/") : (v.condicao==="aprazo" ? "30 DIAS" : "-");
+            const dataFmt = fmtData(v.data) || "-";
+            const vencFmt = v.vencimento ? fmtData(v.vencimento) : (v.condicao==="aprazo" ? "30 DIAS" : "-");
             const descontoPct = v.desconto!=null ? v.desconto : 0;
             let html=`<div style="width:196mm;min-height:133mm;max-height:140mm;padding:2mm 3mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:9pt;page-break-inside:avoid;box-sizing:border-box">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 6px -2px;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>
