@@ -354,7 +354,7 @@ function atualizarVencimento(){
 function adicionarItem(focarDescricao=false){
     const item = document.createElement("div"); item.className = "nota-item-editor";
     item.innerHTML = `
-        <input type="number" class="quantidade" min="1" placeholder="1" oninput="calcularTotal()">
+        <input type="number" class="quantidade" min="1" placeholder="1" oninput="calcularTotal()" onkeydown="irParaDescricao(event)">
         <input type="text" class="descricao" placeholder="Descrição do produto" onkeydown="irParaPreco(event)">
         <input type="number" class="valor" min="0" step="0.01" placeholder="0,00" oninput="calcularTotal()" onkeydown="verificarEnter(event)">
         <input type="text" class="subtotal" value="0,00" readonly>
@@ -363,6 +363,7 @@ function adicionarItem(focarDescricao=false){
     document.getElementById("itens").appendChild(item); calcularTotal();
     if(focarDescricao) item.querySelector(".descricao").focus();
 }
+function irParaDescricao(event){ if(event.key === "Enter"){ event.preventDefault(); event.target.parentElement.querySelector(".descricao").focus(); } }
 function irParaPreco(event){ if(event.key === "Enter"){ event.preventDefault(); event.target.parentElement.querySelector(".valor").focus(); } }
 function verificarEnter(event){ if(event.key === "Enter"){ event.preventDefault(); adicionarItem(true); } }
 function removerItem(botao){
