@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=5">
+<link rel="manifest" href="/manifest.webmanifest?v=6">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=5">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=5">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=5">
-<title>Acompanhamento Unificado </title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=5">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=6">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=6">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=6">
+<title>Acompanhar Vendas</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=6">
 <style>
 .filtros-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 @media(max-width:768px){ .filtros-grid{ grid-template-columns:1fr; } }
@@ -26,6 +26,17 @@
 .badge-status-pronta{ background:#fef3c7; color:#92400e; }
 .badge-status-finalizada{ background:#d1fae5; color:#065f46; }
 .badge-status-aguardando{ background:#fce7f3; color:#9d174d; }
+/* Vendas em formato de card no celular */
+@media(max-width:768px){
+    .tabela-container{ overflow:visible; border:none; background:transparent; padding:0; }
+    .tabela thead{ display:none; }
+    .tabela, .tabela tbody{ display:block; }
+    .tabela tr{ display:block; background:#fff; border:1px solid var(--cor-borda); border-radius:12px; margin-bottom:10px; padding:12px 14px; }
+    .tabela tr:nth-child(even) td{ background:transparent; }
+    .tabela tr:hover td{ background:transparent; }
+    .tabela td{ display:block; border:none; padding:3px 0; }
+    .tabela td .btn{ flex:1; min-height:44px; font-size:.9rem; }
+}
 </style>
 </head>
 <body>
@@ -36,7 +47,7 @@
     <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
     <nav class="sidebar-nav">
         <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
-        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link ativa" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link ativa" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
         {% if pode_visualizar_comissao %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
     </nav>
     <div class="sidebar-footer">
@@ -45,9 +56,35 @@
     </div>
 </aside>
 <main class="conteudo">
-    <div class="pagina-titulo"><h1>Acompanhamento Unificado</h1><p class="pagina-sub">Ordens de serviço e vendas — atualização automática a cada 30s</p></div>
+    <div class="pagina-titulo"><h1>Acompanhar Vendas</h1><p class="pagina-sub">Consulte, edite e reimprima suas vendas</p></div>
 
-    <div class="card">
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Filtros</h2><button class="btn btn-outline btn-sm" onclick="limparFiltros()">Limpar filtros</button></div>
+        <div class="campo-busca" style="margin-bottom:12px"><span class="busca-icon">🔍</span><input type="text" class="form-input" id="buscaFiltro" placeholder="Buscar por número, cliente ou vendedor" oninput="aplicarFiltros()"></div>
+        <div class="filtros-grid">
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Tipo</label><select class="form-select" id="tipoFiltro" onchange="aplicarFiltros()"><option value="">Todos</option><option value="OS">🔧 Ordem de Serviço</option><option value="VENDA">🧾 Venda</option></select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Período</label><input type="month" class="form-input" id="mesFiltro" onchange="aplicarFiltros()"></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Vendedor</label><select class="form-select" id="vendedorFiltro" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Condição</label><select class="form-select" id="condicaoFiltro" onchange="aplicarFiltros()"><option value="">Todos</option><option value="ativa">Ativa</option><option value="vencida">Vencida</option><option value="Em andamento">Em andamento</option><option value="Pronta">Pronta</option><option value="Finalizada">Finalizada</option><option value="Aguardando peça">Aguardando peça</option><option value="dinheiro">DINHEIRO</option><option value="cartadebito">CARTAO DEBITO</option><option value="cartocredito">CARTAO CREDITO</option><option value="pix">PIX SICOOB</option><option value="pixinter">PIX INTER</option><option value="aprazo">A prazo</option></select></div>
+        </div>
+    </div>
+
+    <div class="stat-grid mt-3">
+        <div class="stat-card"><h3>Filtrados — qtd.</h3><div class="stat-numero" id="quantidadeFiltrada">0</div></div>
+        {% if pode_visualizar_comissao %}<div class="stat-card stat-warning"><h3>Comissão filtrada</h3><div class="stat-numero" id="comissaoFiltrada" style="font-size:1.25rem">R$ 0,00</div></div>{% endif %}
+        <div class="stat-card stat-success"><h3>Valor filtrado</h3><div class="stat-numero" id="totalFiltrado" style="font-size:1.25rem">R$ 0,00</div></div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Vendas</h2><span class="text-muted" style="font-size:.82rem" id="infoFiltradas"></span></div>
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Data</th><th>Nº</th><th>Cliente</th><th>Profissional/Vendedor</th><th>Status</th><th>Valor</th>{% if pode_visualizar_comissao %}<th>Comissão</th>{% endif %}<th style="min-width:210px">Ações</th></tr></thead><tbody id="listaFiltrada"></tbody></table></div>
+        <div class="card mt-3" style="background:var(--cor-fundo);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div><div class="font-bold">Total filtrado</div><div class="text-muted" style="font-size:.85rem"><span id="quantidadeFinal">0</span> registros</div></div>
+            <div class="font-bold" style="font-size:1.5rem" id="somatoriaFinal">R$ 0,00</div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
         <div class="card-header"><h2 class="card-title">Registros de hoje</h2><span class="badge badge-pronta" id="badgeHoje">0 itens hoje</span></div>
         <div class="stat-grid" style="margin-bottom:0">
             <div class="stat-card"><h3>Quantidade</h3><div class="stat-numero" id="quantidadeHoje">0</div></div>
@@ -61,37 +98,12 @@
     <div class="card mt-3">
         <div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Nº</th><th>Cliente</th><th>Profissional/Vendedor</th><th>Status</th><th>Valor</th>{% if pode_visualizar_comissao %}<th>Comissão</th>{% endif %}<th style="min-width:210px">Ações</th></tr></thead><tbody id="listaHoje"></tbody></table></div>
     </div>
-
-    <div class="card mt-3">
-        <div class="card-header"><h2 class="card-title">Filtros</h2><button class="btn btn-outline btn-sm" onclick="limparFiltros()">Limpar</button></div>
-        <div class="filtros-grid">
-            <div class="form-group" style="margin-bottom:0"><label class="form-label">Tipo</label><select class="form-select" id="tipoFiltro" onchange="aplicarFiltros()"><option value="">Todos</option><option value="OS">🔧 Ordem de Serviço</option><option value="VENDA">🧾 Venda</option></select></div>
-            <div class="form-group" style="margin-bottom:0"><label class="form-label">Mês</label><input type="month" class="form-input" id="mesFiltro" onchange="aplicarFiltros()"></div>
-            <div class="form-group" style="margin-bottom:0"><label class="form-label">Profissional / Vendedor</label><select class="form-select" id="vendedorFiltro" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
-            <div class="form-group" style="margin-bottom:0"><label class="form-label">Status / Condição</label><select class="form-select" id="condicaoFiltro" onchange="aplicarFiltros()"><option value="">Todos</option><option value="ativa">Ativa</option><option value="vencida">Vencida</option><option value="Em andamento">Em andamento</option><option value="Pronta">Pronta</option><option value="Finalizada">Finalizada</option><option value="Aguardando peça">Aguardando peça</option><option value="dinheiro">DINHEIRO</option><option value="cartadebito">CARTAO DEBITO</option><option value="cartocredito">CARTAO CREDITO</option><option value="pix">PIX SICOOB</option><option value="pixinter">PIX INTER</option><option value="aprazo">A prazo</option></select></div>
-        </div>
-    </div>
-
-    <div class="stat-grid mt-3">
-        <div class="stat-card"><h3>Filtrados — qtd.</h3><div class="stat-numero" id="quantidadeFiltrada">0</div></div>
-        {% if pode_visualizar_comissao %}<div class="stat-card stat-warning"><h3>Comissão filtrada</h3><div class="stat-numero" id="comissaoFiltrada" style="font-size:1.25rem">R$ 0,00</div></div>{% endif %}
-        <div class="stat-card stat-success"><h3>Valor filtrado</h3><div class="stat-numero" id="totalFiltrado" style="font-size:1.25rem">R$ 0,00</div></div>
-    </div>
-
-    <div class="card mt-3">
-        <div class="card-header"><h2 class="card-title">Resultado</h2><span class="text-muted" style="font-size:.82rem" id="infoFiltradas"></span></div>
-        <div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Data</th><th>Nº</th><th>Cliente</th><th>Profissional/Vendedor</th><th>Status</th><th>Valor</th>{% if pode_visualizar_comissao %}<th>Comissão</th>{% endif %}<th style="min-width:210px">Ações</th></tr></thead><tbody id="listaFiltrada"></tbody></table></div>
-        <div class="card mt-3" style="background:var(--cor-fundo);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-            <div><div class="font-bold">Total filtrado</div><div class="text-muted" style="font-size:.85rem"><span id="quantidadeFinal">0</span> registros</div></div>
-            <div class="font-bold" style="font-size:1.5rem" id="somatoriaFinal">R$ 0,00</div>
-        </div>
-    </div>
 <div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
 <div id="areaImpressao" style="display:none"></div>
 <style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:3mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=5"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=6"></script>
 <script>
 let itens=[]; const podeVisualizarComissao={{ "true" if pode_visualizar_comissao else "false" }}; const S=window.SistemaUtil;
 function fmtMoeda(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
@@ -164,7 +176,9 @@ function aplicarFiltros(){
     const mes=document.getElementById("mesFiltro").value;
     const vendedor=document.getElementById("vendedorFiltro").value;
     const condicao=document.getElementById("condicaoFiltro").value;
+    const busca=(document.getElementById("buscaFiltro").value||"").toLowerCase().trim();
     let filtrados=[...itens];
+    if(busca) filtrados=filtrados.filter(i=>fmtNum(i.tipo,i.numero).toLowerCase().includes(busca)||String(i.numero||"").includes(busca)||(i.cliente||"").toLowerCase().includes(busca)||(i.profissional||"").toLowerCase().includes(busca));
     if(tipo) filtrados=filtrados.filter(i=>i.tipo===tipo);
     if(mes) filtrados=filtrados.filter(i=>(i.data||"").startsWith(mes));
     if(vendedor) filtrados=filtrados.filter(i=>i.profissional===vendedor);
@@ -187,7 +201,8 @@ function aplicarFiltros(){
     filtrados.forEach(i=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${badgeTipo(i.tipo)}</td><td>${fmtData(i.data)}</td><td class="font-mono font-bold">${fmtNum(i.tipo,i.numero)}</td><td>${i.cliente||""}</td><td>${i.profissional||""}</td><td>${i.tipo==="VENDA"?badgeStatus(i.status||"ativa"):badgeStatus(i.status)}</td><td class="font-bold">${fmtMoeda(i.total)}</td>${podeVisualizarComissao?`<td>${i.comissao?fmtMoeda(i.comissao):"-"}</td>`:``}${acoesHTML(i)}`; lista.appendChild(tr); });
 }
 function limparFiltros(){
-    document.getElementById("tipoFiltro").value="";
+    document.getElementById("buscaFiltro").value="";
+    document.getElementById("tipoFiltro").value="VENDA";
     document.getElementById("mesFiltro").value="";
     document.getElementById("vendedorFiltro").value="";
     document.getElementById("condicaoFiltro").value="";
@@ -237,12 +252,12 @@ async function excluirOS(id,numero){
     try{ const r=await fetch("/excluir_os/"+id,{method:"DELETE"}); const res=await r.json(); if(!r.ok){ S.Toast.erro(res.erro||"Erro ao excluir."); return; } S.Toast.sucesso(res.mensagem||"OS excluída!"); await carregarItens(); }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
 }
 function definirMesAtual(){ const h=new Date(); document.getElementById("mesFiltro").value=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,"0")}`; }
-S.initSidebar(); (async()=>{ definirMesAtual(); await carregarItens(); carregarProfissionais(); setInterval(carregarItens,30000); })();
+S.initSidebar(); (async()=>{ definirMesAtual(); document.getElementById("tipoFiltro").value="VENDA"; await carregarItens(); carregarProfissionais(); setInterval(carregarItens,30000); })();
 </script>
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=5").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=6").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

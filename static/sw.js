@@ -1,13 +1,13 @@
 const CACHE = "somled-v5";
 const CORE = [
-  "/static/manifest.webmanifest?v=5",
-  "/static/icon-192.png?v=5",
-  "/static/icon-512.png?v=5",
-  "/static/apple-touch-icon.png?v=5",
-  "/static/favicon-32.png?v=5",
-  "/static/favicon-16.png?v=5",
-  "/static/estilo.css?v=5",
-  "/static/utilitarios.js?v=5",
+  "/static/manifest.webmanifest?v=6",
+  "/static/icon-192.png?v=6",
+  "/static/icon-512.png?v=6",
+  "/static/apple-touch-icon.png?v=6",
+  "/static/favicon-32.png?v=6",
+  "/static/favicon-16.png?v=6",
+  "/static/estilo.css?v=6",
+  "/static/utilitarios.js?v=6",
 ];
 
 self.addEventListener("install", (event) => {
