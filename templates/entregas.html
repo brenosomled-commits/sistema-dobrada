@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=3">
+<link rel="manifest" href="/manifest.webmanifest?v=4">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=4">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=4">
 <title>Entregas</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=4">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -171,7 +171,7 @@
 </main>
 </div>
 <div id="areaImpressaoEntrega"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=4"></script>
 <script>
 const S=window.SistemaUtil; S.initSidebar();
 let listaVendas=[], listaOS=[], entregas=[], rotaAtual=[], editandoId=null;
@@ -334,6 +334,7 @@ function imprimirEntrega(id){
                     <div><span style="font-weight:900">TELEFONE:</span> <span style="font-weight:800">${e.telefone||"-"}</span></div>
                     <div><span style="font-weight:900">ENDEREÇO:</span> <span style="font-weight:800">${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</span></div>
                     <div><span style="font-weight:900">ENTREGADOR:</span> <span style="font-weight:800">${e.entregador||"-"}</span></div>
+                    <div><span style="font-weight:900">VENDEDOR:</span> <span style="font-weight:800">${e.venda_vendedor||"-"}</span></div>
                     <div style="display:flex;gap:10px"><span><span style="font-weight:900">TAXA:</span> <span style="font-weight:800">${taxaFmt}</span></span><span><span style="font-weight:900">STATUS:</span> <span style="font-weight:800">${e.status||""}</span></span></div>
                 </div>
                 ${e.observacao ? '<div style="margin-top:4px;padding:3px 4px;border:1.5px solid #000;background:#fff;font-size:7.5pt;color:#000"><span style="font-weight:900">OBSERVAÇÕES:</span> <span style="font-weight:700">' + e.observacao + '</span></div>' : ""}
@@ -342,7 +343,6 @@ function imprimirEntrega(id){
                 <div style="margin-top:10px;text-align:center"><div style="border-top:1.8px solid #000;width:62mm;margin:0 auto 3px"></div><div style="font-size:7.5pt;font-weight:900;color:#000">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;margin-top:1px;font-weight:700;color:#000">RECEBI OS PRODUTOS EM PERFEITAS CONDIÇÕES.</div></div>
                 <div style="margin-top:6px;display:flex;justify-content:center"><div id="qr-entrega" style="width:22mm;height:22mm;border:1.5px solid #000;padding:1px;background:#fff"></div></div>
                 <div style="font-size:5.5pt;text-align:center;margin-top:2px;font-weight:700;letter-spacing:.04em;color:#000;border-top:1px solid #000;padding-top:2px;margin-top:4px">DOCUMENTO SEM VALOR FISCAL — CONTROLE INTERNO — SOMLED</div>
-                <div style="font-size:5pt;text-align:center;word-break:break-all;color:#000">${window.location.origin}/m/entrega/${e.id}</div>
             </div>`;
         }
         area.innerHTML=`<div class="pagina-impressao">${viaZebra()}</div>`;
@@ -440,7 +440,7 @@ async function imprimirZebraDireto(id){
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
 </script>
 <script>
-if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=4").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
 </script>
 </body>
 </html>

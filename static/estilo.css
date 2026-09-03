@@ -686,8 +686,14 @@ a:hover {
     justify-content: space-between;
     gap: 16px;
     box-shadow: var(--sombra-sm);
-    transition: all var(--transicao);
+    transition: border-color var(--transicao), box-shadow var(--transicao);
     cursor: pointer;
+    animation: cardSurgir 0.22s ease both;
+}
+
+@keyframes cardSurgir {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .item-card:hover {
@@ -803,8 +809,8 @@ a:hover {
 }
 
 @keyframes toastEntrar {
-    from { opacity: 0; transform: translateX(50px); }
-    to { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; transform: translateX(24px) scale(0.97); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
 }
 
 @keyframes toastSair {
@@ -1144,12 +1150,60 @@ a:hover {
 /* TRANSICAOES DE TELA */
 
 .tela-entrada {
-    animation: telaEntrar 0.3s ease;
+    animation: telaEntrar 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes telaEntrar {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* LOADING — feedback claro ao usuário */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.loading-box {
+    background: #fff;
+    border-radius: var(--raio-lg);
+    padding: 28px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--sombra-lg);
+    animation: modalEntrar 0.25s ease;
+}
+
+.loading-box .spinner {
+    width: 42px;
+    height: 42px;
+}
+
+.loading-box .loading-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--cor-texto-secundario);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--cor-borda);
+    border-top-color: var(--cor-primaria);
+    border-radius: 50%;
+    animation: girar 0.7s linear infinite;
+}
+
+@keyframes girar {
+    to { transform: rotate(360deg); }
 }
 
 /* ============================================

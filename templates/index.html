@@ -3,43 +3,193 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=3">
+<link rel="manifest" href="/manifest.webmanifest?v=4">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=4">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=4">
 <title>Sistema de Ordem de Serviço</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=4">
 <style>
 
-/* ===== TELA NOVA OS ===== */
+/* ===== TELA NOVA OS — documento profissional ===== */
 
-.os-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-}
-
-.os-campo-cheio {
-    grid-column: 1 / -1;
-}
-
-.os-subtitulo {
-    grid-column: 1 / -1;
-    font-size: 1rem;
-    font-weight: 700;
+.os-pagina-titulo {
+    font-size: 1.35rem;
+    font-weight: 800;
     color: var(--cor-texto);
-    padding-top: 8px;
-    border-top: 1px solid var(--cor-borda);
-    margin-top: 8px;
+    margin: 0 0 16px;
+}
+
+.os-doc {
+    background: #fff;
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-lg);
+    box-shadow: var(--sombra-sm);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 960px;
+}
+
+.os-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--cor-primaria);
+}
+
+.os-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.os-logo img {
+    height: 44px;
+    width: auto;
+}
+
+.os-logo-nome {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--cor-primaria);
+}
+
+.os-titulo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--cor-texto);
+    text-align: center;
+}
+
+.os-info {
+    display: flex;
+    gap: 12px;
+}
+
+.os-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.os-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cor-texto-secundario);
+}
+
+.os-input,
+.os-select,
+.os-textarea {
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.92rem;
+    color: var(--cor-texto);
+    background: #fff;
+    width: 100%;
+}
+
+.os-input:focus,
+.os-select:focus,
+.os-textarea:focus {
+    outline: 2px solid var(--cor-primaria);
+    outline-offset: 0;
+    border-color: var(--cor-primaria);
+}
+
+.os-input[readonly] {
+    background: var(--cor-fundo);
+    font-weight: 700;
+}
+
+.os-input-cheio {
+    width: 100%;
+}
+
+.os-textarea {
+    min-height: 88px;
+    resize: vertical;
+}
+
+.os-secao {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.os-secao-titulo {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #fff;
+    background: var(--cor-primaria);
+    border-radius: 8px;
+    padding: 8px 14px;
+}
+
+.os-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.os-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.os-grid-dupla {
+    grid-template-columns: 1fr 1fr;
+}
+
+.os-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.os-tabela-itens {
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.os-itens-head {
+    display: grid;
+    grid-template-columns: 1fr 90px 130px 44px;
+    gap: 8px;
+    background: var(--cor-texto);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 10px 12px;
+    align-items: center;
 }
 
 .os-itens-lista {
-    grid-column: 1 / -1;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.os-itens-lista:empty {
+    display: none;
 }
 
 .os-item-linha {
@@ -47,7 +197,44 @@
     grid-template-columns: 1fr 90px 130px 44px;
     gap: 8px;
     align-items: center;
-    margin-bottom: 8px;
+}
+
+.os-itens-rodape {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px;
+    border-top: 1px dashed var(--cor-borda);
+    background: var(--cor-fundo);
+}
+
+.os-itens-vazio {
+    font-size: 0.82rem;
+    color: var(--cor-texto-secundario);
+}
+
+.os-total-geral {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #1e3a8a;
+    color: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+}
+
+.os-total-geral-label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.os-total-geral-valor {
+    font-size: 1.8rem;
+    font-weight: 800;
 }
 
 .os-resumo {
@@ -77,17 +264,35 @@
 }
 
 .os-acoes {
-    grid-column: 1 / -1;
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
     justify-content: flex-end;
-    margin-top: 8px;
+}
+
+/* Assinaturas e rodapé da Nova OS — visíveis só na impressão */
+.os-assinaturas,
+.os-rodape {
+    display: none;
 }
 
 @media (max-width: 768px) {
-    .os-layout {
+    .os-doc {
+        padding: 16px;
+    }
+
+    .os-cabecalho {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .os-grid-3,
+    .os-grid-dupla {
         grid-template-columns: 1fr;
+    }
+
+    .os-itens-head {
+        display: none;
     }
 
     .os-item-linha {
@@ -98,9 +303,65 @@
         grid-column: 1 / -1;
     }
 
+    .os-total-geral {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
+
+    .os-acoes {
+        justify-content: stretch;
+    }
+
+    .os-acoes .btn {
+        flex: 1 1 100%;
+    }
+
     .os-resumo {
         grid-template-columns: 1fr;
         text-align: right;
+    }
+}
+
+@media print {
+    #telaNova .os-acoes {
+        display: none !important;
+    }
+
+    #telaNova .os-doc {
+        border: none;
+        box-shadow: none;
+        max-width: none;
+        padding: 0;
+    }
+
+    #telaNova .os-assinaturas {
+        display: flex;
+        gap: 32px;
+        margin-top: 48px;
+    }
+
+    #telaNova .os-assinatura {
+        flex: 1;
+        text-align: center;
+    }
+
+    #telaNova .os-assinatura-linha {
+        border-top: 1.5px solid #000;
+        margin-bottom: 4px;
+    }
+
+    #telaNova .os-assinatura-rotulo {
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    #telaNova .os-rodape {
+        display: block;
+        margin-top: 24px;
+        text-align: center;
+        font-size: 0.65rem;
+        font-weight: 700;
     }
 }
 
@@ -389,87 +650,129 @@
 
 <div id="telaNova" class="tela">
 
-    <div class="pagina-titulo">
-        <h1 id="tituloNovaOS">Nova Ordem de Serviço</h1>
-        <p class="pagina-sub">Preencha os dados do serviço</p>
-    </div>
+    <h1 id="tituloNovaOS" class="os-pagina-titulo">Nova Ordem de Serviço</h1>
 
-    <div class="card">
-        <div class="os-layout">
+    <div class="os-doc">
 
-            <div class="form-group">
-                <label class="form-label">Número da OS</label>
-                <input type="text" class="form-input" id="numero" readonly>
+        <!-- 1. CABEÇALHO -->
+        <div class="os-cabecalho">
+            <div class="os-logo">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="SOMLED" onerror="this.style.display='none'">
+                <span class="os-logo-nome">SOMLED</span>
             </div>
-
-            <div class="form-group">
-                <label class="form-label">Data de Entrada</label>
-                <input type="text" class="form-input" id="dataEntrada" readonly>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Cliente</label>
-                <input type="text" class="form-input" id="cliente" placeholder="Nome do cliente">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Telefone do Cliente</label>
-                <input type="text" class="form-input" id="telefone" placeholder="(00) 00000-0000">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Responsável pela OS</label>
-                <select id="responsavel" class="form-select">
-                    <option value="">Selecione o responsável</option>
-                </select>
-            </div>
-
-            <div class="form-group os-campo-cheio">
-                <label class="form-label">Problema relatado *</label>
-                <textarea class="form-textarea" id="problema" placeholder="Ex: Lustre não acende, 2 retangulares + 1 infinito..." required></textarea>
-            </div>
-
-            <div class="os-subtitulo">Itens Utilizados</div>
-
-            <div class="os-itens-lista" id="itens"></div>
-
-            <div class="os-acoes">
-                <button class="btn btn-outline btn-sm" onclick="adicionarItem()">
-                    + Adicionar Item
-                </button>
-            </div>
-
-            <details class="card" style="grid-column:1 / -1; padding:14px 16px; background:var(--cor-fundo); margin-top:8px">
-                <summary style="cursor:pointer; font-weight:700; font-size:.85rem; list-style:none; display:flex; align-items:center; gap:8px">⚙ Mais opções <span class="text-muted" style="font-weight:400; font-size:.78rem">— telefone, solução e mão de obra</span></summary>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px">
-                    <div class="form-group" style="margin:0"><label class="form-label">Solução / Serviço executado</label><textarea class="form-textarea" id="solucao" placeholder="Ex: Substituição dos drivers..." rows="2"></textarea></div>
-                    <div class="form-group" style="margin:0"><label class="form-label">Valor da Mão de Obra</label><input type="number" class="form-input" id="maoObra" step="0.01" oninput="calcularTotal()" placeholder="0,00"></div>
+            <div class="os-titulo">ORDEM DE SERVIÇO</div>
+            <div class="os-info">
+                <div class="os-info-item">
+                    <label class="os-label">Nº da OS</label>
+                    <input type="text" class="os-input" id="numero" readonly>
                 </div>
-            </details>
-
-            <div class="os-resumo">
-                <span class="os-total-label">Total</span>
-                <span></span>
-                <span class="os-total-valor">R$ <span id="total">0,00</span></span>
+                <div class="os-info-item">
+                    <label class="os-label">Data de Entrada</label>
+                    <input type="text" class="os-input" id="dataEntrada" readonly>
+                </div>
             </div>
-
-            <div class="os-acoes">
-                <button class="btn btn-outline" onclick="window.print()">🖨 Imprimir OS</button>
-
-                <button id="botaoSalvar" class="btn btn-primary btn-lg" onclick="salvarOS()">
-                    Salvar Ordem de Serviço
-                </button>
-
-                <button id="botaoSalvarImprimir" class="btn btn-primary btn-lg" style="background:var(--cor-texto);border-color:var(--cor-texto)" onclick="salvarEImprimirOS()">
-                    💾🖨 Salvar e Imprimir
-                </button>
-
-                <button id="botaoAtualizar" class="btn btn-success btn-lg" onclick="atualizarOS()" style="display:none;">
-                    Atualizar Ordem de Serviço
-                </button>
-            </div>
-
         </div>
+
+        <!-- 2. DADOS DO CLIENTE -->
+        <div class="os-secao">
+            <div class="os-secao-titulo">Dados do Cliente</div>
+            <div class="os-grid os-grid-3">
+                <div class="os-campo">
+                    <label class="os-label">Cliente</label>
+                    <input type="text" class="os-input os-input-cheio" id="cliente" placeholder="Nome do cliente">
+                </div>
+                <div class="os-campo">
+                    <label class="os-label">Telefone do Cliente</label>
+                    <input type="text" class="os-input os-input-cheio" id="telefone" placeholder="(00) 00000-0000">
+                </div>
+                <div class="os-campo">
+                    <label class="os-label">Responsável pela OS</label>
+                    <select id="responsavel" class="os-select os-input-cheio">
+                        <option value="">Selecione o responsável</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. PROBLEMA RELATADO -->
+        <div class="os-secao">
+            <div class="os-secao-titulo">Problema Relatado *</div>
+            <textarea class="os-textarea" id="problema" placeholder="Ex: Lustre não acende, 2 retangulares + 1 infinito..." required></textarea>
+        </div>
+
+        <!-- 4. ITENS UTILIZADOS -->
+        <div class="os-secao">
+            <div class="os-secao-titulo">Itens Utilizados</div>
+            <div class="os-tabela-itens">
+                <div class="os-itens-head">
+                    <span>Item</span>
+                    <span>Quantidade</span>
+                    <span>Valor Unitário</span>
+                    <span></span>
+                </div>
+                <div id="itens" class="os-itens-lista"></div>
+                <div class="os-itens-rodape">
+                    <span class="os-itens-vazio">Utilize o botão para adicionar itens</span>
+                    <button class="btn btn-outline btn-sm" onclick="adicionarItem()">+ Adicionar Item</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. MAIS OPÇÕES -->
+        <div class="os-secao">
+            <div class="os-secao-titulo">Mais Opções</div>
+            <div class="os-grid os-grid-dupla">
+                <div class="os-campo">
+                    <label class="os-label">Solução / Serviço executado</label>
+                    <textarea class="os-textarea" id="solucao" placeholder="Ex: Substituição dos drivers..." rows="2"></textarea>
+                </div>
+                <div class="os-campo">
+                    <label class="os-label">Valor da Mão de Obra</label>
+                    <input type="number" class="os-input os-input-cheio" id="maoObra" step="0.01" oninput="calcularTotal()" placeholder="0,00">
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. TOTAL GERAL -->
+        <div class="os-total-geral">
+            <span class="os-total-geral-label">TOTAL GERAL</span>
+            <span class="os-total-geral-valor">R$ <span id="total">0,00</span></span>
+        </div>
+
+        <!-- AÇÕES -->
+        <div class="os-acoes">
+            <button class="btn btn-outline" onclick="window.print()">🖨 Imprimir OS</button>
+
+            <button id="botaoSalvar" class="btn btn-primary btn-lg" onclick="salvarOS()">
+                Salvar Ordem de Serviço
+            </button>
+
+            <button id="botaoSalvarImprimir" class="btn btn-primary btn-lg" style="background:var(--cor-texto);border-color:var(--cor-texto)" onclick="salvarEImprimirOS()">
+                💾🖨 Salvar e Imprimir
+            </button>
+
+            <button id="botaoAtualizar" class="btn btn-success btn-lg" onclick="atualizarOS()" style="display:none;">
+                Atualizar Ordem de Serviço
+            </button>
+        </div>
+
+        <!-- 8. ASSINATURAS (impressão) -->
+        <div class="os-assinaturas">
+            <div class="os-assinatura">
+                <div class="os-assinatura-linha"></div>
+                <div class="os-assinatura-rotulo">ASSINATURA DO RESPONSÁVEL</div>
+            </div>
+            <div class="os-assinatura">
+                <div class="os-assinatura-linha"></div>
+                <div class="os-assinatura-rotulo">ASSINATURA DO CLIENTE</div>
+            </div>
+        </div>
+
+        <!-- 9. RODAPÉ (impressão) -->
+        <div class="os-rodape">
+            DOCUMENTO SEM VALOR FISCAL — SISTEMA DE CONTROLE INTERNO SOMLED — NÃO SUBSTITUI NOTA FISCAL ELETRÔNICA
+        </div>
+
     </div>
 
 </div>
@@ -610,7 +913,7 @@
 
 </div>
 
-<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=4"></script>
 <script>
 
 const S = window.SistemaUtil;
@@ -1316,7 +1619,7 @@ iniciarSistema();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=4").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

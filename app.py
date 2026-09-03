@@ -2677,11 +2677,12 @@ def buscar_entrega(id):
     d=dict(row) if hasattr(row,"keys") else dict(zip([c[0] for c in cur.description], row))
     # dados da origem para impressao
     if d.get("venda_id"):
-        cur.execute("SELECT cliente, numero FROM vendas WHERE id=?", (d["venda_id"],))
+        cur.execute("SELECT cliente, numero, vendedor FROM vendas WHERE id=?", (d["venda_id"],))
         v=cur.fetchone()
         if v:
             d["venda_cliente"]=v["cliente"] if hasattr(v,"keys") else v[0]
             d["venda_numero"]=v["numero"] if hasattr(v,"keys") else v[1]
+            d["venda_vendedor"]=v["vendedor"] if hasattr(v,"keys") else v[2]
     if d.get("ordem_id"):
         cur.execute("SELECT cliente, numero FROM ordens WHERE id=?", (d["ordem_id"],))
         o=cur.fetchone()

@@ -122,9 +122,9 @@
         overlay.className = 'loading-overlay';
         overlay.id = 'loading-overlay';
         overlay.innerHTML =
-            '<div class="flex flex-col items-center gap-3">' +
+            '<div class="loading-box">' +
             '<div class="spinner"></div>' +
-            (texto ? '<div style="color:var(--cor-texto-secundario)">' + texto + '</div>' : '') +
+            '<div class="loading-label">' + (texto || 'Carregando…') + '</div>' +
             '</div>';
         document.body.appendChild(overlay);
     }
