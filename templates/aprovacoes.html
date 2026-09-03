@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest?v=7">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
+<title>Aprovações Gerenciais</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
+<style>
+.aprov-hero{ background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1a56db 100%); color:#fff; border-radius:16px; padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.aprov-hero h1{ font-size:1.25rem; margin:0; }
+.aprov-hero p{ margin:4px 0 0; opacity:.85; font-size:.85rem; }
+.badge-aprov{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:.72rem; font-weight:700; }
+.badge-aprov.ok{ background:#dcfce7; color:#166534; }
+.badge-aprov.pend{ background:#fef9c3; color:#854d0e; }
+.monospace{ font-family:ui-monospace,Consolas,monospace; font-size:.82rem; }
+</style>
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissões</a></div>
+        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link ativa" href="/aprovacoes"><span class="link-icon">🔒</span> Aprovações</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div><div class="text-muted" style="font-size:.70rem">Acesso restrito: Gerente</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+    <div class="aprov-hero">
+        <div>
+            <h1>🔒 Aprovações Gerenciais</h1>
+            <p>Histórico de ações críticas executadas com aprovação do gerente (desconto acima do limite, exclusões, cancelamentos, alteração de venda finalizada etc.).</p>
+        </div>
+        <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)" onclick="carregar()">⟳ Atualizar</button>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Registro de aprovações</h2><span class="badge badge-pronta" id="badgeCount">—</span></div>
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>#</th><th>Ação</th><th>Referência</th><th>Vendedor</th><th>Gerente</th><th>Detalhe</th><th>Status</th><th>Data/Hora</th></tr></thead><tbody id="tbody"></tbody></table></div>
+        <div id="empty" class="empty-state" style="display:none"><div class="empty-icon">🔒</div><h3>Nenhuma aprovação registrada</h3><p>Quando o vendedor precisar de autorização do gerente, o registro aparecerá aqui.</p></div>
+    </div>
+<div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
+</main>
+</div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
+<script>
+const S=window.SistemaUtil; S.initSidebar();
+function detalheTxt(s){
+    if(!s) return '—';
+    try{ const o=typeof s==='string' ? JSON.parse(s) : s; return JSON.stringify(o,null,0); }catch(e){ return String(s); }
+}
+async function carregar(){
+    S.mostrarLoading("Carregando aprovações...");
+    try{
+        const r=await fetch('/api/aprovacoes');
+        const j=await r.json();
+        if(!r.ok){ S.Toast.erro(j.erro||'Erro'); return; }
+        const lista=j.aprovacoes||[];
+        document.getElementById('badgeCount').innerText=lista.length+' registro(s)';
+        const tbody=document.getElementById('tbody'); tbody.innerHTML='';
+        const empty=document.getElementById('empty');
+        if(lista.length===0){ empty.style.display='block'; return; }
+        empty.style.display='none';
+        lista.forEach(a=>{
+            const tr=document.createElement('tr');
+            const status=a.status==='APROVADO'
+                ? '<span class="badge-aprov ok">APROVADO</span>'
+                : '<span class="badge-aprov pend">'+String(a.status||'PENDENTE')+'</span>';
+            tr.innerHTML=`<td>${a.id}</td><td class="font-bold">${String(a.acao||'').replace(/</g,'&lt;')}</td><td class="monospace">${String(a.referencia||'—').replace(/</g,'&lt;')}</td><td>${String(a.vendedor||'—').replace(/</g,'&lt;')}</td><td>${String(a.gerente||'—').replace(/</g,'&lt;')}</td><td style="font-size:.8rem">${detalheTxt(a.detalhe).replace(/</g,'&lt;')}</td><td>${status}</td><td class="monospace">${String(a.criacao||'—').replace(/</g,'&lt;')}</td>`;
+            tbody.appendChild(tr);
+        });
+    }catch(e){ S.Toast.erro('Erro de conexão'); }
+    finally{ S.esconderLoading(); }
+}
+carregar();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+  });
+}
+</script>
+</body>
+</html>

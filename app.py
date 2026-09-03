@@ -1,4 +1,5 @@
 import os
+import json
 import threading
 import time
 from pathlib import Path
@@ -35,6 +36,7 @@ STATUS_OS = {"Em andamento", "Aguardando peça", "Aguardando cliente", "Aguardan
 PAPEIS = {"DONO", "GERENTE", "FINANCEIRO", "VENDEDOR"}
 PAPEIS_GESTAO = {"DONO", "GERENTE"}
 PAPEIS_FINANCEIRO = {"DONO", "GERENTE", "FINANCEIRO"}
+AUTORIZADORES = {"BRENO", "VINICIUS"}
 DESCONTO_MAXIMO_PERCENTUAL = 5
 COMISSAO_PERCENTUAL = 2
 HIERARQUIA_NIVEL = {"VENDEDOR": 1, "FINANCEIRO": 2, "GERENTE": 3, "DONO": 4}
@@ -421,6 +423,7 @@ def _criar_banco_sqlite():
             numero INTEGER UNIQUE NOT NULL,
             cliente TEXT,
             fantasia TEXT,
+            telefone TEXT,
             vendedor TEXT,
             data TEXT,
             condicao TEXT,
@@ -433,6 +436,12 @@ def _criar_banco_sqlite():
             status TEXT DEFAULT 'ativa'
         )
     """)
+
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN telefone TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
 
     try:
         cursor.execute("ALTER TABLE vendas ADD COLUMN endereco TEXT")
@@ -484,6 +493,7 @@ def _criar_banco_sqlite():
             observacao TEXT,
             total REAL DEFAULT 0,
             vendedor TEXT,
+            cliente TEXT,
             FOREIGN KEY (venda_id) REFERENCES vendas(id)
         )
     """)
@@ -506,6 +516,12 @@ def _criar_banco_sqlite():
     cursor.execute("SELECT id FROM controle_devolucoes WHERE id = 1")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO controle_devolucoes (id, ultimo_numero) VALUES (1, 0)")
+
+    try:
+        cursor.execute("ALTER TABLE devolucoes ADD COLUMN cliente TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS entregas (
@@ -538,6 +554,20 @@ def _criar_banco_sqlite():
     cursor.execute("SELECT id FROM controle_entregas WHERE id = 1")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO controle_entregas (id, ultimo_numero) VALUES (1, 0)")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS aprovacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            acao TEXT NOT NULL,
+            referencia TEXT,
+            vendedor TEXT,
+            detalhe TEXT,
+            gerente TEXT,
+            status TEXT DEFAULT 'PENDENTE',
+            criacao TEXT,
+            aprovado_em TEXT
+        )
+    """)
 
     try:
         cursor.execute("ALTER TABLE entregas ADD COLUMN qr_token TEXT")
@@ -751,6 +781,7 @@ def _criar_banco_postgres():
             numero INTEGER UNIQUE NOT NULL,
             cliente TEXT,
             fantasia TEXT,
+            telefone TEXT,
             vendedor TEXT,
             data TEXT,
             condicao TEXT,
@@ -763,6 +794,11 @@ def _criar_banco_postgres():
             status TEXT DEFAULT 'ativa'
         )
     """)
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN IF NOT EXISTS telefone TEXT")
+    except Exception:
+        pass
+
     try:
         cursor.execute("ALTER TABLE vendas ADD COLUMN IF NOT EXISTS endereco TEXT")
     except Exception:
@@ -810,6 +846,7 @@ def _criar_banco_postgres():
             observacao TEXT,
             total DOUBLE PRECISION DEFAULT 0,
             vendedor TEXT,
+            cliente TEXT,
             FOREIGN KEY (venda_id) REFERENCES vendas(id)
         )
     """)
@@ -832,6 +869,8 @@ def _criar_banco_postgres():
     cursor.execute("SELECT id FROM controle_devolucoes WHERE id = 1")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO controle_devolucoes (id, ultimo_numero) VALUES (%s, %s)", (1, 0))
+
+    cursor.execute("ALTER TABLE devolucoes ADD COLUMN IF NOT EXISTS cliente TEXT")
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS entregas (
@@ -864,6 +903,20 @@ def _criar_banco_postgres():
     cursor.execute("SELECT id FROM controle_entregas WHERE id = 1")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO controle_entregas (id, ultimo_numero) VALUES (%s, %s)", (1, 0))
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS aprovacoes (
+            id SERIAL PRIMARY KEY,
+            acao TEXT NOT NULL,
+            referencia TEXT,
+            vendedor TEXT,
+            detalhe TEXT,
+            gerente TEXT,
+            status TEXT DEFAULT 'PENDENTE',
+            criacao TEXT,
+            aprovado_em TEXT
+        )
+    """)
 
     try:
         cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS qr_token TEXT")
@@ -1960,6 +2013,7 @@ def salvar_venda():
             numero,
             cliente,
             fantasia,
+            telefone,
             vendedor,
             data,
             condicao,
@@ -1970,11 +2024,12 @@ def salvar_venda():
             total,
             comissao
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         novo_numero,
         cliente_final,
         dados.get("fantasia", ""),
+        dados.get("telefone", ""),
         dados.get("vendedor", ""),
         dados.get("data", ""),
         dados.get("condicao", ""),
@@ -2049,6 +2104,7 @@ def listar_vendas():
             "numero": venda["numero"],
             "cliente": venda["cliente"],
             "fantasia": venda["fantasia"],
+            "telefone": venda["telefone"],
             "vendedor": venda["vendedor"],
             "data": venda["data"],
             "condicao": venda["condicao"],
@@ -2108,6 +2164,7 @@ def acompanhar_unificado():
             "numero": v["numero"],
             "data": _normalizar_data(v["data"]),
             "cliente": v["cliente"],
+            "telefone": v["telefone"],
             "profissional": v["vendedor"],
             "status": v["status"],
             "total": v["total"],
@@ -2222,6 +2279,7 @@ def buscar_venda(id):
         "numero": venda["numero"],
         "cliente": venda["cliente"],
         "fantasia": venda["fantasia"],
+        "telefone": venda["telefone"],
         "vendedor": venda["vendedor"],
         "data": venda["data"],
         "condicao": venda["condicao"],
@@ -2289,6 +2347,7 @@ def atualizar_venda(id):
         SET
             cliente = ?,
             fantasia = ?,
+            telefone = ?,
             vendedor = ?,
             data = ?,
             condicao = ?,
@@ -2302,6 +2361,7 @@ def atualizar_venda(id):
     """, (
         cliente_final,
         dados.get("fantasia", ""),
+        dados.get("telefone", ""),
         dados.get("vendedor", ""),
         dados.get("data", ""),
         dados.get("condicao", ""),
@@ -2394,6 +2454,72 @@ def controle_comissao():
         papel=papel,
         eh_gerente=(papel or "").upper() in ("GERENTE","DONO")
     )
+
+
+@app.route("/aprovacoes")
+@login_obrigatorio
+def pagina_aprovacoes():
+    papel = obter_papel_usuario(session["usuario"])
+    if papel not in PAPEIS_GESTAO:
+        return jsonify({"erro": "Acesso restrito à gerência"}), 403
+    return render_template("aprovacoes.html", usuario=session["usuario"], papel=papel)
+
+
+@app.route("/api/aprovacoes", methods=["POST"])
+@login_obrigatorio
+def aprovar_acao():
+    dados = json_body()
+    if not dados:
+        return jsonify({"erro": "Dados inválidos"}), 400
+    acao = str(dados.get("acao") or "").strip()
+    referencia = str(dados.get("referencia") or "").strip()
+    vendedor = str(dados.get("vendedor") or "").strip() or session["usuario"]
+    detalhe = dados.get("detalhe")
+    if isinstance(detalhe, dict) or isinstance(detalhe, list):
+        detalhe = json.dumps(detalhe, ensure_ascii=False, default=str)
+    else:
+        detalhe = str(detalhe or "")
+    login = str(dados.get("gerente_login") or "").strip().upper()
+    senha = str(dados.get("gerente_senha") or "")
+    if not acao:
+        return jsonify({"erro": "Ação não informada"}), 400
+    conexao = conectar()
+    gerente = conexao.execute(
+        "SELECT * FROM usuarios WHERE upper(usuario) = upper(?)",
+        (login,)
+    ).fetchone()
+    if not gerente:
+        conexao.close()
+        return jsonify({"erro": "Gerente não encontrado"}), 400
+    papel_gerente = str(gerente["papel"] or "").upper()
+    if papel_gerente not in PAPEIS_GESTAO and login not in AUTORIZADORES:
+        conexao.close()
+        return jsonify({"erro": "Apenas usuários autorizados podem aprovar"}), 403
+    senha_hash = gerente["senha"]
+    if not (check_password_hash(senha_hash, senha) if senha_hash.startswith(("pbkdf2:", "scrypt:")) else senha_hash == senha):
+        conexao.close()
+        return jsonify({"erro": "Senha do gerente inválida"}), 400
+    agora = agora_sp().strftime("%d/%m/%Y %H:%M")
+    conexao.execute(
+        "INSERT INTO aprovacoes (acao, referencia, vendedor, detalhe, gerente, status, criacao, aprovado_em) VALUES (?,?,?,?,?,?,?,?)",
+        (acao, referencia, vendedor, detalhe, login, "APROVADO", agora, agora)
+    )
+    conexao.commit()
+    conexao.close()
+    return jsonify({"ok": True, "mensagem": "Aprovação registrada e ação liberada."})
+
+
+@app.route("/api/aprovacoes", methods=["GET"])
+@login_obrigatorio
+def lista_aprovacoes():
+    if obter_papel_usuario(session["usuario"]) not in PAPEIS_GESTAO:
+        return jsonify({"erro": "Acesso restrito à gerência"}), 403
+    conexao = conectar()
+    registros = conexao.execute(
+        "SELECT * FROM aprovacoes ORDER BY id DESC LIMIT 200"
+    ).fetchall()
+    conexao.close()
+    return jsonify({"aprovacoes": [dict(r) for r in registros]})
 
 
 @app.route("/api/comissoes")
@@ -2500,7 +2626,7 @@ def listar_devolucoes():
     cur.execute("SELECT * FROM devolucoes ORDER BY numero DESC")
     devs = cur.fetchall()
     conexao.close()
-    return jsonify([{"id": d["id"], "numero": d["numero"], "venda_id": d["venda_id"], "data": d["data"], "motivo": d["motivo"], "observacao": d["observacao"], "total": d["total"], "vendedor": d["vendedor"]} for d in devs])
+    return jsonify([{"id": d["id"], "numero": d["numero"], "venda_id": d["venda_id"], "data": d["data"], "motivo": d["motivo"], "observacao": d["observacao"], "total": d["total"], "vendedor": d["vendedor"], "cliente": d["cliente"]} for d in devs])
 
 
 @app.route("/api/devolucoes/<int:id>")
@@ -2524,7 +2650,7 @@ def buscar_devolucao(id):
             venda_numero = v["numero"]
             venda_cliente = v["cliente"]
     conexao.close()
-    return jsonify({"id": dev["id"], "numero": dev["numero"], "venda_id": dev["venda_id"], "venda_numero": venda_numero, "venda_cliente": venda_cliente, "data": dev["data"], "motivo": dev["motivo"], "observacao": dev["observacao"], "total": dev["total"], "vendedor": dev["vendedor"], "itens": [{"id": it["id"], "quantidade": it["quantidade"], "descricao": it["descricao"], "valor": it["valor"]} for it in itens]})
+    return jsonify({"id": dev["id"], "numero": dev["numero"], "venda_id": dev["venda_id"], "venda_numero": venda_numero, "venda_cliente": venda_cliente, "data": dev["data"], "motivo": dev["motivo"], "observacao": dev["observacao"], "total": dev["total"], "vendedor": dev["vendedor"], "cliente": dev["cliente"], "itens": [{"id": it["id"], "quantidade": it["quantidade"], "descricao": it["descricao"], "valor": it["valor"]} for it in itens]})
 
 
 @app.route("/api/devolucoes", methods=["POST"])
@@ -2546,6 +2672,7 @@ def criar_devolucao():
     conexao = conectar()
     cur = conexao.cursor()
     vendedor = str(dados.get("vendedor") or "").strip() or session["usuario"]
+    cliente = str(dados.get("cliente") or "").strip()
     # se vinculada, valida venda e usa o vendedor da venda como fallback
     if venda_id:
         cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
@@ -2562,9 +2689,9 @@ def criar_devolucao():
     from datetime import datetime
     data = dados.get("data") or agora_sp().strftime("%Y-%m-%d")
     cur.execute("""
-        INSERT INTO devolucoes (numero, venda_id, data, motivo, observacao, total, vendedor)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (novo, venda_id, data, motivo, dados.get("observacao",""), total, vendedor))
+        INSERT INTO devolucoes (numero, venda_id, data, motivo, observacao, total, vendedor, cliente)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (novo, venda_id, data, motivo, dados.get("observacao",""), total, vendedor, cliente))
     dev_id = cur.lastrowid
     for desc, q, v in itens:
         cur.execute("INSERT INTO devolucao_itens (devolucao_id, quantidade, descricao, valor) VALUES (?, ?, ?, ?)", (dev_id, q, desc, v))
@@ -2599,6 +2726,7 @@ def editar_devolucao(id):
         return jsonify({"erro": "Devolução não encontrada."}), 404
 
     vendedor = str(dados.get("vendedor") or "").strip() or session["usuario"]
+    cliente = str(dados.get("cliente") or "").strip()
     if venda_id:
         cur.execute("SELECT id, vendedor FROM vendas WHERE id=?", (venda_id,))
         venda = cur.fetchone()
@@ -2612,9 +2740,9 @@ def editar_devolucao(id):
     data = dados.get("data") or agora_sp().strftime("%Y-%m-%d")
     cur.execute("""
         UPDATE devolucoes
-        SET venda_id=?, data=?, motivo=?, observacao=?, total=?, vendedor=?
+        SET venda_id=?, data=?, motivo=?, observacao=?, total=?, vendedor=?, cliente=?
         WHERE id=?
-    """, (venda_id, data, motivo, dados.get("observacao",""), total, dados.get("vendedor") or venda["vendedor"], id))
+    """, (venda_id, data, motivo, dados.get("observacao",""), total, dados.get("vendedor") or venda["vendedor"], cliente, id))
     cur.execute("DELETE FROM devolucao_itens WHERE devolucao_id=?", (id,))
     for desc, q, v in itens:
         cur.execute("INSERT INTO devolucao_itens (devolucao_id, quantidade, descricao, valor) VALUES (?, ?, ?, ?)", (id, q, desc, v))

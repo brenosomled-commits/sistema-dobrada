@@ -902,7 +902,7 @@
 
         <!-- AÇÕES -->
         <div class="os-acoes">
-            <button class="btn btn-outline" onclick="window.print()">🖨 Imprimir OS</button>
+            <button class="btn btn-outline" onclick="imprimirOSAtual()">🖨 Imprimir OS</button>
 
             <button id="botaoSalvar" class="btn btn-primary btn-lg" onclick="salvarOS()">
                 Salvar Ordem de Serviço
@@ -983,7 +983,7 @@
 
     <div class="toolbar">
         <button class="btn btn-outline" onclick="mostrarConsulta()">← Voltar para consulta</button>
-        <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir esta OS</button>
+        <button class="btn btn-primary" onclick="imprimirOSDetalhe()">🖨 Imprimir esta OS</button>
     </div>
 
     <div class="print-logo-os" style="display:none; text-align:center; margin-bottom:10px">
@@ -1305,6 +1305,17 @@ function pegarDadosOS() {
     };
 }
 
+function imprimirOSAtual() {
+    const dados = pegarDadosOS();
+    dados.total = Number(document.getElementById("total").innerText.replace(/\./g, "").replace(",", ".")) || Number(dados.mao_obra);
+    if (S.imprimirOS) S.imprimirOS(dados);
+}
+
+let detalheOSAtual = null;
+function imprimirOSDetalhe() {
+    if (detalheOSAtual && S.imprimirOS) S.imprimirOS(detalheOSAtual);
+}
+
 /* ===================== SALVAR ===================== */
 
 async function salvarOS() {
@@ -1395,7 +1406,7 @@ async function salvarEImprimirOS(){
             S.Toast.sucesso("OS #"+String(res.numero).padStart(5,"0")+" salva!");
             const ordens=await fetch("/ordens").then(x=>x.json());
             const nova=ordens.find(o=>o.numero===res.numero);
-            if(nova){ await verDetalhes(nova.id); setTimeout(()=>window.print(),700); }
+            if(nova && S.imprimirOS){ const ordem=await fetch("/ordem/"+nova.id).then(x=>x.json()); S.imprimirOS(ordem); }
             novaOS();
         }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
     } else {
@@ -1405,7 +1416,7 @@ async function salvarEImprimirOS(){
             const res=await r.json(); if(!r.ok) throw new Error(res.erro||"Erro");
             S.Toast.sucesso("OS atualizada!");
             await verDetalhes(ordemEditando);
-            setTimeout(()=>window.print(),700);
+            setTimeout(function(){ if(detalheOSAtual && S.imprimirOS) S.imprimirOS(detalheOSAtual); }, 300);
         }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
     }
 }
@@ -1551,6 +1562,8 @@ async function verDetalhes(id) {
         const ordem = await resposta.json();
 
         if (!resposta.ok) throw new Error(ordem.erro);
+
+        detalheOSAtual = ordem;
 
         document.getElementById("detalheTitulo").innerText = "Ordem de Serviço Nº " + String(ordem.numero).padStart(5, "0");
         document.getElementById("detalheData").innerText = S.formatarDataBrasil(ordem.data_entrada);

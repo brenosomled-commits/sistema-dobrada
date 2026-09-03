@@ -74,7 +74,7 @@
   <option value="pixmaq">PIX MAQUINA</option>
   <option value="aprazo">A prazo</option>
 </select></div>
-            <div class="form-group"><label class="form-label">Desconto (%)</label><input type="number" class="form-input" id="desconto" min="0" step="0.01" oninput="calcularTotal()"></div>
+            <div class="form-group"><label class="form-label">Telefone</label><input type="text" class="form-input" id="telefone" placeholder="(00) 00000-0000" maxlength="15"></div>
         </div>
         <div class="form-row" id="linhaVencimentoEdit" style="display:none">
             <div class="form-group"><label class="form-label">Vencimento (30 dias)</label><input type="date" class="form-input" id="vencimento" readonly></div>
@@ -82,6 +82,9 @@
         </div>
         <div class="form-row">
             <div class="form-group"><label class="form-label">Endereço de entrega</label><input type="text" class="form-input" id="endereco" placeholder="Rua, número, bairro"></div>
+            <div class="form-group"><label class="form-label">Desconto (%)</label><input type="number" class="form-input" id="desconto" min="0" step="0.01" oninput="calcularTotal()"></div>
+        </div>
+        <div class="form-row">
             <div class="form-group"><label class="form-label">Observação</label><input type="text" class="form-input" id="observacao" placeholder="Ex.: instalação incluída"></div>
         </div>
 
@@ -110,6 +113,7 @@
 <script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
 <script>
 let vendas=[]; let vendaEditando=null; const S=window.SistemaUtil; S.initSidebar();
+const papelUsuarioEdit="{{ papel|e }}"; const descontoMaximoEdit=(papelUsuarioEdit==="GERENTE"||papelUsuarioEdit==="DONO")?100:5; let aprovacaoDescontoEdit=false;
 async function carregarVendedores(){
     try{ const r=await fetch("/api/vendedores"); const usuarios=await r.json();
         const sel=document.getElementById("vendedor"); sel.innerHTML='<option value="">Selecione</option>';
@@ -123,7 +127,7 @@ function fmtVenda(n){ return "SL" + String(n||0).padStart(4,"0"); }
 function fmtData(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
 function textoBusca(v){
     return [
-        fmtVenda(v.numero), String(v.numero||""), v.cliente||"", v.fantasia||"", v.vendedor||"",
+        fmtVenda(v.numero), String(v.numero||""), v.cliente||"", v.fantasia||"", v.telefone||"", v.vendedor||"",
         v.condicao||"", v.data||"", v.vencimento||"", v.observacao||"",
         String(v.total||""), String(v.desconto||""), String(v.comissao||"")
     ].join(" ").toLowerCase();
@@ -155,42 +159,7 @@ async function imprimirVenda(id){
     S.mostrarLoading("Gerando impressão...");
     try{
         const r=await fetch('/api/vendas/'+id); const v=await r.json(); if(!r.ok) throw new Error(v.erro||'Erro');
-        const area=document.getElementById('areaImpressao');
-        if(!area){ S.Toast.erro('Área de impressão não encontrada'); return; }
-        area.innerHTML='';
-        const pagina=document.createElement('div'); pagina.style.cssText='width:190mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
-        function viaHTML(isSegunda){
-            const condTxt = (v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'-').toUpperCase());
-            const dataFmt = fmtData(v.data) || "-";
-            const vencFmt = v.vencimento ? fmtData(v.vencimento) : (v.condicao==="aprazo" ? "30 DIAS" : "-");
-            const descontoPct = v.desconto!=null ? v.desconto : 0;
-            let h=`<div style="width:190mm;min-height:133mm;max-height:141mm;padding:4mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:9pt;overflow:visible;page-break-inside:avoid;box-sizing:border-box">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 4mm 0;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000"><div style="flex:1"></div><div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div><div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">${fmtVenda(v.numero)}</div></div></div></div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35"><div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">${v.cliente||"CONSUMIDOR FINAL"}</span></div><div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condTxt}</span></div><div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${fmtVenda(v.numero)}</span></div><div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div><div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${v.vendedor||"-"}</div><div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${v.observacao||"-"}</div><div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div></div><div style="border-top:1px solid #000;margin:5px 0 0"></div>
-                <div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;font-weight:700;border-bottom:1.2px solid #000;padding:3px 0;font-size:7.5pt;letter-spacing:.02em"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>`;
-            (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); h+=`<div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;padding:2.5px 0;font-size:8.5pt;border-bottom:1px dotted #d1d5db;min-height:6mm;align-items:center"><span>${it.quantidade}</span><span style="padding-right:4px">${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
-            const totalItens = Number(v.total||0) / (1 - Number(descontoPct||0)/100 || 1);
-            const vDesc = (totalItens * Number(descontoPct||0)/100).toFixed(2).replace(".",",");
-            h+=`<div style="display:flex;gap:12px;align-items:flex-end;margin-top:6px"><div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">${isSegunda ? 'ASSINATURA — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>${!isSegunda ? '<div style="font-size:6pt;color:#374151;margin-top:2px">Ao assinar, declaro que estou ciente<br>das condições deste orçamento.</div>' : ''}</div><div style="width:86mm;border:1px solid #000;padding:4px 6px;font-size:8pt;line-height:1.35"><div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL:</span><span>R$ ${totalItens.toFixed(2).replace(".",",")}</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">DESCONTO:</span><span>${descontoPct}%</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">VALOR DESCONTO:</span><span>R$ ${vDesc}</span></div><div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:3px"><span style="font-weight:800">TOTAL FINAL:</span><span style="font-weight:800">R$ ${Number(v.total).toFixed(2).replace('.',',')}</span></div></div></div><div style="margin-top:4px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>`;
-            h+=`</div>`;
-            return h;
-        }
-        const v1=document.createElement('div'); v1.innerHTML=viaHTML(false);
-        const v2=document.createElement('div'); v2.innerHTML=viaHTML(true);
-        if(v.condicao==='aprazo'){
-            const sig='<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">ASSINATURA DO CLIENTE</div>'+(v.vencimento ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+v.vencimento.split('-').reverse().join('/')+'</div>' : '')+'</div>';
-            const sig2='<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">ASSINATURA DO CLIENTE — VIA DA LOJA</div>'+(v.vencimento ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+v.vencimento.split('-').reverse().join('/')+'</div>' : '')+'</div>';
-            v1.firstElementChild.innerHTML += sig;
-            v2.firstElementChild.innerHTML += sig2;
-        }
-        v1.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        v2.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-        const recorte=document.createElement('div');
-        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
-        recorte.innerHTML='<div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div>';
-        pagina.appendChild(v1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(v2.firstElementChild);
-        area.appendChild(pagina); area.style.display='block'; window.print(); setTimeout(()=> area.style.display='none',500);
+        if(S.imprimirNotaDobrada){ S.imprimirNotaDobrada(v); }
     }catch(e){ S.Toast.erro(e.message||'Erro ao imprimir'); } finally{ S.esconderLoading(); }
 }
 async function buscarVendas(){
@@ -218,6 +187,7 @@ async function editarVenda(id){
         document.getElementById("numero").value=fmtVenda(v.numero);
         document.getElementById("cliente").value=v.cliente||"CONSUMIDOR FINAL";
         document.getElementById("cliente").placeholder="CONSUMIDOR FINAL (editável)";
+        document.getElementById("telefone").value=v.telefone||"";
         document.getElementById("vendedor").value=v.vendedor||"";
         document.getElementById("data").value=v.data||"";
         document.getElementById("condicao").value=v.condicao||"avista";
@@ -255,7 +225,21 @@ function atualizarVencimentoEdit(){
     const cond=document.getElementById("condicao").value, data=document.getElementById("data").value, linha=document.getElementById("linhaVencimentoEdit"), venc=document.getElementById("vencimento");
     if(cond==="aprazo" && data){ const d=new Date(data+"T12:00:00"); d.setDate(d.getDate()+30); venc.value=d.toISOString().split("T")[0]; linha.style.display="flex"; } else { linha.style.display="none"; venc.value=""; }
 }
+async function autorizarDescontoEdit(){
+    const d=Number(document.getElementById("desconto").value)||0;
+    if(d>descontoMaximoEdit && !aprovacaoDescontoEdit){
+        const ok=await S.solicitarAprovacao(
+            "Desconto acima do limite",
+            "Desconto de "+d.toFixed(2).replace(".",",")+"% (limite "+descontoMaximoEdit+"%)",
+            "Venda para "+(document.getElementById("cliente").value.trim()||"cliente")
+        );
+        if(!ok){ S.Toast.aviso("Desconto não aprovado. Ajuste o valor dentro do limite."); return false; }
+        aprovacaoDescontoEdit=true;
+    }
+    return true;
+}
 async function salvarAlteracoes(){
+    if(!(await autorizarDescontoEdit())) return;
     if(vendaEditando===null){ S.Toast.erro("Nenhuma venda selecionada."); return; }
     if(!document.getElementById("vendedor").value){ S.Toast.erro("Selecione o vendedor primeiro."); document.getElementById("vendedor").focus(); return; }
     if(!document.getElementById("data").value){ S.Toast.erro("Informe a data."); document.getElementById("data").focus(); return; }
@@ -270,7 +254,7 @@ async function salvarAlteracoes(){
     const totalTexto=document.getElementById("totalFinal").innerText;
     const total=Number(totalTexto.replace(/\./g,"").replace(",","."))||0;
     let cliente=document.getElementById("cliente").value.trim(); if(!cliente) cliente="CONSUMIDOR FINAL";
-    const dados={ cliente, vendedor:document.getElementById("vendedor").value, data:document.getElementById("data").value, condicao:document.getElementById("condicao").value, vencimento:document.getElementById("vencimento").value, desconto:Number(document.getElementById("desconto").value)||0, observacao:document.getElementById("observacao").value.trim(), endereco:document.getElementById("endereco").value.trim(), total, itens };
+    const dados={ cliente, telefone:document.getElementById("telefone").value.trim(), vendedor:document.getElementById("vendedor").value, data:document.getElementById("data").value, condicao:document.getElementById("condicao").value, vencimento:document.getElementById("vencimento").value, desconto:Number(document.getElementById("desconto").value)||0, observacao:document.getElementById("observacao").value.trim(), endereco:document.getElementById("endereco").value.trim(), total, itens };
     S.mostrarLoading("Salvando...");
     try{
         const r=await fetch("/api/vendas/"+vendaEditando,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
@@ -279,6 +263,7 @@ async function salvarAlteracoes(){
     }catch(e){ S.Toast.erro(e.message); } finally{ S.esconderLoading(); }
 }
 async function salvarEImprimirVenda(){
+    if(!(await autorizarDescontoEdit())) return;
     if(vendaEditando===null){ S.Toast.erro("Nenhuma venda selecionada."); return; }
     if(!document.getElementById("vendedor").value){ S.Toast.erro("Selecione o vendedor primeiro."); document.getElementById("vendedor").focus(); return; }
     if(!document.getElementById("data").value){ S.Toast.erro("Informe a data."); return; }
@@ -292,7 +277,7 @@ async function salvarEImprimirVenda(){
     const totalTexto=document.getElementById("totalFinal").innerText;
     const total=Number(totalTexto.replace(/\./g,"").replace(",","."))||0;
     let cliente=document.getElementById("cliente").value.trim(); if(!cliente) cliente="CONSUMIDOR FINAL";
-    const dados={ cliente, vendedor:document.getElementById("vendedor").value, data:document.getElementById("data").value, condicao:document.getElementById("condicao").value, vencimento:document.getElementById("vencimento").value, desconto:Number(document.getElementById("desconto").value)||0, observacao:document.getElementById("observacao").value.trim(), endereco:document.getElementById("endereco").value.trim(), total, itens };
+    const dados={ cliente, telefone:document.getElementById("telefone").value.trim(), vendedor:document.getElementById("vendedor").value, data:document.getElementById("data").value, condicao:document.getElementById("condicao").value, vencimento:document.getElementById("vencimento").value, desconto:Number(document.getElementById("desconto").value)||0, observacao:document.getElementById("observacao").value.trim(), endereco:document.getElementById("endereco").value.trim(), total, itens };
     S.mostrarLoading("Salvando e imprimindo...");
     try{
         const r=await fetch("/api/vendas/"+vendaEditando,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
@@ -306,6 +291,8 @@ async function salvarEImprimirVenda(){
 function cancelarEdicao(){ vendaEditando=null; document.getElementById("formulario").style.display="none"; document.getElementById("itens").innerHTML=""; }
 (async()=>{
     await carregarVendedores(); await carregarVendas(); buscarVendas();
+    const campoTel=document.getElementById("telefone");
+    if(campoTel) campoTel.addEventListener("input", function(){ if(S.mascaraTelefone) S.mascaraTelefone(campoTel); });
     const params=new URLSearchParams(location.search); const editar=params.get('editar'); if(editar){ editarVenda(Number(editar)); }
 })();
 

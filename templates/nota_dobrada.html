@@ -200,7 +200,10 @@
 
             <div class="nota-corpo">
                 <div class="nota-secao-titulo">Dados do cliente</div>
-                <div class="campo-nota" style="margin-bottom:12px"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="CONSUMIDOR FINAL" value="CONSUMIDOR FINAL"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+                    <div class="campo-nota"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="CONSUMIDOR FINAL" value="CONSUMIDOR FINAL"></div>
+                    <div class="campo-nota"><label for="telefone">Telefone</label><input type="text" id="telefone" placeholder="(00) 00000-0000" maxlength="15"></div>
+                </div>
 
                 <div class="nota-grid-4">
                     <div class="campo-nota"><label for="venda">Venda</label><input type="text" id="venda" readonly></div>
@@ -265,6 +268,7 @@
 const papelUsuario = "{{ papel or 'VENDEDOR' }}";
 const chaveRascunho = "notaDobradaRascunho:" + {{ usuario|tojson }};
 let descontoMaximo = papelUsuario === "GERENTE" || papelUsuario === "DONO" ? 100 : 5;
+let aprovacaoDescontoAtiva = false;
 document.getElementById("txtMaxDesc").innerText = descontoMaximo;
 let vendaSalva = false;
 const S = window.SistemaUtil; S.initSidebar();
@@ -272,6 +276,7 @@ function syncBadge(){ const v=document.getElementById("venda").value||"SL --"; d
 function salvarRascunho(){
     const rascunho = {
         cliente: document.getElementById("cliente").value,
+        telefone: document.getElementById("telefone").value,
         venda: document.getElementById("venda").value,
         vendedor: document.getElementById("vendedor").value,
         data: document.getElementById("data").value,
@@ -291,6 +296,7 @@ function restaurarRascunho(){
     let rascunho; try{ rascunho = JSON.parse(localStorage.getItem(chaveRascunho) || "null"); }catch(erro){ return false; }
     if(!rascunho) return false;
     document.getElementById("cliente").value = rascunho.cliente || "CONSUMIDOR FINAL";
+    document.getElementById("telefone").value = rascunho.telefone || "";
     document.getElementById("venda").value = rascunho.venda || "";
     document.getElementById("vendedor").value = rascunho.vendedor || "";
     document.getElementById("data").value = rascunho.data || "";
@@ -374,10 +380,8 @@ function calcularTotal(){
         totalItens += subtotal;
     });
     let desconto = Number(document.getElementById("desconto").value) || 0;
-    if(desconto > descontoMaximo){
-        desconto = descontoMaximo; document.getElementById("desconto").value = descontoMaximo;
-        document.getElementById("avisoDesconto").style.display = "block";
-    }else{ document.getElementById("avisoDesconto").style.display = "none"; }
+    if(desconto <= descontoMaximo){ aprovacaoDescontoAtiva = false; }
+    document.getElementById("avisoDesconto").style.display = (desconto > descontoMaximo && !aprovacaoDescontoAtiva) ? "block" : "none";
     const valorDesconto = totalItens * desconto / 100;
     const totalFinal = totalItens - valorDesconto;
     document.getElementById("totalItens").innerText = totalItens.toFixed(2).replace(".",",");
@@ -385,6 +389,16 @@ function calcularTotal(){
     document.getElementById("totalFinal").innerText = totalFinal.toFixed(2).replace(".",",");
 }
 async function salvarVendaNota(){
+    const descontoSolicitado = Number(document.getElementById("desconto").value) || 0;
+    if(descontoSolicitado > descontoMaximo && !aprovacaoDescontoAtiva){
+        const aprovado = await S.solicitarAprovacao(
+            "Desconto acima do limite",
+            "Desconto de " + descontoSolicitado.toFixed(2).replace(".",",") + "% (limite " + descontoMaximo + "%)",
+            "Venda para " + (document.getElementById("cliente").value.trim() || "cliente")
+        );
+        if(!aprovado){ S.Toast.aviso("Desconto não aprovado. Ajuste o valor dentro do limite."); return null; }
+        aprovacaoDescontoAtiva = true;
+    }
     calcularTotal();
     const itens = [];
     document.querySelectorAll(".nota-item-editor").forEach(function(item){
@@ -395,6 +409,7 @@ async function salvarVendaNota(){
     const total = Number(totalTexto.replace(/\./g,"").replace(",",".").trim()) || 0;
     const dadosVenda = {
         cliente: document.getElementById("cliente").value.trim(),
+        telefone: document.getElementById("telefone").value.trim(),
         vendedor: document.getElementById("vendedor").value,
         data: document.getElementById("data").value,
         condicao: document.getElementById("condicao").value,
@@ -433,8 +448,8 @@ async function novaVenda(){
         const confirmar = await S.confirmacao({titulo:"Descartar venda?",mensagem:"Esta venda ainda não foi salva. Deseja descartá-la?",textoSim:"Descartar",tipo:"danger"});
         if(!confirmar) return;
     }
-    document.getElementById("cliente").value = "CONSUMIDOR FINAL"; document.getElementById("vendedor").value = ""; document.getElementById("obs").value = "";
-    document.getElementById("endereco").value = ""; document.getElementById("condicao").value = ""; document.getElementById("desconto").value = "";
+    document.getElementById("cliente").value = "CONSUMIDOR FINAL"; document.getElementById("telefone").value = ""; document.getElementById("vendedor").value = ""; document.getElementById("obs").value = "";
+    document.getElementById("endereco").value = ""; document.getElementById("condicao").value = ""; document.getElementById("desconto").value = ""; aprovacaoDescontoAtiva = false;
     document.getElementById("vencimento").value = ""; document.getElementById("campoVencimento").style.display = "none";
     document.getElementById("itens").innerHTML = ""; document.querySelectorAll('input[name="tipoEntrega"]').forEach(function(opcao){ opcao.checked = false; });
     const retirar=document.querySelector('input[name="tipoEntrega"][value="RETIRAR"]'); if(retirar) retirar.checked=true;
@@ -447,6 +462,7 @@ function etiquetaVia(isSegunda){
 }
 function gerarCabecalho(isSegunda=false){
     const cliente = (document.getElementById("cliente").value || "CONSUMIDOR FINAL").trim() || "CONSUMIDOR FINAL";
+    const telefone = (document.getElementById("telefone").value || "").trim();
     const venda = document.getElementById("venda").value;
     const vendedor = document.getElementById("vendedor").value || "-";
     const data = document.getElementById("data").value;
@@ -464,7 +480,7 @@ function gerarCabecalho(isSegunda=false){
             <div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;letter-spacing:.02em;margin-top:2px">${venda}</div></div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35">
-            <div><span style="font-size:7pt;font-weight:700;letter-spacing:.04em">CLIENTE:</span> <span style="font-weight:600">${cliente}</span></div>
+            <div><span style="font-size:7pt;font-weight:700;letter-spacing:.04em">CLIENTE:</span> <span style="font-weight:600">${cliente}</span>${telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : ''}</div>
             <div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condicaoTxt}</span></div>
             <div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${venda}</span></div>
             <div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div>
@@ -513,28 +529,24 @@ async function prepararImpressao(){
     const itens = Array.from(document.querySelectorAll(".nota-item-editor")).filter(item => item.querySelector(".descricao").value.trim() !== "");
     if(!cliente){ S.Toast.erro("Informe o cliente."); document.getElementById("cliente").focus(); return; }
     if(itens.length === 0){ S.Toast.erro("Adicione pelo menos um produto."); return; }
-    ajustarLinhas(itens.length);
-    const condicaoAtual = document.getElementById("condicao").value;
     if(!vendaSalva){ S.mostrarLoading("Salvando..."); const r=await salvarVendaNota(); S.esconderLoading(); if(!r) return; }
-    const area = document.getElementById("areaImpressao"); area.innerHTML = "";
-    const pagina = document.createElement("div"); pagina.className = "pagina-impressao";
-    const primeiraVia = document.createElement("div"); primeiraVia.className = "via-impressao";
-    primeiraVia.innerHTML = gerarCabecalho(false);
-    itens.forEach(item => { primeiraVia.innerHTML += gerarLinhaProduto(item); });
-    const resumoHTML = gerarResumo();
-    const assinaturaCliente = `<div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;color:#374151;margin-top:2px">Ao assinar, declaro que estou ciente<br>das condições deste orçamento.</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
-    const assinaturaLoja = `<div style="flex:1;text-align:center;padding-top:8px"><div style="border-top:1px solid #000;width:68mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA — VIA DA LOJA</div>${condicaoAtual==='aprazo' && document.getElementById("vencimento").value ? '<div style="font-size:6pt;margin-top:3px">VENC: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
-    primeiraVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:4px;flex:1"><div style="flex:1;display:flex;align-items:flex-end">${assinaturaCliente}</div><div>${resumoHTML}</div></div>`;
-    primeiraVia.innerHTML += '<div style="margin-top:2px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-    const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
-    segundaVia.innerHTML = gerarCabecalho(true);
-    itens.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
-    segundaVia.innerHTML += `<div style="display:flex;gap:12px;align-items:flex-end;margin-top:4px;flex:1"><div style="flex:1;display:flex;align-items:flex-end">${assinaturaLoja}</div><div>${resumoHTML}</div></div>`;
-    segundaVia.innerHTML += '<div style="margin-top:2px;text-align:center;font-size:6pt;color:#6b7280;letter-spacing:.04em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
-    pagina.appendChild(primeiraVia);
-    pagina.appendChild(recorteVia());
-    pagina.appendChild(segundaVia); area.appendChild(pagina);
-    window.print();
+    const vendaNum = Number(String(document.getElementById("venda").value).replace(/\D/g,"")) || 0;
+    const itensImpressao = itens.map(item => ({ quantidade: Number(item.querySelector(".quantidade").value)||1, descricao: item.querySelector(".descricao").value.trim(), valor: Number(item.querySelector(".valor").value)||0 }));
+    const totalFinal = Number(document.getElementById("totalFinal").innerText.replace(/\./g,"").replace(",",".")) || 0;
+    const v = {
+        numero: vendaNum,
+        cliente: cliente,
+        telefone: document.getElementById("telefone").value.trim(),
+        vendedor: document.getElementById("vendedor").value,
+        data: document.getElementById("data").value,
+        condicao: document.getElementById("condicao").value,
+        vencimento: document.getElementById("vencimento").value,
+        desconto: Number(document.getElementById("desconto").value) || 0,
+        observacao: document.getElementById("obs").value.trim(),
+        total: totalFinal,
+        itens: itensImpressao
+    };
+    S.imprimirNotaDobrada(v);
     setTimeout(function(){ novaVenda(); }, 500);
 }
 
@@ -555,6 +567,8 @@ async function iniciar(){
     const restaurado = restaurarRascunho();
     if(!restaurado){ await gerarNumeroVenda(); adicionarItem(); }
     calcularTotal(); syncBadge();
+    var campoTel = document.getElementById("telefone");
+    if(campoTel){ campoTel.addEventListener("input", function(){ if(S.mascaraTelefone){ S.mascaraTelefone(campoTel); } }); }
 }
 document.addEventListener("input", salvarRascunho);
 document.addEventListener("change", salvarRascunho);

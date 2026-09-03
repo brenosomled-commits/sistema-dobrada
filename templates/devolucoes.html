@@ -189,6 +189,7 @@
 
                 <div id="camposAvulsa" style="display:none">
                     <div class="nota-secao-titulo">Devolução avulsa (sem vínculo com venda)</div>
+                    <div class="campo-nota" style="margin-bottom:12px"><label for="clienteAvulso">Nome do cliente que está devolvendo <span style="color:var(--cor-perigo)">*</span></label><input type="text" id="clienteAvulso" oninput="calcularTotal()" placeholder="Nome do cliente"></div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
                         <div class="campo-nota"><label for="vendedorAvulso">Vendedor responsável</label><select id="vendedorAvulso"><option value="">Selecione</option></select></div>
                     </div>
@@ -411,6 +412,7 @@ async function registrarDevolucao(){
     const vendaId = document.getElementById("vendaSelect").value;
     if(modo==="vinculada" && !vendaId){ S.Toast.erro("Selecione a venda original."); return; }
     if(modo==="avulsa" && !document.getElementById("vendedorAvulso").value){ S.Toast.erro("Selecione o vendedor responsável."); return; }
+    if(modo==="avulsa" && !document.getElementById("clienteAvulso").value.trim()){ S.Toast.erro("Informe o nome do cliente que está devolvendo."); document.getElementById("clienteAvulso").focus(); return; }
     if(!motivo){ S.Toast.erro("Informe o motivo da devolução."); return; }
 
     const itens = [];
@@ -430,6 +432,7 @@ async function registrarDevolucao(){
 
     const dados = {
         venda_id: modo==="vinculada" && vendaId ? Number(vendaId) : null,
+        cliente: modo==="avulsa" ? document.getElementById("clienteAvulso").value.trim() : undefined,
         motivo: motivo,
         observacao: document.getElementById("observacao").value.trim(),
         data: document.getElementById("data").value || undefined,
@@ -466,6 +469,7 @@ async function registrarEImprimir(){
     const vendaId = document.getElementById("vendaSelect").value;
     if(modo==="vinculada" && !vendaId){ S.Toast.erro("Selecione a venda original."); return; }
     if(modo==="avulsa" && !document.getElementById("vendedorAvulso").value){ S.Toast.erro("Selecione o vendedor responsável."); return; }
+    if(modo==="avulsa" && !document.getElementById("clienteAvulso").value.trim()){ S.Toast.erro("Informe o nome do cliente que está devolvendo."); document.getElementById("clienteAvulso").focus(); return; }
     if(!motivo){ S.Toast.erro("Informe o motivo da devolução."); return; }
     const itens = [];
     document.querySelectorAll(".nota-item-editor").forEach(item=>{
@@ -475,7 +479,7 @@ async function registrarEImprimir(){
         if(descricao) itens.push({ descricao, quantidade: Number(item.querySelector(".quantidade").value)||1, valor: Number(item.querySelector(".valor").value)||0 });
     });
     if(itens.length===0){ S.Toast.erro("Selecione pelo menos um item para devolver."); return; }
-    const dados={ venda_id: modo==="vinculada" && vendaId ? Number(vendaId) : null, motivo, observacao: document.getElementById("observacao").value.trim(), data: document.getElementById("data").value||undefined, vendedor: modo==="avulsa" ? document.getElementById("vendedorAvulso").value : undefined, itens };
+    const dados={ venda_id: modo==="vinculada" && vendaId ? Number(vendaId) : null, cliente: modo==="avulsa" ? document.getElementById("clienteAvulso").value.trim() : undefined, motivo, observacao: document.getElementById("observacao").value.trim(), data: document.getElementById("data").value||undefined, vendedor: modo==="avulsa" ? document.getElementById("vendedorAvulso").value : undefined, itens };
     const editando=editandoId!==null, url=editando?"/api/devolucoes/"+editandoId:"/api/devolucoes", metodo=editando?"PUT":"POST";
     S.mostrarLoading("Salvando e imprimindo...");
     try{
@@ -508,7 +512,7 @@ async function carregarDevolucoes(){
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="color:var(--cor-texto-secundario);font-size:.82rem">${d.data ? d.data.split('-').reverse().join('/') : ''}</span><button type="button" class="acao-nota" onclick="abrirNotaDevolucao(${d.id})">👁 Ver nota</button><button type="button" class="acao-nota" onclick="carregarDevolucaoParaEdicao(${d.id})">✏️ Editar</button><button type="button" class="acao-nota" style="color:var(--cor-perigo)" onclick="cancelarDevolucao(${d.id})">✕ Cancelar</button></div>
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:8px">
-                    <span style="font-size:.85rem;color:var(--cor-texto-secundario)">${d.observacao || '—'}</span>
+                    <span style="font-size:.85rem;color:var(--cor-texto-secundario)">${d.cliente ? '<b>Cliente:</b> '+d.cliente+' — ' : ''}${d.observacao || '—'}</span>
                     <b style="color:var(--cor-perigo)">R$ ${fmtMoedaV(d.total)}</b>
                 </div>`;
             container.appendChild(div);
@@ -554,12 +558,13 @@ function montarNotaDevolucao(dev){
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
                 <div><b>DEVOLUÇÃO:</b> DEV${String(dev.numero).padStart(4,"0")}</div>
                 <div><b>DATA:</b> ${dev.data ? dev.data.split('-').reverse().join('/') : '-'}</div>
+                <div><b>CLIENTE:</b> ${dev.cliente || dev.venda_cliente || '-'}</div>
                 <div><b>VENDA VINCULADA:</b> ${dev.venda_numero ? ("SL" + String(dev.venda_numero).padStart(4,"0")) : '-'}</div>
                 <div><b>VENDEDOR:</b> ${dev.vendedor || '-'}</div>
                 <div><b>MOTIVO:</b> ${motivoLabel(dev.motivo)}</div>
                 <div><b>OBSERVAÇÃO:</b> ${dev.observacao || '-'}</div>
             </div>
-            ${dev.venda_cliente ? `<div style="margin-top:6px"><b>CLIENTE (VENDA ${"SL" + String(dev.venda_numero).padStart(4,"0")}):</b> ${dev.venda_cliente}</div>` : ''}
+            ${dev.venda_cliente && !dev.cliente ? `<div style="margin-top:6px"><b>CLIENTE (VENDA ${"SL" + String(dev.venda_numero).padStart(4,"0")}):</b> ${dev.venda_cliente}</div>` : ''}
             <div class="nota-linha"></div>
             <div class="nota-tabela-cabecalho"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>
             ${itensHtml}
@@ -614,6 +619,7 @@ function carregarDevolucaoParaEdicao(id){
             }else{
                 trocarModoDevolucao("avulsa");
                 document.getElementById("vendedorAvulso").value = dev.vendedor || "";
+                document.getElementById("clienteAvulso").value = dev.cliente || "";
             }
             window.scrollTo({top:0, behavior:"smooth"});
         })
@@ -663,6 +669,7 @@ function limparFormulario(){
     document.getElementById("vendaVinculada").style.display = "none";
     trocarModoDevolucao("vinculada");
     if(document.getElementById("vendedorAvulso")) document.getElementById("vendedorAvulso").value = "";
+    if(document.getElementById("clienteAvulso")) document.getElementById("clienteAvulso").value = "";
     const btn = document.getElementById("btnSalvarDevolucao");
     if(btn){ btn.innerText = "↩️ Registrar devolução"; btn.onclick = registrarDevolucao; }
     document.getElementById("badgeDevolucao").innerText = "DEV --";
