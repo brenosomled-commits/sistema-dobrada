@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=6">
+<link rel="manifest" href="/manifest.webmanifest?v=7">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=6">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=6">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=6">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
 <title>Nota Dobrada </title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=6">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
 <style>
 /* ===== NOTA DOBRADA - VISUAL PREMIUM ===== */
 .nota-wrap{ max-width: 960px; margin: 0 auto; }
@@ -139,14 +139,15 @@
 .entrega-impressao{ margin-top:6px; display:flex; gap:16px; justify-content:center; font-size:10px; font-weight:700; }
 .marcador-caixa{ width:11px; height:11px; border:1px solid #000; display:inline-flex; align-items:center; justify-content:center; font-size:9px; line-height:1; }
 @media print{
-    @page{ size:A4 portrait; margin:2mm 3mm; }
+    /* usa o padrão global de A4 (margens pequenas e seguras) */
+    @page{ size:A4 portrait; margin:6mm 5mm 6mm 5mm; }
     body{ background:#fff; }
     body > .layout{ display:none!important; }
     #areaImpressao{ display:block!important; }
-    .pagina-impressao{ width:204mm; height:293mm; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
+    .pagina-impressao{ width:auto; max-width:200mm; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    .via-impressao{ width:196mm; height:143.5mm; min-height:143.5mm; max-height:143.5mm; padding:1.5mm 2.5mm; margin:0; overflow:hidden; page-break-inside:avoid; box-sizing:border-box; font-size:8.5pt; display:flex; flex-direction:column; }
-    .via-impressao + .via-impressao{ border-top:none; }
+    /* via ocupa a largura útil da A4 e a metade superior/inferior */
+    .via-impressao{ width:190mm; height:auto; min-height:133mm; max-height:141mm; padding:4mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:8.5pt; display:flex; flex-direction:column; border:1px solid #000; }
     .via-impressao .resumo-financeiro{ width:88mm; margin:6px 0 0 auto; }
     .nota-tabela-cabecalho *{ text-transform:uppercase; }
     .nota-item-impressao *{ text-transform:uppercase; }
@@ -259,7 +260,7 @@
 </main>
 </div>
 <div id="areaImpressao"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
 <script>
 const papelUsuario = "{{ papel or 'VENDEDOR' }}";
 const chaveRascunho = "notaDobradaRascunho:" + {{ usuario|tojson }};
@@ -442,7 +443,7 @@ async function novaVenda(){
 const LOGO_URL = "{{ url_for('static', filename='logo.png') }}";
 function venc30(dataStr){ if(!dataStr) return '30 DIAS'; const d=new Date(dataStr+'T12:00:00'); d.setDate(d.getDate()+30); const dd=d.toISOString().split('T')[0].split('-'); return dd[2]+'/'+dd[1]+'/'+dd[0]; }
 function etiquetaVia(isSegunda){
-    return `<div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 6px -2px;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-weight:600;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>`;
+    return `<div class="via-etiqueta" style="margin:0 0 4mm 0;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em;text-transform:uppercase"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-weight:600;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>`;
 }
 function gerarCabecalho(isSegunda=false){
     const cliente = (document.getElementById("cliente").value || "CONSUMIDOR FINAL").trim() || "CONSUMIDOR FINAL";
@@ -539,7 +540,7 @@ async function prepararImpressao(){
 
 function recorteVia(){
     const el=document.createElement('div');
-    el.style.cssText='width:196mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
+    el.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
     el.innerHTML='<div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div>';
     return el;
 }
@@ -563,7 +564,7 @@ iniciar();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=6").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

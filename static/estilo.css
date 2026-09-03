@@ -1301,3 +1301,202 @@ input, select, textarea, button {
     .stat-atalho:active { transform: scale(.98); }
     .sidebar-link:active { background: var(--cor-fundo); }
 }
+
+/* ===================================================================
+   ARQUITETURA GLOBAL DE IMPRESSÃO — PADRÃO A4 SOMLED
+   -------------------------------------------------------------------
+   Base única para TODOS os documentos impressos do sistema.
+   Documentos de UMA via  (.os-doc, relatórios) e de DUAS VIAS
+   (.pagina-impressao + .via-impressao) compartilham estas regras.
+
+   Cada template mantém apenas as regras específicas do seu conteúdo;
+   o padrão geral (esconder interface, @page A4, largura útil, segurança
+   superior, quebra de página) fica centralizado aqui.
+   =================================================================== */
+
+/* Margens pequenas e seguras para impressoras domésticas.
+   A área superior recebe um pouco mais de folga para NUNCA cortar
+   títulos como "VIA DO CLIENTE — 1ª VIA" ou cabeçalhos de documento. */
+@page {
+    size: A4 portrait;
+    margin: 6mm 5mm 6mm 5mm;
+}
+
+@media print {
+    /* ---- esconde TODA a interface de uso (sidebar, header, botões) ----
+       ATENÇÃO: não esconder `.layout` aqui — a Ordem de Serviço (index.html)
+       imprime um documento que vive DENTRO de `.layout`. Documentos que usam
+       overlay de impressão (#areaImpressao, fora do .layout) escondem o .layout
+       nas regras internas de cada template. */
+    .sidebar,
+    .sidebar-overlay,
+    .mobile-toggle,
+    .conteudo .area-acoes,
+    .conteudo .area-acoes-venda,
+    .toolbar,
+    .pagina-titulo,
+    .stats-grid,
+    .filtros-box,
+    .paginacao,
+    .os-acoes,
+    .print-logo-os { display: none !important; }
+
+    /* Mantém a área de conteúdo como documento puro, sem margens externas */
+    .conteudo {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: none !important;
+        width: 100% !important;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        font-size: 12pt;
+    }
+
+    /* Contraste forte + cores exatas na impressão (barras escuras etc.) */
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    a { color: #000; text-decoration: none; }
+
+    /* Nunca cortar uma linha/ser/painel no meio */
+    tr, li {
+        page-break-inside: avoid;
+    }
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+
+    h1, h2, h3, h4 { page-break-after: avoid; }
+}
+
+/* ---- Documentos de UMA via (ex.: Ordem de Serviço) ---- */
+@media print {
+    /* usa 100% da área útil, sem bordas/sombras de tela */
+    .os-doc {
+        border: none !important;
+        box-shadow: none !important;
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+}
+
+/* ---- Documentos de DUAS VIAS numa única folha A4 ---- */
+/* Container gerado em JS que reúne: 1ª via + linha de recorte + 2ª via */
+@media print {
+    .pagina-impressao {
+        page-break-inside: avoid;
+    }
+    .pagina-impressao:last-child {
+        page-break-after: auto;
+    }
+
+    /* via única: 1ª ou 2ª metade da folha, largura útil da A4 (190mm) */
+    .via-impressao {
+        width: 190mm;
+        height: auto;
+        min-height: 133mm;
+        max-height: 141mm;
+        padding: 4mm 4mm 4mm 4mm;
+        overflow: visible;
+        page-break-inside: avoid;
+        border: 1px solid #000;
+        background: #fff;
+        box-sizing: border-box;
+        /* segurança interna superior — nunca corta etiqueta/título */
+        padding-top: 4mm;
+    }
+
+    /* faixa escura "VIA DO CLIENTE — 1ª VIA" / "VIA DA LOJA — 2ª VIA" */
+    .via-etiqueta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #000;
+        color: #fff;
+        font-size: 7pt;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        margin-bottom: 4mm;
+    }
+
+    /* tabela de produtos — descrição com prioridade de largura */
+    .nota-tabela-cabecalho,
+    .nota-item-impressao {
+        display: grid;
+        gap: 6px;
+        align-items: center;
+        grid-template-columns: 14mm minmax(0, 1fr) 26mm 26mm;
+    }
+    .nota-tabela-cabecalho {
+        font-weight: 700;
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        border-bottom: 1.2px solid #000;
+        padding: 2mm 0 2mm 0;
+    }
+    .nota-item-impressao {
+        font-size: 8.5pt;
+        border-bottom: 1px dotted #d1d5db;
+        min-height: 5.5mm;
+        padding: 1mm 0;
+    }
+
+    /* linha de recorte centralizada entre as vias */
+    .recorte-linha {
+        width: 190mm;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        page-break-inside: avoid;
+        padding: 2px 0;
+    }
+    .recorte-linha::before,
+    .recorte-linha::after {
+        content: "";
+        flex: 1;
+        border-top: 1.5px dashed #111827;
+    }
+
+    /* assinaturas alinhadas na base da via */
+    .via-assinaturas {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        margin-top: 6px;
+        flex: 1;
+    }
+    .via-assinatura {
+        flex: 1;
+        text-align: center;
+        padding-top: 8px;
+    }
+    .via-assinatura-linha {
+        border-top: 1px solid #000;
+        width: 90%;
+        margin: 0 auto 3px;
+    }
+    .via-assinatura-rotulo {
+        font-size: 7pt;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    /* rodapé fiscal dos cupons */
+    .via-rodape {
+        margin-top: 2px;
+        text-align: center;
+        font-size: 6pt;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+}

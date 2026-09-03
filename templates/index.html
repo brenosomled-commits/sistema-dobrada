@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=6">
+<link rel="manifest" href="/manifest.webmanifest?v=7">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=6">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=6">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=6">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
 <title>Sistema de Ordem de Serviço</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=6">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
 <style>
 
 /* ===== TELA NOVA OS — documento profissional ===== */
@@ -30,10 +30,10 @@
     border: 1px solid var(--cor-borda);
     border-radius: var(--raio-lg);
     box-shadow: var(--sombra-sm);
-    padding: 24px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 14px;
     max-width: 960px;
 }
 
@@ -41,9 +41,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
-    padding-bottom: 16px;
+    padding-bottom: 10px;
     border-bottom: 2px solid var(--cor-primaria);
 }
 
@@ -54,12 +54,12 @@
 }
 
 .os-logo img {
-    height: 44px;
+    height: 30px;
     width: auto;
 }
 
 .os-logo-nome {
-    font-size: 1.3rem;
+    font-size: 1.05rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     color: var(--cor-primaria);
@@ -71,6 +71,36 @@
     letter-spacing: 0.08em;
     color: var(--cor-texto);
     text-align: center;
+}
+
+.os-numero-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid var(--cor-texto);
+    border-radius: 8px;
+    padding: 6px 12px;
+    background: var(--cor-fundo);
+}
+
+.os-numero-rotulo {
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--cor-texto-secundario);
+}
+
+.os-numero-box .os-input {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    width: 72px;
+    text-align: center;
+}
+
+.os-numero-box .os-input:focus {
+    outline: none;
 }
 
 .os-info {
@@ -141,6 +171,95 @@
     padding: 8px 14px;
 }
 
+/* Caixa leve para problema/solução */
+.os-caixa-leve {
+    background: #f8fafc;
+    border: 1px solid var(--cor-borda);
+    border-radius: 8px;
+    padding: 6px;
+}
+
+.os-caixa-leve .os-textarea {
+    border: none;
+    background: transparent;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.os-caixa-leve .os-textarea:focus {
+    outline: none;
+}
+
+/* Resumo financeiro compacto à direita */
+.os-resumo-novo {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+    padding: 14px 16px;
+    border: 1px solid var(--cor-borda);
+    border-radius: 10px;
+    background: var(--cor-fundo);
+}
+
+@media (max-width: 640px) {
+    .os-resumo-novo {
+        grid-template-columns: 1fr;
+    }
+}
+
+.os-resumo-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.os-resumo-rotulo {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cor-texto-secundario);
+}
+
+.os-resumo-valor {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--cor-texto);
+}
+
+.os-resumo-input {
+    text-align: right;
+    min-height: 40px;
+    font-weight: 700;
+}
+
+.os-resumo-total {
+    border-left: 1px solid var(--cor-borda);
+    padding-left: 16px;
+    background: transparent;
+}
+
+@media (max-width: 640px) {
+    .os-resumo-total {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid var(--cor-borda);
+        padding-top: 10px;
+    }
+}
+
+.os-resumo-total .os-resumo-rotulo {
+    color: var(--cor-primaria);
+}
+
+.os-resumo-total .os-resumo-valor {
+    font-size: 1.7rem;
+    color: var(--cor-primaria);
+}
+
 .os-grid {
     display: grid;
     gap: 12px;
@@ -152,6 +271,10 @@
 
 .os-grid-dupla {
     grid-template-columns: 1fr 1fr;
+}
+
+.os-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
 }
 
 .os-campo {
@@ -287,7 +410,8 @@
     }
 
     .os-grid-3,
-    .os-grid-dupla {
+    .os-grid-dupla,
+    .os-grid-4 {
         grid-template-columns: 1fr;
     }
 
@@ -688,39 +812,37 @@
 
     <div class="os-doc">
 
-        <!-- 1. CABEÇALHO -->
+        <!-- 1. CABEÇALHO COMPACTO -->
         <div class="os-cabecalho">
             <div class="os-logo">
                 <img src="{{ url_for('static', filename='logo.png') }}" alt="SOMLED" onerror="this.style.display='none'">
                 <span class="os-logo-nome">SOMLED</span>
             </div>
             <div class="os-titulo">ORDEM DE SERVIÇO</div>
-            <div class="os-info">
-                <div class="os-info-item">
-                    <label class="os-label">Nº da OS</label>
-                    <input type="text" class="os-input" id="numero" readonly>
-                </div>
-                <div class="os-info-item">
-                    <label class="os-label">Data de Entrada</label>
-                    <input type="text" class="os-input" id="dataEntrada" readonly>
-                </div>
+            <div class="os-numero-box">
+                <span class="os-numero-rotulo">Nº</span>
+                <input type="text" class="os-input" id="numero" readonly>
             </div>
         </div>
 
-        <!-- 2. DADOS DO CLIENTE -->
+        <!-- 2. DADOS -->
         <div class="os-secao">
             <div class="os-secao-titulo">Dados do Cliente</div>
-            <div class="os-grid os-grid-3">
+            <div class="os-grid os-grid-4">
                 <div class="os-campo">
                     <label class="os-label">Cliente</label>
                     <input type="text" class="os-input os-input-cheio" id="cliente" placeholder="Nome do cliente">
                 </div>
                 <div class="os-campo">
-                    <label class="os-label">Telefone do Cliente</label>
+                    <label class="os-label">Telefone</label>
                     <input type="text" class="os-input os-input-cheio" id="telefone" placeholder="(00) 00000-0000">
                 </div>
                 <div class="os-campo">
-                    <label class="os-label">Responsável pela OS</label>
+                    <label class="os-label">Data de Entrada</label>
+                    <input type="text" class="os-input os-input-cheio" id="dataEntrada" readonly>
+                </div>
+                <div class="os-campo">
+                    <label class="os-label">Responsável</label>
                     <select id="responsavel" class="os-select os-input-cheio">
                         <option value="">Selecione o responsável</option>
                     </select>
@@ -731,16 +853,26 @@
         <!-- 3. PROBLEMA RELATADO -->
         <div class="os-secao">
             <div class="os-secao-titulo">Problema Relatado *</div>
-            <textarea class="os-textarea" id="problema" placeholder="Ex: Lustre não acende, 2 retangulares + 1 infinito..." required></textarea>
+            <div class="os-caixa-leve">
+                <textarea class="os-textarea" id="problema" placeholder="Ex: Lustre não acende, 2 retangulares + 1 infinito..." required></textarea>
+            </div>
         </div>
 
-        <!-- 4. ITENS UTILIZADOS -->
+        <!-- 4. SOLUÇÃO / SERVIÇO EXECUTADO -->
+        <div class="os-secao">
+            <div class="os-secao-titulo">Solução / Serviço Executado</div>
+            <div class="os-caixa-leve">
+                <textarea class="os-textarea" id="solucao" placeholder="Ex: Substituição dos drivers..." rows="2"></textarea>
+            </div>
+        </div>
+
+        <!-- 5. ITENS UTILIZADOS -->
         <div class="os-secao">
             <div class="os-secao-titulo">Itens Utilizados</div>
             <div class="os-tabela-itens">
                 <div class="os-itens-head">
-                    <span>Item</span>
                     <span>Quantidade</span>
+                    <span>Item</span>
                     <span>Valor Unitário</span>
                     <span></span>
                 </div>
@@ -752,25 +884,20 @@
             </div>
         </div>
 
-        <!-- 5. MAIS OPÇÕES -->
-        <div class="os-secao">
-            <div class="os-secao-titulo">Mais Opções</div>
-            <div class="os-grid os-grid-dupla">
-                <div class="os-campo">
-                    <label class="os-label">Solução / Serviço executado</label>
-                    <textarea class="os-textarea" id="solucao" placeholder="Ex: Substituição dos drivers..." rows="2"></textarea>
-                </div>
-                <div class="os-campo">
-                    <label class="os-label">Valor da Mão de Obra</label>
-                    <input type="number" class="os-input os-input-cheio" id="maoObra" step="0.01" oninput="calcularTotal()" placeholder="0,00">
-                </div>
+        <!-- 6. RESUMO -->
+        <div class="os-resumo-novo">
+            <div class="os-resumo-item">
+                <span class="os-resumo-rotulo">Itens</span>
+                <span class="os-resumo-valor">R$ <span id="subtotalItens">0,00</span></span>
             </div>
-        </div>
-
-        <!-- 6. TOTAL GERAL -->
-        <div class="os-total-geral">
-            <span class="os-total-geral-label">TOTAL GERAL</span>
-            <span class="os-total-geral-valor">R$ <span id="total">0,00</span></span>
+            <div class="os-resumo-item">
+                <label class="os-resumo-rotulo" for="maoObra">Mão de obra</label>
+                <input type="number" class="os-input os-resumo-input" id="maoObra" step="0.01" oninput="calcularTotal()" placeholder="0,00">
+            </div>
+            <div class="os-resumo-item os-resumo-total">
+                <span class="os-resumo-rotulo">Total</span>
+                <span class="os-resumo-valor">R$ <span id="total">0,00</span></span>
+            </div>
         </div>
 
         <!-- AÇÕES -->
@@ -947,7 +1074,7 @@
 
 </div>
 
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
 <script>
 
 const S = window.SistemaUtil;
@@ -1133,6 +1260,8 @@ function calcularTotal() {
         const valor = Number(item.querySelector(".valor").value) || 0;
         total += quantidade * valor;
     });
+    const subtotalEl = document.getElementById("subtotalItens");
+    if (subtotalEl) subtotalEl.innerText = total.toFixed(2).replace(".", ",");
     total += Number(document.getElementById("maoObra").value) || 0;
     document.getElementById("total").innerText = total.toFixed(2).replace(".", ",");
 }
@@ -1653,7 +1782,7 @@ iniciarSistema();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=6").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

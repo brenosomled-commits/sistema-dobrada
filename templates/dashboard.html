@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=6">
+<link rel="manifest" href="/manifest.webmanifest?v=7">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=6">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=6">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=6">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
 <title>Dashboard - Sistema OS</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=6">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
 <style>
 .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
 @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -96,7 +96,7 @@
 <div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
 <script>
 (function(){
 const S=window.SistemaUtil;
@@ -142,7 +142,7 @@ async function carregarDashboard(){
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=6").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

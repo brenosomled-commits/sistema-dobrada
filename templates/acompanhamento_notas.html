@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=6">
+<link rel="manifest" href="/manifest.webmanifest?v=7">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=6">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=6">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=6">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
 <title>Acompanhar Vendas</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=6">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
 <style>
 .filtros-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 @media(max-width:768px){ .filtros-grid{ grid-template-columns:1fr; } }
@@ -102,8 +102,8 @@
 </main>
 </div>
 <div id="areaImpressao" style="display:none"></div>
-<style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:3mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=6"></script>
+<style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:6mm 5mm 6mm 5mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
 <script>
 let itens=[]; const podeVisualizarComissao={{ "true" if pode_visualizar_comissao else "false" }}; const S=window.SistemaUtil;
 function fmtMoeda(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
@@ -214,14 +214,14 @@ async function imprimirVenda(id){
     try{
         const r=await fetch('/api/vendas/'+id); const v=await r.json(); if(!r.ok) throw new Error(v.erro||'Erro');
         const area=document.getElementById('areaImpressao'); area.innerHTML='';
-        const pagina=document.createElement('div'); pagina.style.cssText='width:204mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
+        const pagina=document.createElement('div'); pagina.style.cssText='width:190mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
         function viaHTML(isSegunda){
             const condTxt = (v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'-').toUpperCase());
             const dataFmt = fmtData(v.data) || "-";
             const vencFmt = v.vencimento ? fmtData(v.vencimento) : (v.condicao==="aprazo" ? "30 DIAS" : "-");
             const descontoPct = v.desconto!=null ? v.desconto : 0;
-            let html=`<div style="width:196mm;min-height:133mm;max-height:140mm;padding:2mm 3mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:9pt;page-break-inside:avoid;box-sizing:border-box">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 6px -2px;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>
+            let html=`<div style="width:190mm;min-height:133mm;max-height:141mm;padding:4mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:9pt;overflow:visible;page-break-inside:avoid;box-sizing:border-box">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 4mm 0;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000"><div style="flex:1"></div><div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div><div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">${fmtNum("VENDA",v.numero)}</div></div></div></div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35"><div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">${v.cliente||"CONSUMIDOR FINAL"}</span></div><div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condTxt}</span></div><div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${fmtNum("VENDA",v.numero)}</span></div><div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div><div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${v.vendedor||"-"}</div><div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${v.observacao||"-"}</div><div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div></div><div style="border-top:1px solid #000;margin:5px 0 0"></div>
                 <div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;font-weight:700;border-bottom:1.2px solid #000;padding:3px 0;font-size:7.5pt;letter-spacing:.02em"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>`;
@@ -234,7 +234,7 @@ async function imprimirVenda(id){
         const via1=document.createElement('div'); via1.innerHTML=viaHTML(false); via1.firstElementChild.style.margin='0 auto 0';
         const via2=document.createElement('div'); via2.innerHTML=viaHTML(true);
         const recorte=document.createElement('div');
-        recorte.style.cssText='width:196mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
+        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
         recorte.innerHTML='<div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div>';
         pagina.appendChild(via1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(via2.firstElementChild);
         area.appendChild(pagina); area.style.display='block'; window.print();
@@ -257,7 +257,7 @@ S.initSidebar(); (async()=>{ definirMesAtual(); document.getElementById("tipoFil
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=6").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

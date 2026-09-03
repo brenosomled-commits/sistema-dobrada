@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=6">
+<link rel="manifest" href="/manifest.webmanifest?v=7">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=6">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=6">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=6">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
 <title>Devolução </title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=6">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
 <style>
 /* ===== DEVOLUÇÃO - VISUAL PREMIUM ===== */
 .nota-wrap{ max-width: 960px; margin: 0 auto; }
@@ -113,13 +113,13 @@
 .nota-tabela-cabecalho{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; font-weight:700; font-size:.78rem; border-bottom:1px solid #000; padding:6px 0 5px; text-transform:uppercase; }
 .nota-item-impressao{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; padding:4px 0; font-size:13px; border-bottom:1px solid #e8edf2; text-transform:uppercase; }
 @media print{
-    @page{ size:A4 portrait; margin:3mm; }
+    @page{ size:A4 portrait; margin:6mm 5mm 6mm 5mm; }
     body{ background:#fff; }
     body > .layout{ display:none!important; }
     #areaImpressaoDev{ display:block!important; }
-    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    .via-impressao{ min-height:133mm; max-height:138mm; height:auto; padding:1.5mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; }
+    .via-impressao{ width:190mm; min-height:133mm; max-height:141mm; height:auto; padding:4mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; border:1px solid #000; }
 }
 </style>
 </head>
@@ -230,7 +230,7 @@
 </main>
 </div>
 <div id="areaImpressaoDev"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
 <script>
 const S = window.SistemaUtil; S.initSidebar();
 const LOGO_URL = "{{ url_for('static', filename='logo.png') }}";
@@ -534,7 +534,7 @@ function abrirNotaDevolucao(id){
 }
 
 function etiquetaDev(isSegunda){
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#7f1d1d'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>`;
+    return `<div class="via-etiqueta" style="display:flex;justify-content:space-between;align-items:center;padding:3px 8px;margin:0 0 4mm 0;border-radius:4px;background:${isSegunda ? '#1e293b' : '#7f1d1d'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>`;
 }
 function montarNotaDevolucao(dev){
     const area = document.getElementById("areaImpressaoDev");
@@ -680,7 +680,7 @@ document.addEventListener("DOMContentLoaded", function(){
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=6").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>
