@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=4">
+<link rel="manifest" href="/manifest.webmanifest?v=5">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=4">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=4">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=5">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=5">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=5">
 <title>Entregas</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=5">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -41,6 +41,14 @@
 .badge-Falha{ background:#fee2e2; color:#991b1b; }
 .badge-Cancelada{ background:#f3f4f6; color:#6b7280; text-decoration:line-through; }
 .badge-Reagendada{ background:#ede9fe; color:#6d28d9; }
+/* Scanner QR — overlay centralizado estilo app */
+#qr-reader video{ width:100%!important; height:auto!important; display:block; margin:0 auto; object-fit:cover; }
+#qr-reader__scan_region{ margin:0 auto; }
+#qrScanner.qr-tela-cheia{ position:fixed; inset:0; z-index:9000; margin:0!important; border:none; border-radius:0; background:rgba(8,12,24,.96); display:flex!important; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px 16px calc(20px + env(safe-area-inset-bottom)); }
+#qrScanner.qr-tela-cheia #qr-reader{ width:100%; max-width:420px; margin:0 auto; border-radius:12px; overflow:hidden; background:#000; }
+#qrScanner.qr-tela-cheia .qr-rodape{ background:transparent!important; }
+#qrScanner.qr-tela-cheia .qr-hint{ color:#e5e7eb!important; }
+#qrScanner.qr-tela-cheia .qr-fechar{ min-height:48px; padding:12px 28px; }
 #areaImpressaoEntrega{display:none}
 .pagina-impressao{ width:204mm; height:293mm; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
 .via-impressao{ width:196mm; height:143.5mm; min-height:143.5mm; max-height:143.5mm; padding:2mm 3mm; border:1px solid #000; overflow:hidden; margin:0; background:#fff; display:flex; flex-direction:column; font-size:8.5pt; box-sizing:border-box; }
@@ -84,9 +92,9 @@
             </div>
             <div id="qrScanner" style="display:none;margin-top:12px;border:1px solid #000;border-radius:8px;overflow:hidden;background:#fff">
                 <div id="qr-reader" style="width:100%"></div>
-                <div style="display:flex;gap:8px;padding:8px;justify-content:space-between;align-items:center;background:#f3f4f6">
-                    <span style="font-size:7.5pt;color:#374151">Aponte a câmera para o QR da nota (ENT0001) — leitura não altera, só abre</span>
-                    <button class="btn btn-outline btn-sm" onclick="fecharScannerQR()">✕ Fechar</button>
+                <div style="display:flex;gap:8px;padding:8px;justify-content:space-between;align-items:center;background:#f3f4f6" class="qr-rodape">
+                    <span style="font-size:7.5pt;color:#374151" class="qr-hint">Aponte a câmera para o QR da nota (ENT0001) — leitura não altera, só abre</span>
+                    <button class="btn btn-outline btn-sm qr-fechar" onclick="fecharScannerQR()">✕ Fechar</button>
                 </div>
             </div>
         </div>
@@ -171,7 +179,7 @@
 </main>
 </div>
 <div id="areaImpressaoEntrega"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=5"></script>
 <script>
 const S=window.SistemaUtil; S.initSidebar();
 let listaVendas=[], listaOS=[], entregas=[], rotaAtual=[], editandoId=null;
@@ -365,13 +373,14 @@ let _qrScanner=null;
 async function abrirScannerQR(){
     const box=document.getElementById("qrScanner");
     box.style.display="block";
+    box.classList.add("qr-tela-cheia");
     box.scrollIntoView({behavior:"smooth"});
     if(!window.Html5Qrcode){ S.Toast.erro("Leitor QR não carregado. Verifique internet."); return; }
     try{
         _qrScanner=new Html5Qrcode("qr-reader");
         await _qrScanner.start({facingMode:"environment"}, {fps:10, qrbox:{width:240, height:240}}, (decoded)=>{
             try{ _qrScanner.stop(); }catch(e){}
-            document.getElementById("qrScanner").style.display="none";
+            const _qrBox=document.getElementById("qrScanner"); _qrBox.style.display="none"; _qrBox.classList.remove("qr-tela-cheia");
             // extrai id de URL tipo /m/entrega/123 ou ENT0001
             let id=null;
             const m=String(decoded).match(/\/m\/entrega\/(\d+)/);
@@ -402,7 +411,7 @@ async function abrirScannerQR(){
 }
 async function fecharScannerQR(){
     try{ if(_qrScanner){ await _qrScanner.stop(); _qrScanner.clear(); } }catch(e){}
-    document.getElementById("qrScanner").style.display="none";
+    const _qrBox=document.getElementById("qrScanner"); _qrBox.style.display="none"; _qrBox.classList.remove("qr-tela-cheia");
 }
 function fmtDataBR(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
 // Conexão universal com a Elgin i9: usa a impressora padrão do Windows (window.print),
@@ -442,7 +451,7 @@ async function imprimirZebraDireto(id){
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
 </script>
 <script>
-if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=4").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=5").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
 </script>
 </body>
 </html>

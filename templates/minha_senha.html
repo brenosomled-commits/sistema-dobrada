@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=4">
+<link rel="manifest" href="/manifest.webmanifest?v=5">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=4">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=4">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=5">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=5">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=5">
 <title>Minha Senha - Sistema OS</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=5">
 </head>
 <body>
 <div class="layout">
@@ -49,7 +49,7 @@
     </div>
 </main>
 </div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=5"></script>
 <script>
 const S=window.SistemaUtil; S.initSidebar();
 async function alterarSenha(){
@@ -70,7 +70,7 @@ async function alterarSenha(){
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=4").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=5").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

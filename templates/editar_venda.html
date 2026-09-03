@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=4">
+<link rel="manifest" href="/manifest.webmanifest?v=5">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=4">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=4">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=5">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=5">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=5">
 <title>Editar Venda </title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=5">
 <style>
 .venda-card{ border:1px solid var(--cor-borda); border-radius:var(--raio); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; background:var(--cor-painel); }
 .venda-card:hover{ border-color:var(--cor-primaria); }
@@ -107,7 +107,7 @@
 <div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=5"></script>
 <script>
 let vendas=[]; let vendaEditando=null; const S=window.SistemaUtil; S.initSidebar();
 async function carregarVendedores(){
@@ -313,7 +313,7 @@ function cancelarEdicao(){ vendaEditando=null; document.getElementById("formular
 <div id="areaImpressao" style="display:none"></div><style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:3mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style><script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=4").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=5").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
   });
 }
 </script>

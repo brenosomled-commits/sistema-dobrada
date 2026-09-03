@@ -1212,6 +1212,7 @@ a:hover {
 
 html {
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -1291,5 +1292,12 @@ input, select, textarea, button {
 
     .sidebar { border-right-color: var(--cor-borda); }
 
-    .conteudo { padding-top: 18px; }
+    .conteudo { padding-top: max(18px, env(safe-area-inset-top)); }
+}
+
+/* feedback de toque — sensação de aplicativo */
+@media (hover: none) {
+    .btn:active { transform: scale(.97); }
+    .stat-atalho:active { transform: scale(.98); }
+    .sidebar-link:active { background: var(--cor-fundo); }
 }
