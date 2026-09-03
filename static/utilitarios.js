@@ -417,7 +417,7 @@
                     '<div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">' + venda + '</div></div></div>' +
                 '</div>' +
                 '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35">' +
-                    '<div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">' + cliente + '</span>' + (telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : '') + '</div>' +
+                    '<div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-size:10pt;font-weight:900">' + cliente + '</span>' + (telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : '') + '</div>' +
                     '<div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">' + condTxt + '</span></div>' +
                     '<div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">' + venda + '</span></div>' +
                     '<div><span style="font-size:7pt;font-weight:700">DATA:</span> ' + data + '</div>' +
@@ -499,7 +499,7 @@
                 '<div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">' + numero + '</div></div></div>' +
             '</div>' +
             '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35">' +
-                '<div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">' + cliente + '</span>' + (telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : '') + '</div>' +
+                '<div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-size:10pt;font-weight:900">' + cliente + '</span>' + (telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : '') + '</div>' +
                 '<div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">' + condTxt + '</span></div>' +
                 '<div><span style="font-size:7pt;font-weight:700">DATA:</span> ' + data + '</div>' +
                 '<div><span style="font-size:7pt;font-weight:700">VALIDADE:</span> ' + validadeDias + ' DIAS</div>' +

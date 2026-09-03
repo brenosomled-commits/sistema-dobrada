@@ -484,7 +484,7 @@ function gerarCabecalho(isSegunda=false){
             <div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;letter-spacing:.02em;margin-top:2px">${venda}</div></div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35">
-            <div><span style="font-size:7pt;font-weight:700;letter-spacing:.04em">CLIENTE:</span> <span style="font-weight:600">${cliente}</span>${telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : ''}</div>
+            <div><span style="font-size:7pt;font-weight:700;letter-spacing:.04em">CLIENTE:</span> <span style="font-size:10pt;font-weight:900">${cliente}</span>${telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : ''}</div>
             <div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condicaoTxt}</span></div>
             <div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${venda}</span></div>
             <div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div>
@@ -582,8 +582,7 @@ iniciar();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
-  });
+    navigator.serviceWorker.register("/sw.js?v=7").catch(function(e){ console.warn("SW:", e); });
 }
 </script>
 </body>

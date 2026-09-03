@@ -451,7 +451,7 @@ async function imprimirZebraDireto(id){
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
 </script>
 <script>
-if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=8").catch(()=>{}); }); }
 </script>
 </body>
 </html>

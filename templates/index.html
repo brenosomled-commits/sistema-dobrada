@@ -1805,8 +1805,7 @@ iniciarSistema();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
-  });
+    navigator.serviceWorker.register("/sw.js?v=7").catch(function(e){ console.warn("SW:", e); });
 }
 </script>
 </body>

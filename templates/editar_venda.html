@@ -300,8 +300,7 @@ function cancelarEdicao(){ vendaEditando=null; document.getElementById("formular
 <div id="areaImpressao" style="display:none"></div><style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:6mm 5mm 6mm 5mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style><script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=7").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
-  });
+    navigator.serviceWorker.register("/sw.js?v=7").catch(function(e){ console.warn("SW:", e); });
 }
 </script>
 </body>
