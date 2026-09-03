@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=7">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
 <title>Nota Dobrada </title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <style>
 /* ===== NOTA DOBRADA - VISUAL PREMIUM ===== */
 .nota-wrap{ max-width: 960px; margin: 0 auto; }
@@ -106,14 +106,6 @@
 
 /* AÇÕES */
 .area-acoes{ display:flex; gap:10px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap; }
-/* AÇÕES COLADAS NO TOTAL FINAL */
-.area-acoes-venda{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
-.area-acoes-venda .btn{ flex:1; min-height:52px; font-size:1rem; }
-.area-acoes-venda .btn-outline{ flex:0 0 auto; }
-@media(max-width:640px){
-    .area-acoes-venda{ flex-direction:column; }
-    .area-acoes-venda .btn{ width:100%; }
-}
 @media(max-width:640px){
     .nota-topo{ flex-direction:column; align-items:flex-start; }
     .itens-head{ display:none; }
@@ -126,29 +118,27 @@
 }
 
 #areaImpressao{display:none}
-.pagina-impressao{ width:204mm; min-height:287mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
-.via-impressao{ width:196mm; min-height:132mm; padding:3mm 4mm; border:1.2px solid #000; overflow:hidden; margin:2mm auto 0; background:#fff; display:flex; flex-direction:column; }
+.pagina-impressao{ width:200mm; min-height:287mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
+.via-impressao{ width:190mm; min-height:132mm; padding:6mm 8mm; border:1px solid #000; overflow:hidden; margin:3mm auto 0; background:#fff; display:flex; flex-direction:column; }
 .via-impressao + .via-impressao{ border-top:none; }
-.nota-linha{ border-top:1px solid #000; margin:6px 0; }
-.nota-tabela-cabecalho, .nota-item-impressao{ display:grid; gap:6px; align-items:center; }
-.nota-tabela-cabecalho{ grid-template-columns:14mm minmax(0,1fr) 26mm 26mm; font-weight:700; font-size:7.5pt; border-bottom:1.2px solid #000; padding:4px 0 3px; letter-spacing:.02em; }
-.nota-item-impressao{ grid-template-columns:14mm minmax(0,1fr) 26mm 26mm; padding:3px 0; font-size:9pt; border-bottom:1px solid #e5e7eb; min-height:6mm; }
-.via-impressao .resumo-financeiro{ width:98mm; margin:8px 0 0 auto; border:none; border-radius:0; background:transparent; }
-.assinatura{ margin-top:12px; text-align:center; }
-.assinatura-linha{ width:78mm; border-top:1px solid #000; margin:0 auto 3px; }
-.entrega-impressao{ margin-top:6px; display:flex; gap:16px; justify-content:center; font-size:10px; font-weight:700; }
-.marcador-caixa{ width:11px; height:11px; border:1px solid #000; display:inline-flex; align-items:center; justify-content:center; font-size:9px; line-height:1; }
+.nota-linha{ border-top:1px solid var(--cor-borda-forte); margin:14px 0; }
+.nota-tabela-cabecalho, .nota-item-impressao{ display:grid; gap:10px; align-items:center; }
+.nota-tabela-cabecalho{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; font-weight:700; font-size:.78rem; border-bottom:1px solid #000; padding:6px 0 5px; }
+.nota-item-impressao{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; padding:4px 0; font-size:13px; border-bottom:1px solid #e8edf2; }
+.via-impressao .resumo-financeiro{ width:104mm; margin:14px auto 0; border:none; border-radius:0; background:transparent; }
+.assinatura{ margin-top:18px; text-align:center; }
+.assinatura-linha{ width:90mm; border-top:1px solid #000; margin:0 auto 4px; }
+.entrega-impressao{ margin-top:8px; display:flex; gap:20px; justify-content:center; font-size:12px; font-weight:bold; }
+.marcador-caixa{ width:12px; height:12px; border:1px solid #000; display:inline-flex; align-items:center; justify-content:center; font-size:10px; line-height:1; }
 @media print{
-    /* usa o padrão global de A4 (margens pequenas e seguras) */
-    @page{ size:A4 portrait; margin:6mm 5mm 6mm 5mm; }
+    @page{ size:A4 portrait; margin:3mm; }
     body{ background:#fff; }
     body > .layout{ display:none!important; }
     #areaImpressao{ display:block!important; }
-    .pagina-impressao{ width:auto; max-width:200mm; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
+    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    /* via ocupa a largura útil da A4 e a metade superior/inferior */
-    .via-impressao{ width:190mm; height:auto; min-height:133mm; max-height:141mm; padding:4mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:8.5pt; display:flex; flex-direction:column; border:1px solid #000; }
-    .via-impressao .resumo-financeiro{ width:88mm; margin:6px 0 0 auto; }
+    .via-impressao{ min-height:133mm; max-height:138mm; height:auto; padding:1.5mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; }
+    .via-impressao + .via-impressao{ border-top:none; }
     .nota-tabela-cabecalho *{ text-transform:uppercase; }
     .nota-item-impressao *{ text-transform:uppercase; }
     .via-impressao .resumo-financeiro *{ text-transform:uppercase; }
@@ -165,11 +155,11 @@
     <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
     <nav class="sidebar-nav">
         <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
-        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link ativa" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/orcamentos"><span class="link-icon">📋</span> Orçamento</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link ativa" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
         {% if papel in ["GERENTE", "DONO"] %}
         <div class="sidebar-section"><div class="sidebar-section-label">Sistema</div>
   <a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a>
-  <a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a>
+  <a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/gerenciar_impressora"><span class="link-icon">🖨</span> Impressora Zebra</a>
   <a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a>
 </div>
         {% endif %}
@@ -200,10 +190,7 @@
 
             <div class="nota-corpo">
                 <div class="nota-secao-titulo">Dados do cliente</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
-                    <div class="campo-nota"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="CONSUMIDOR FINAL" value="CONSUMIDOR FINAL"></div>
-                    <div class="campo-nota"><label for="telefone">Telefone</label><input type="text" id="telefone" placeholder="(00) 00000-0000" maxlength="15"></div>
-                </div>
+                <div class="campo-nota" style="margin-bottom:12px"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="CONSUMIDOR FINAL" value="CONSUMIDOR FINAL"></div>
 
                 <div class="nota-grid-4">
                     <div class="campo-nota"><label for="venda">Venda</label><input type="text" id="venda" readonly></div>
@@ -244,31 +231,30 @@
                     <div id="avisoDesconto" class="aviso-desconto">Desconto acima do limite permitido (máx. <span id="txtMaxDesc">5</span>%)</div>
                     <div class="resumo-linha"><span>Valor do desconto</span><span style="color:var(--cor-perigo)">- R$ <span id="valorDesconto">0,00</span></span></div>
                     <div class="resumo-linha total-final"><span>Total final</span><b>R$ <span id="totalFinal">0,00</span></b></div>
-                    <div id="linhaRecebido" class="resumo-linha" style="display:none"><span>Valor recebido (R$)</span><span style="display:flex;align-items:center;gap:6px"><input type="number" id="valorRecebido" min="0" step="0.01" placeholder="0,00" oninput="calcularTroco()" style="width:100px"></span></div>
-                    <div id="linhaTroco" class="resumo-linha" style="display:none"><span>Troco</span><b style="color:#059669">R$ <span id="valorTroco">0,00</span></b></div>
-                </div>
-
-                <div class="area-acoes-venda">
-                    <button type="button" class="btn btn-primary btn-lg" style="background:var(--cor-texto);color:#fff;border-color:var(--cor-texto)" onclick="prepararImpressao()">💾🖨 Salvar e Imprimir</button>
-                    <button type="button" class="btn btn-primary" onclick="salvarVendaManual()">💾 Salvar venda</button>
-                    <button type="button" class="btn btn-outline" onclick="novaVenda()">Nova venda</button>
                 </div>
             </div>
         </div>
 
-    </div>
+        <div class="card mt-3" id="cardUltimas">
+            <div class="card-header"><h2 class="card-title">Últimas dobradas — editar / reimprimir</h2><button class="btn btn-ghost btn-sm" onclick="carregarUltimas()">↻</button></div>
+            <div id="ultimasDobradas"><div class="empty-state" style="padding:16px"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
+        </div>
+
+    <div class="area-acoes">
+            <button type="button" class="btn btn-outline" onclick="novaVenda()">Nova venda</button>
+            <button type="button" class="btn btn-primary" style="min-width:160px" onclick="salvarVendaManual()">💾 Salvar venda</button>
+            <button type="button" class="btn btn-outline" style="background:var(--cor-texto);color:#fff;border-color:var(--cor-texto)" onclick="prepararImpressao()">🖨 Imprimir</button>
+        </div>
         <p class="text-muted" style="font-size:.78rem; text-align:center; margin-top:8px">A venda é salva automaticamente antes de imprimir. Atalho: Enter no valor adiciona novo item.</p>
     </div>
-<div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
 <div id="areaImpressao"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
 <script>
 const papelUsuario = "{{ papel or 'VENDEDOR' }}";
 const chaveRascunho = "notaDobradaRascunho:" + {{ usuario|tojson }};
 let descontoMaximo = papelUsuario === "GERENTE" || papelUsuario === "DONO" ? 100 : 5;
-let aprovacaoDescontoAtiva = false;
 document.getElementById("txtMaxDesc").innerText = descontoMaximo;
 let vendaSalva = false;
 const S = window.SistemaUtil; S.initSidebar();
@@ -276,7 +262,6 @@ function syncBadge(){ const v=document.getElementById("venda").value||"SL --"; d
 function salvarRascunho(){
     const rascunho = {
         cliente: document.getElementById("cliente").value,
-        telefone: document.getElementById("telefone").value,
         venda: document.getElementById("venda").value,
         vendedor: document.getElementById("vendedor").value,
         data: document.getElementById("data").value,
@@ -296,7 +281,6 @@ function restaurarRascunho(){
     let rascunho; try{ rascunho = JSON.parse(localStorage.getItem(chaveRascunho) || "null"); }catch(erro){ return false; }
     if(!rascunho) return false;
     document.getElementById("cliente").value = rascunho.cliente || "CONSUMIDOR FINAL";
-    document.getElementById("telefone").value = rascunho.telefone || "";
     document.getElementById("venda").value = rascunho.venda || "";
     document.getElementById("vendedor").value = rascunho.vendedor || "";
     document.getElementById("data").value = rascunho.data || "";
@@ -316,45 +300,25 @@ function definirDataHoje(){
     document.getElementById("data").value = ano + "-" + mes + "-" + dia;
 }
 function fmtVenda(n){ return "SL" + String(n||0).padStart(4,"0"); }
-function fmtData(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
 async function gerarNumeroVenda(){
     try{ const r = await fetch("/api/proxima_venda"); const j = await r.json(); document.getElementById("venda").value = fmtVenda(j.numero); syncBadge(); }
     catch(erro){ console.error(erro); document.getElementById("venda").value = ""; }
-}
-function calcularTroco(){
-    const total = Number(document.getElementById("totalFinal").innerText.replace(/\./g,"").replace(",",".")) || 0;
-    const recebido = Number(document.getElementById("valorRecebido").value) || 0;
-    const troco = recebido - total;
-    document.getElementById("valorTroco").innerText = troco < 0 ? "0,00" : troco.toFixed(2).replace(".",",");
-    document.getElementById("linhaTroco").style.display = troco > 0 ? "flex" : "none";
 }
 function atualizarVencimento(){
     const condicao = document.getElementById("condicao").value;
     const data = document.getElementById("data").value;
     const campo = document.getElementById("campoVencimento");
     const vencimento = document.getElementById("vencimento");
-    const linhaRecebido = document.getElementById("linhaRecebido");
-    const linhaTroco = document.getElementById("linhaTroco");
     if(condicao === "aprazo" && data){
         const novaData = new Date(data + "T12:00:00"); novaData.setDate(novaData.getDate() + 30);
         vencimento.value = novaData.toISOString().split("T")[0];
         campo.style.display = "flex"; campo.style.flexDirection="column";
     }else{ campo.style.display = "none"; vencimento.value = ""; }
-    if(condicao === "dinheiro"){
-        linhaRecebido.style.display = "flex";
-        document.getElementById("valorRecebido").value = "";
-        document.getElementById("valorTroco").innerText = "0,00";
-        linhaTroco.style.display = "none";
-    } else {
-        linhaRecebido.style.display = "none";
-        linhaTroco.style.display = "none";
-        document.getElementById("valorRecebido").value = "";
-    }
 }
 function adicionarItem(focarDescricao=false){
     const item = document.createElement("div"); item.className = "nota-item-editor";
     item.innerHTML = `
-        <input type="number" class="quantidade" min="1" placeholder="1" oninput="calcularTotal()" onkeydown="irParaDescricao(event)">
+        <input type="number" class="quantidade" min="1" placeholder="1" oninput="calcularTotal()">
         <input type="text" class="descricao" placeholder="Descrição do produto" onkeydown="irParaPreco(event)">
         <input type="number" class="valor" min="0" step="0.01" placeholder="0,00" oninput="calcularTotal()" onkeydown="verificarEnter(event)">
         <input type="text" class="subtotal" value="0,00" readonly>
@@ -363,7 +327,6 @@ function adicionarItem(focarDescricao=false){
     document.getElementById("itens").appendChild(item); calcularTotal();
     if(focarDescricao) item.querySelector(".descricao").focus();
 }
-function irParaDescricao(event){ if(event.key === "Enter"){ event.preventDefault(); event.target.parentElement.querySelector(".descricao").focus(); } }
 function irParaPreco(event){ if(event.key === "Enter"){ event.preventDefault(); event.target.parentElement.querySelector(".valor").focus(); } }
 function verificarEnter(event){ if(event.key === "Enter"){ event.preventDefault(); adicionarItem(true); } }
 function removerItem(botao){
@@ -381,8 +344,10 @@ function calcularTotal(){
         totalItens += subtotal;
     });
     let desconto = Number(document.getElementById("desconto").value) || 0;
-    if(desconto <= descontoMaximo){ aprovacaoDescontoAtiva = false; }
-    document.getElementById("avisoDesconto").style.display = (desconto > descontoMaximo && !aprovacaoDescontoAtiva) ? "block" : "none";
+    if(desconto > descontoMaximo){
+        desconto = descontoMaximo; document.getElementById("desconto").value = descontoMaximo;
+        document.getElementById("avisoDesconto").style.display = "block";
+    }else{ document.getElementById("avisoDesconto").style.display = "none"; }
     const valorDesconto = totalItens * desconto / 100;
     const totalFinal = totalItens - valorDesconto;
     document.getElementById("totalItens").innerText = totalItens.toFixed(2).replace(".",",");
@@ -390,17 +355,6 @@ function calcularTotal(){
     document.getElementById("totalFinal").innerText = totalFinal.toFixed(2).replace(".",",");
 }
 async function salvarVendaNota(){
-    let credAprov = null;
-    const descontoSolicitado = Number(document.getElementById("desconto").value) || 0;
-    if(descontoSolicitado > descontoMaximo && !aprovacaoDescontoAtiva){
-        const aprovado = await S.solicitarAprovacao(
-            "Desconto acima do limite",
-            "Desconto de " + descontoSolicitado.toFixed(2).replace(".",",") + "% (limite " + descontoMaximo + "%)",
-            "Venda para " + (document.getElementById("cliente").value.trim() || "cliente")
-        );
-        if(!aprovado){ S.Toast.aviso("Desconto não aprovado. Ajuste o valor dentro do limite."); return null; }
-        aprovacaoDescontoAtiva = true; credAprov = aprovado;
-    }
     calcularTotal();
     const itens = [];
     document.querySelectorAll(".nota-item-editor").forEach(function(item){
@@ -411,7 +365,6 @@ async function salvarVendaNota(){
     const total = Number(totalTexto.replace(/\./g,"").replace(",",".").trim()) || 0;
     const dadosVenda = {
         cliente: document.getElementById("cliente").value.trim(),
-        telefone: document.getElementById("telefone").value.trim(),
         vendedor: document.getElementById("vendedor").value,
         data: document.getElementById("data").value,
         condicao: document.getElementById("condicao").value,
@@ -419,8 +372,6 @@ async function salvarVendaNota(){
         desconto: Number(document.getElementById("desconto").value) || 0,
         observacao: document.getElementById("obs").value.trim(),
         endereco: document.getElementById("endereco").value.trim(),
-        gerente_login: credAprov ? credAprov.gerente_login : undefined,
-        gerente_senha: credAprov ? credAprov.gerente_senha : undefined,
         total: total, itens: itens
     };
     try{
@@ -429,14 +380,11 @@ async function salvarVendaNota(){
         if(!resposta.ok) throw new Error(resultado.erro || "Erro ao salvar venda");
         vendaSalva = true; localStorage.removeItem(chaveRascunho);
         S.Toast.sucesso("Venda " + fmtVenda(resultado.numero) + " salva com sucesso!");
-        document.getElementById("venda").value = fmtVenda(resultado.numero); syncBadge();
+        document.getElementById("venda").value = fmtVenda(resultado.numero); syncBadge(); carregarUltimas();
         return resultado;
     }catch(erro){ console.error(erro); S.Toast.erro("Erro ao salvar venda: " + erro.message); return null; }
 }
 async function salvarVendaManual(){
-    if(!document.getElementById("vendedor").value){ S.Toast.erro("Selecione o vendedor primeiro."); document.getElementById("vendedor").focus(); return; }
-    if(!document.getElementById("data").value){ S.Toast.erro("Informe a data."); document.getElementById("data").focus(); return; }
-    if(!document.getElementById("condicao").value){ S.Toast.erro("Selecione a condição."); document.getElementById("condicao").focus(); return; }
     const cliente = document.getElementById("cliente").value.trim();
     const itens = Array.from(document.querySelectorAll(".nota-item-editor")).filter(function(item){ return item.querySelector(".descricao").value.trim() !== ""; });
     if(!cliente){ S.Toast.erro("Informe o cliente."); document.getElementById("cliente").focus(); return; }
@@ -452,8 +400,8 @@ async function novaVenda(){
         const confirmar = await S.confirmacao({titulo:"Descartar venda?",mensagem:"Esta venda ainda não foi salva. Deseja descartá-la?",textoSim:"Descartar",tipo:"danger"});
         if(!confirmar) return;
     }
-    document.getElementById("cliente").value = "CONSUMIDOR FINAL"; document.getElementById("telefone").value = ""; document.getElementById("vendedor").value = ""; document.getElementById("obs").value = "";
-    document.getElementById("endereco").value = ""; document.getElementById("condicao").value = ""; document.getElementById("desconto").value = ""; aprovacaoDescontoAtiva = false;
+    document.getElementById("cliente").value = "CONSUMIDOR FINAL"; document.getElementById("vendedor").value = ""; document.getElementById("obs").value = "";
+    document.getElementById("endereco").value = ""; document.getElementById("condicao").value = ""; document.getElementById("desconto").value = "";
     document.getElementById("vencimento").value = ""; document.getElementById("campoVencimento").style.display = "none";
     document.getElementById("itens").innerHTML = ""; document.querySelectorAll('input[name="tipoEntrega"]').forEach(function(opcao){ opcao.checked = false; });
     const retirar=document.querySelector('input[name="tipoEntrega"][value="RETIRAR"]'); if(retirar) retirar.checked=true;
@@ -462,95 +410,77 @@ async function novaVenda(){
 const LOGO_URL = "{{ url_for('static', filename='logo.png') }}";
 function venc30(dataStr){ if(!dataStr) return '30 DIAS'; const d=new Date(dataStr+'T12:00:00'); d.setDate(d.getDate()+30); const dd=d.toISOString().split('T')[0].split('-'); return dd[2]+'/'+dd[1]+'/'+dd[0]; }
 function etiquetaVia(isSegunda){
-    return `<div class="via-etiqueta" style="margin:0 0 4mm 0;padding:3px 8px;background:#000;color:#fff;font-size:7pt;font-weight:800;letter-spacing:.08em;text-transform:uppercase"><span>${isSegunda ? 'VIA DA LOJA — 2ª VIA' : 'VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.8;font-weight:600;font-size:6.5pt">${isSegunda ? 'CONTROLE INTERNO' : ''}</span></div>`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin:-2px -2px 8px -2px;padding:4px 10px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>`;
 }
 function gerarCabecalho(isSegunda=false){
-    const cliente = (document.getElementById("cliente").value || "CONSUMIDOR FINAL").trim() || "CONSUMIDOR FINAL";
-    const telefone = (document.getElementById("telefone").value || "").trim();
+    const cliente = document.getElementById("cliente").value;
     const venda = document.getElementById("venda").value;
-    const vendedor = document.getElementById("vendedor").value || "-";
+    const vendedor = document.getElementById("vendedor").value;
     const data = document.getElementById("data").value;
-    const obs = document.getElementById("obs").value.trim() || "-";
-    const condicaoRaw = document.getElementById("condicao").value;
+    const obs = document.getElementById("obs").value;
+    const endereco = document.getElementById("endereco").value;
+    const condicao = document.getElementById("condicao").selectedOptions[0]?.text || "";
     const vencimento = document.getElementById("vencimento").value || "";
-    const condicaoTxt = condicaoRaw==='aprazo' ? 'A PRAZO' : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[condicaoRaw])||(condicaoRaw||'-').toUpperCase());
-    const dataFmt = data ? data.split('-').reverse().join('/') : "-";
-    const vencFmt = vencimento ? vencimento.split('-').reverse().join('/') : (condicaoRaw==='aprazo' ? venc30(data) : "-");
-    const validade = "";
+    const condicaoRaw = document.getElementById("condicao").value;
+    const tipoEntrega = document.querySelector('input[name="tipoEntrega"]:checked')?.value || "RETIRAR";
     return etiquetaVia(isSegunda) + `
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000">
-            <div style="flex:1"></div>
-            <div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div>
-            <div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">NOTA DE ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;letter-spacing:.02em;margin-top:2px">${venda}</div></div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35">
-            <div><span style="font-size:7pt;font-weight:700;letter-spacing:.04em">CLIENTE:</span> <span style="font-weight:600">${cliente}</span>${telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : ''}</div>
-            <div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">${condicaoTxt}</span></div>
-            <div><span style="font-size:7pt;font-weight:700">VENDA:</span> <span style="font-weight:800">${venda}</span></div>
-            <div><span style="font-size:7pt;font-weight:700">DATA:</span> ${dataFmt}</div>
-            <div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ${vendedor}</div>
-            <div><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ${obs}</div>
-            <div><span style="font-size:7pt;font-weight:700">VENCIMENTO:</span> ${vencFmt}</div>
-        </div>
-        <div style="border-top:1px solid #000;margin:5px 0 0"></div>
-        <div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;font-weight:700;border-bottom:1.2px solid #000;padding:3px 0;font-size:7.5pt;letter-spacing:.02em"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL}" style="height:22px;object-fit:contain" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL</span></div>
+        <div style="border-top:1px solid #000;margin:8px 0"></div>
+        <div><b>CLIENTE:</b> ${cliente}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${venda}</div><div><b>CONDIÇÃO:</b> <span style="display:inline-block;background:${condicaoRaw==='aprazo' ? '#fef3c7' : '#e0f2fe'};color:${condicaoRaw==='aprazo' ? '#92400e' : '#0c4a6e'};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.05em;vertical-align:middle">${condicaoRaw==='aprazo' ? 'A PRAZO' : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[condicaoRaw])||(condicaoRaw||'').toUpperCase())}</span>${condicaoRaw==='aprazo' ? '<span style="font-size:11px;color:#92400e;margin-left:8px;font-weight:700">· VENC '+ (vencimento ? vencimento.split('-').reverse().join('/') : venc30(data))+' (30 DIAS)</span>' : ''}</div><div><b>VENDEDOR:</b> ${vendedor}</div><div><b>DATA:</b> ${data.split('-').reverse().join('/')}</div></div>
+        <div><b>OBS:</b> ${obs}</div><div><b>ENDEREÇO:</b> ${endereco || "-"}</div>
+        <div style="display:flex;gap:20px;justify-content:center;font-size:12px;font-weight:bold;margin-top:6px"><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:10px">${tipoEntrega === "RETIRAR" ? "X" : ""}</span>RETIRAR</span><span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border:1px solid #000;display:inline-flex;align-items:center;justify-content:center;font-size:10px">${tipoEntrega === "ENTREGAR" ? "X" : ""}</span>ENTREGAR</span></div>
+        <div style="border-top:1px solid #000;margin:8px 0"></div>
+        <div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>
     `;
-}
-let _rowH = "5.5mm", _rowFont = "8pt";
-function ajustarLinhas(n){
-    if(n>=15){ _rowH="4.6mm"; _rowFont="7.5pt"; }
-    else if(n>=10){ _rowH="5.2mm"; _rowFont="7.8pt"; }
-    else if(n>=6){ _rowH="5.5mm"; _rowFont="8pt"; }
-    else { _rowH="6mm"; _rowFont="8.5pt"; }
 }
 function gerarLinhaProduto(item){
     const quantidade = item.querySelector(".quantidade").value;
     const descricao = item.querySelector(".descricao").value;
     const valor = Number(item.querySelector(".valor").value) || 0;
     const subtotal = item.querySelector(".subtotal").value;
-    return `<div style="display:grid;grid-template-columns:14mm minmax(0,1fr) 26mm 26mm;padding:1.5px 0;font-size:${_rowFont};border-bottom:1px dotted #d1d5db;min-height:${_rowH};height:${_rowH};align-items:center;overflow:hidden"><span>${quantidade}</span><span style="padding-right:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${descricao}</span><span>R$ ${valor.toFixed(2).replace(".",",")}</span><span>R$ ${subtotal}</span></div>`;
+    return `<div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;padding:4px 0;font-size:13px;border-bottom:1px solid #e8edf2"><span>${quantidade}</span><span>${descricao}</span><span>R$ ${valor.toFixed(2).replace(".",",")}</span><span>R$ ${subtotal}</span></div>`;
 }
 function gerarResumo(){
-    const descontoPct = document.getElementById("desconto").value || "0";
-    const valorDesc = document.getElementById("valorDesconto").innerText;
-    const condicao = document.getElementById("condicao").value;
-    const recebido = document.getElementById("valorRecebido").value;
-    const troco = document.getElementById("valorTroco").innerText;
-    let html = `<div style="width:86mm;margin-left:auto;margin-top:6px;border:1px solid #000;padding:4px 6px;font-size:8pt;line-height:1.35"><div style="display:flex;justify-content:space-between"><span style="font-weight:700">TOTAL:</span><span>R$ ${document.getElementById("totalItens").innerText}</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">DESCONTO:</span><span>${descontoPct}%</span></div><div style="display:flex;justify-content:space-between"><span style="font-weight:700">VALOR DESCONTO:</span><span>R$ ${valorDesc}</span></div><div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:3px"><span style="font-weight:800">TOTAL FINAL:</span><span style="font-weight:800">R$ ${document.getElementById("totalFinal").innerText}</span></div>`;
-    if(condicao === "dinheiro" && recebido){
-        html += `<div style="display:flex;justify-content:space-between"><span style="font-weight:700">RECEBIDO:</span><span>R$ ${Number(recebido).toFixed(2).replace(".",",")}</span></div>`;
-        html += `<div style="display:flex;justify-content:space-between"><span style="font-weight:800">TROCO:</span><span style="font-weight:800">R$ ${troco}</span></div>`;
-    }
-    html += `</div>`;
-    return html;
+    return `<div style="width:68mm;margin-left:auto;margin-top:auto;padding-top:10px;text-align:right"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px"><b>TOTAL:</b><span>R$ ${document.getElementById("totalItens").innerText}</span></div><div style="display:flex;justify-content:space-between;border-top:1.5px solid #000;padding-top:6px;font-size:13px"><b>TOTAL FINAL:</b><b>R$ ${document.getElementById("totalFinal").innerText}</b></div></div>`;
 }
 async function prepararImpressao(){
-    if(!document.getElementById("vendedor").value){ S.Toast.erro("Selecione o vendedor primeiro."); document.getElementById("vendedor").focus(); return; }
-    if(!document.getElementById("data").value){ S.Toast.erro("Informe a data."); return; }
-    if(!document.getElementById("condicao").value){ S.Toast.erro("Selecione a condição."); document.getElementById("condicao").focus(); return; }
     const cliente = document.getElementById("cliente").value.trim();
     calcularTotal();
     const itens = Array.from(document.querySelectorAll(".nota-item-editor")).filter(item => item.querySelector(".descricao").value.trim() !== "");
-    if(!cliente){ S.Toast.erro("Informe o cliente."); document.getElementById("cliente").focus(); return; }
+    if(!cliente){ S.Toast.erro("Informe o cliente."); return; }
     if(itens.length === 0){ S.Toast.erro("Adicione pelo menos um produto."); return; }
+    const condicaoAtual = document.getElementById("condicao").value;
     if(!vendaSalva){ S.mostrarLoading("Salvando..."); const r=await salvarVendaNota(); S.esconderLoading(); if(!r) return; }
-    const vendaNum = Number(String(document.getElementById("venda").value).replace(/\D/g,"")) || 0;
-    const itensImpressao = itens.map(item => ({ quantidade: Number(item.querySelector(".quantidade").value)||1, descricao: item.querySelector(".descricao").value.trim(), valor: Number(item.querySelector(".valor").value)||0 }));
-    const totalFinal = Number(document.getElementById("totalFinal").innerText.replace(/\./g,"").replace(",",".")) || 0;
-    const v = {
-        numero: vendaNum,
-        cliente: cliente,
-        telefone: document.getElementById("telefone").value.trim(),
-        vendedor: document.getElementById("vendedor").value,
-        data: document.getElementById("data").value,
-        condicao: document.getElementById("condicao").value,
-        vencimento: document.getElementById("vencimento").value,
-        desconto: Number(document.getElementById("desconto").value) || 0,
-        observacao: document.getElementById("obs").value.trim(),
-        total: totalFinal,
-        itens: itensImpressao
-    };
-    S.imprimirNotaDobrada(v);
+    const area = document.getElementById("areaImpressao"); area.innerHTML = "";
+    const itensPorVia = 15;
+    for(let i = 0; i < itens.length; i += itensPorVia){
+        const grupo = itens.slice(i, i + itensPorVia);
+        const pagina = document.createElement("div"); pagina.className = "pagina-impressao";
+        const primeiraVia = document.createElement("div"); primeiraVia.className = "via-impressao";
+        primeiraVia.innerHTML = gerarCabecalho(false);
+        grupo.forEach(item => { primeiraVia.innerHTML += gerarLinhaProduto(item); });
+        if(i + itensPorVia >= itens.length) primeiraVia.innerHTML += gerarResumo();
+        primeiraVia.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+        // assinatura automática quando a prazo — nas duas vias, mais visível
+        if(condicaoAtual === "aprazo"){
+            const assinaturaHTML = `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700;letter-spacing:.04em">ASSINATURA DO CLIENTE — VENDA A PRAZO</div>${document.getElementById("vencimento").value ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+            primeiraVia.innerHTML += assinaturaHTML;
+        }
+        const segundaVia = document.createElement("div"); segundaVia.className = "via-impressao";
+        segundaVia.innerHTML = gerarCabecalho(true);
+        grupo.forEach(item => { segundaVia.innerHTML += gerarLinhaProduto(item); });
+        if(i + itensPorVia >= itens.length) segundaVia.innerHTML += gerarResumo();
+        segundaVia.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+        if(condicaoAtual === "aprazo"){
+            const assinaturaHTML2 = `<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700;letter-spacing:.04em">ASSINATURA DO CLIENTE — VIA DA LOJA — VENDA A PRAZO</div>${document.getElementById("vencimento").value ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+document.getElementById("vencimento").value.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+            segundaVia.innerHTML += assinaturaHTML2;
+        }
+        pagina.appendChild(primeiraVia);
+        pagina.appendChild(recorteVia());
+        pagina.appendChild(segundaVia); area.appendChild(pagina);
+    }
+    window.print();
     setTimeout(function(){ novaVenda(); }, 500);
 }
 
@@ -566,13 +496,52 @@ async function carregarVendedores(){
         usuarios.forEach(function(u){ const nome = u.usuario || u.nome || ""; if(nome){ const o=document.createElement("option"); o.value=nome; o.textContent=nome; sel.appendChild(o);} });
     }catch(erro){ console.error(erro); }
 }
+async function carregarUltimas(){
+    try{
+        const r=await fetch('/api/vendas'); const vendas=await r.json();
+        const box=document.getElementById('ultimasDobradas');
+        if(!vendas.length){ box.innerHTML='<div class="empty-state" style="padding:16px"><p>Nenhuma dobrada ainda — a próxima será '+fmtVenda(1)+'</p></div>'; return; }
+        const ultimas=vendas.slice(0,5);
+        box.innerHTML='';
+        ultimas.forEach(v=>{
+            const div=document.createElement('div');
+            div.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--cor-borda);border-radius:10px;margin-bottom:8px;background:#fff';
+            div.innerHTML=`<div><div class="font-bold">${fmtVenda(v.numero)} · ${v.cliente||'-'}</div><div class="text-muted" style="font-size:.78rem">${v.vendedor||'-'} · R$ ${Number(v.total||0).toFixed(2).replace('.',',')} · ${v.data||''}</div></div><div style="display:flex;gap:6px"><button class="btn btn-outline btn-sm" onclick="editarDobrada(${v.id})">✏ Editar</button><button class="btn btn-outline btn-sm" onclick="reimprimirDobrada(${v.id})">🖨 Reimprimir</button></div>`;
+            box.appendChild(div);
+        });
+    }catch(e){ console.error(e); }
+}
+function editarDobrada(id){ window.location.href='/editar_venda?editar='+id; }
+async function reimprimirDobrada(id){
+    S.mostrarLoading("Gerando impressão...");
+    try{
+        const r=await fetch('/api/vendas/'+id); const v=await r.json(); if(!r.ok) throw new Error(v.erro||'Erro');
+        const area=document.getElementById('areaImpressao'); area.innerHTML='';
+        const pagina=document.createElement('div'); pagina.className='pagina-impressao';
+        function viaHTML(isSegunda){
+            let h=`<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div><div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL}" style="height:20px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtVenda(v.numero)}</span></div><div style="border-top:1px solid #000;margin:8px 0"></div><div><b>CLIENTE:</b> ${v.cliente||''}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${fmtVenda(v.numero)}</div><div><b>VENDEDOR:</b> ${v.vendedor||''}</div><div><b>DATA:</b> ${(v.data||'').split('-').reverse().join('/')}</div><div><b>CONDIÇÃO:</b> ${(v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'').toUpperCase())}</b>${v.condicao==='aprazo' && v.vencimento ? ' · VENC: '+v.vencimento.split('-').reverse().join('/') : ''}</div></div><div style="border-top:1px solid #000;margin:8px 0"></div><div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR</span><span>SUBTOTAL</span></div>`;
+            (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); h+=`<div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;padding:4px 0;border-bottom:1px solid #e8edf2"><span>${it.quantidade}</span><span>${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
+            h+=`<div style="width:68mm;margin-left:auto;margin-top:auto;padding-top:10px;text-align:right"><div style="display:flex;justify-content:space-between"><b>TOTAL:</b><span>R$ ${Number(v.total).toFixed(2).replace('.',',')}</span></div><div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:6px"><b>TOTAL FINAL:</b><b>R$ ${Number(v.total).toFixed(2).replace('.',',')}</b></div></div>`;
+            if(v.condicao==='aprazo'){
+                h+=`<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">${isSegunda ? 'ASSINATURA DO CLIENTE — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>${v.vencimento ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+v.vencimento.split('-').reverse().join('/')+'</div>' : ''}</div>`;
+            }
+            h+=`</div>`;
+            return h;
+        }
+        const v1=document.createElement('div'); v1.innerHTML=viaHTML(false);
+        const v2=document.createElement('div'); v2.innerHTML=viaHTML(true);
+        v1.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+        v2.firstElementChild.innerHTML += '<div style="margin-top:10px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:6px;letter-spacing:.06em">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>';
+        const recorte = recorteVia();
+        pagina.appendChild(v1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(v2.firstElementChild);
+        area.appendChild(pagina); area.style.display='block'; window.print(); setTimeout(()=> area.style.display='none',500);
+    }catch(e){ S.Toast.erro(e.message||'Erro ao reimprimir'); } finally{ S.esconderLoading(); }
+}
 async function iniciar(){
     definirDataHoje(); await carregarVendedores();
     const restaurado = restaurarRascunho();
     if(!restaurado){ await gerarNumeroVenda(); adicionarItem(); }
-    calcularTotal(); syncBadge();
-    var campoTel = document.getElementById("telefone");
-    if(campoTel){ campoTel.addEventListener("input", function(){ if(S.mascaraTelefone){ S.mascaraTelefone(campoTel); } }); }
+    calcularTotal(); syncBadge(); carregarUltimas();
 }
 document.addEventListener("input", salvarRascunho);
 document.addEventListener("change", salvarRascunho);
@@ -582,7 +551,8 @@ iniciar();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=7").catch(function(e){ console.warn("SW:", e); });
+    navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+  });
 }
 </script>
 </body>

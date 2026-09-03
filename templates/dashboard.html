@@ -103,39 +103,56 @@
 const S=window.SistemaUtil;
 function classeStatus(s){ if(s==="Em andamento")return"badge-andamento"; if(s==="Pronta")return"badge-pronta"; if(s==="Finalizada")return"badge-finalizada"; return ""; }
 function fmtMoeda(v){ return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v||0)); }
+function _erroBloco(id, msg){
+    const el=document.getElementById(id);
+    if(el) el.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><p style="color:#b91c1c">'+msg+'</p></div>';
+}
+async function _fetchJSON(url){
+    const r=await fetch(url,{credentials:"same-origin"});
+    if(r.status===302||r.redirected){ window.location.href="/login"; throw new Error("Sessão expirada"); }
+    const ct=r.headers.get("content-type")||"";
+    if(!ct.includes("application/json")){ throw new Error("Resposta inesperada do servidor ("+r.status+")"); }
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.erro||"Erro "+r.status);
+    return j;
+}
 async function carregarResumoVendas(){
-    const hoje=new Date(); const mesAtual=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,"0")}`;
-    const badge=document.getElementById("badgeRankingMes"); if(badge) badge.innerText=mesAtual.split("-").reverse().join("/") + " · Top 5";
-    const r=await fetch("/api/dashboard/resumo?mes="+mesAtual); const resumo=await r.json();
-    document.getElementById("totalVendas").innerText=resumo.total_vendas||0;
-    document.getElementById("arrecadacaoTotal").innerText=fmtMoeda(resumo.total_arrecadado);
-    document.getElementById("comissaoTotal").innerText=fmtMoeda(resumo.total_comissao);
-    const melhor=resumo.melhor_vendedor;
-    document.getElementById("melhorVendedor").innerText=melhor?melhor.vendedor:"-";
-    document.getElementById("melhorVendedorSub").innerText=melhor?`${melhor.vendas} vendas · ${fmtMoeda(melhor.total_vendas)}`:"";
-    const ranking=document.getElementById("rankingVendedores"); ranking.innerHTML="";
-    if(!resumo.por_vendedor||resumo.por_vendedor.length===0){ ranking.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><h3>Nenhuma venda registrada</h3></div>'; return; }
-    resumo.por_vendedor.slice(0,5).forEach((item,i)=>{
-        const linha=document.createElement("div"); linha.className="ranking-linha";
-        linha.innerHTML=`<div class="ranking-pos">${i+1}</div><div class="ranking-info"><div class="ranking-nome">${item.vendedor}</div><div class="ranking-meta">${item.vendas} vendas · ${fmtMoeda(item.total_comissao)} comissão</div></div><div class="font-bold">${fmtMoeda(item.total_vendas)}</div>`;
-        ranking.appendChild(linha);
-    });
+    try{
+        const hoje=new Date(); const mesAtual=`${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,"0")}`;
+        const badge=document.getElementById("badgeRankingMes"); if(badge) badge.innerText=mesAtual.split("-").reverse().join("/") + " · Top 5";
+        const resumo=await _fetchJSON("/api/dashboard/resumo?mes="+mesAtual);
+        document.getElementById("totalVendas").innerText=resumo.total_vendas||0;
+        document.getElementById("arrecadacaoTotal").innerText=fmtMoeda(resumo.total_arrecadado);
+        document.getElementById("comissaoTotal").innerText=fmtMoeda(resumo.total_comissao);
+        const melhor=resumo.melhor_vendedor;
+        document.getElementById("melhorVendedor").innerText=melhor?melhor.vendedor:"-";
+        document.getElementById("melhorVendedorSub").innerText=melhor?`${melhor.vendas} vendas · ${fmtMoeda(melhor.total_vendas)}`:"";
+        const ranking=document.getElementById("rankingVendedores"); ranking.innerHTML="";
+        if(!resumo.por_vendedor||resumo.por_vendedor.length===0){ ranking.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><h3>Nenhuma venda registrada</h3></div>'; return; }
+        resumo.por_vendedor.slice(0,5).forEach((item,i)=>{
+            const linha=document.createElement("div"); linha.className="ranking-linha";
+            linha.innerHTML=`<div class="ranking-pos">${i+1}</div><div class="ranking-info"><div class="ranking-nome">${item.vendedor}</div><div class="ranking-meta">${item.vendas} vendas · ${fmtMoeda(item.total_comissao)} comissão</div></div><div class="font-bold">${fmtMoeda(item.total_vendas)}</div>`;
+            ranking.appendChild(linha);
+        });
+    }catch(e){ _erroBloco("rankingVendedores", e.message||"Erro ao carregar vendas"); }
 }
 async function carregarDashboard(){
-    const r=await fetch("/ordens"); const ordens=await r.json();
-    document.getElementById("totalOS").innerText=ordens.length;
-    document.getElementById("andamentoOS").innerText=ordens.filter(o=>o.status==="Em andamento").length;
-    document.getElementById("prontaOS").innerText=ordens.filter(o=>o.status==="Pronta").length;
-    document.getElementById("finalizadaOS").innerText=ordens.filter(o=>o.status==="Finalizada").length;
-    const lista=document.getElementById("ultimasOrdens"); lista.innerHTML="";
-    const ultimas=ordens.slice(0,8);
-    if(ultimas.length===0){ lista.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><h3>Nenhuma ordem</h3></div>'; return; }
-    ultimas.forEach(ordem=>{
-        const div=document.createElement("div"); div.className="item-card"; div.style.cursor="pointer";
-        div.onclick=()=>window.location.href="/?consulta=1";
-        div.innerHTML=`<div class="item-info"><div class="item-titulo">OS #${String(ordem.numero).padStart(5,"0")} · ${ordem.cliente||"Sem cliente"}</div><div class="item-sub">${S.formatarDataBrasil(ordem.data_entrada)} · ${ordem.responsavel||"Sem responsável"}</div></div><span class="badge ${classeStatus(ordem.status)}">${ordem.status}</span><div class="item-valor">${S.formatarMoeda(ordem.total)}</div>`;
-        lista.appendChild(div);
-    });
+    try{
+        const ordens=await _fetchJSON("/ordens");
+        document.getElementById("totalOS").innerText=ordens.length;
+        document.getElementById("andamentoOS").innerText=ordens.filter(o=>o.status==="Em andamento").length;
+        document.getElementById("prontaOS").innerText=ordens.filter(o=>o.status==="Pronta").length;
+        document.getElementById("finalizadaOS").innerText=ordens.filter(o=>o.status==="Finalizada").length;
+        const lista=document.getElementById("ultimasOrdens"); lista.innerHTML="";
+        const ultimas=ordens.slice(0,8);
+        if(ultimas.length===0){ lista.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><h3>Nenhuma ordem</h3></div>'; return; }
+        ultimas.forEach(ordem=>{
+            const div=document.createElement("div"); div.className="item-card"; div.style.cursor="pointer";
+            div.onclick=()=>window.location.href="/?consulta=1";
+            div.innerHTML=`<div class="item-info"><div class="item-titulo">OS #${String(ordem.numero).padStart(5,"0")} · ${ordem.cliente||"Sem cliente"}</div><div class="item-sub">${S.formatarDataBrasil(ordem.data_entrada)} · ${ordem.responsavel||"Sem responsável"}</div></div><span class="badge ${classeStatus(ordem.status)}">${ordem.status}</span><div class="item-valor">${S.formatarMoeda(ordem.total)}</div>`;
+            lista.appendChild(div);
+        });
+    }catch(e){ _erroBloco("ultimasOrdens", e.message||"Erro ao carregar ordens"); }
 }
 (async function(){ S.initSidebar(); await carregarDashboard(); await carregarResumoVendas(); })();
 })();

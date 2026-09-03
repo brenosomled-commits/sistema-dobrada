@@ -3,19 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=7">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
 <title>Entregas</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
 .nota-wrap{ max-width:960px; margin:0 auto; }
 .nota-via{ background:var(--cor-painel); border:1px solid var(--cor-borda); border-radius:16px; box-shadow:var(--sombra); overflow:hidden; }
@@ -41,26 +40,18 @@
 .badge-Falha{ background:#fee2e2; color:#991b1b; }
 .badge-Cancelada{ background:#f3f4f6; color:#6b7280; text-decoration:line-through; }
 .badge-Reagendada{ background:#ede9fe; color:#6d28d9; }
-/* Scanner QR — overlay centralizado estilo app */
-#qr-reader video{ width:100%!important; height:auto!important; display:block; margin:0 auto; object-fit:cover; }
-#qr-reader__scan_region{ margin:0 auto; }
-#qrScanner.qr-tela-cheia{ position:fixed; inset:0; z-index:9000; margin:0!important; border:none; border-radius:0; background:rgba(8,12,24,.96); display:flex!important; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px 16px calc(20px + env(safe-area-inset-bottom)); }
-#qrScanner.qr-tela-cheia #qr-reader{ width:100%; max-width:420px; margin:0 auto; border-radius:12px; overflow:hidden; background:#000; }
-#qrScanner.qr-tela-cheia .qr-rodape{ background:transparent!important; }
-#qrScanner.qr-tela-cheia .qr-hint{ color:#e5e7eb!important; }
-#qrScanner.qr-tela-cheia .qr-fechar{ min-height:48px; padding:12px 28px; }
 #areaImpressaoEntrega{display:none}
 .pagina-impressao{ width:204mm; height:293mm; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
 .via-impressao{ width:196mm; height:143.5mm; min-height:143.5mm; max-height:143.5mm; padding:2mm 3mm; border:1px solid #000; overflow:hidden; margin:0; background:#fff; display:flex; flex-direction:column; font-size:8.5pt; box-sizing:border-box; }
-/* ZEBRA 80mm — Elgin i9 — NEGRITO */
+/* ZEBRA 80mm — Elgin i9 */
 @media print{
-    @page{ size:80mm auto; margin:1.5mm; }
-    body{ background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    @page{ size:80mm auto; margin:2mm; }
+    body{ background:#fff; }
     body > .layout{ display:none!important; }
     #areaImpressaoEntrega{ display:block!important; }
     .pagina-impressao{ width:80mm; height:auto; min-height:0; page-break-after:always; page-break-inside:avoid; display:block; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    .via-impressao{ width:76mm; height:auto; min-height:0; max-height:none; padding:2.5mm; margin:0 auto; overflow:visible; border:1.8px solid #000; font-size:8.5pt; font-weight:700; color:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .via-impressao{ width:76mm; height:auto; min-height:0; max-height:none; padding:2mm; margin:0 auto; overflow:visible; border:1px solid #000; font-size:8pt; }
 }
 </style>
 </head>
@@ -72,8 +63,8 @@
     <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
     <nav class="sidebar-nav">
         <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
-        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/orcamentos"><span class="link-icon">📋</span> Orçamento</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link ativa" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
-        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link ativa" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/gerenciar_impressora"><span class="link-icon">🖨</span> Impressora Zebra</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
     </nav>
     <div class="sidebar-footer">
         <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div></div></div>
@@ -83,20 +74,8 @@
 <main class="conteudo">
     <div class="nota-wrap">
         <div class="pagina-titulo" style="margin-bottom:16px">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-                <div>
-                    <h1 style="display:flex;align-items:center;gap:10px">🚚 Entregas <span class="badge badge-pronta" style="font-size:.65rem">Vinculada / Avulsa + Rota</span></h1>
-                    <p class="pagina-sub">Cadastre entregas vinculadas à venda/OS ou avulsas — com taxa, entregador, horário e comprovante</p>
-                </div>
-                <button class="btn btn-primary" style="background:#000;border-color:#000" onclick="abrirScannerQR()">📷 Bipar QR</button>
-            </div>
-            <div id="qrScanner" style="display:none;margin-top:12px;border:1px solid #000;border-radius:8px;overflow:hidden;background:#fff">
-                <div id="qr-reader" style="width:100%"></div>
-                <div style="display:flex;gap:8px;padding:8px;justify-content:space-between;align-items:center;background:#f3f4f6" class="qr-rodape">
-                    <span style="font-size:7.5pt;color:#374151" class="qr-hint">Aponte a câmera para o QR da nota (ENT0001) — leitura não altera, só abre</span>
-                    <button class="btn btn-outline btn-sm qr-fechar" onclick="fecharScannerQR()">✕ Fechar</button>
-                </div>
-            </div>
+            <h1 style="display:flex;align-items:center;gap:10px">🚚 Entregas <span class="badge badge-pronta" style="font-size:.65rem">Vinculada / Avulsa + Rota</span></h1>
+            <p class="pagina-sub">Cadastre entregas vinculadas à venda/OS ou avulsas — com taxa, entregador, horário e comprovante</p>
         </div>
 
         <div class="nota-via">
@@ -175,11 +154,10 @@
             <div id="lista"><div class="empty-state" style="padding:16px"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
         </div>
     </div>
-<div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
 <div id="areaImpressaoEntrega"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
 <script>
 const S=window.SistemaUtil; S.initSidebar();
 let listaVendas=[], listaOS=[], entregas=[], rotaAtual=[], editandoId=null;
@@ -242,33 +220,7 @@ async function carregarOrigem(){
     }catch(e){}
 }
 function statusBadge(s){ return `<span class="badge-entrega badge-${s}">${s}</span>`; }
-async function _fetchJSONEntregas(url){
-    const r=await fetch(url,{credentials:"same-origin"});
-    if(r.redirected||r.status===302){ window.location.href="/login"; throw new Error("Sessão expirada"); }
-    const ct=r.headers.get("content-type")||"";
-    if(!ct.includes("application/json")) throw new Error("Resposta inesperada ("+r.status+")");
-    const j=await r.json();
-    if(!r.ok) throw new Error(j.erro||"Erro "+r.status);
-    return j;
-}
-async function carregar(){
-    try{
-        const lista=await _fetchJSONEntregas("/api/entregas");
-        const ids=new Set(lista.map(e=>e.id));
-        const mapa=new Map(lista.map(e=>[e.id,(e.status||"")+"|"+(e.cliente||"")+"|"+(e.endereco||"")]));
-        const ehPrimeira=ultimaQtd===-1;
-        const novas=lista.filter(e=>!ultimoIds.has(e.id));
-        const atualizadas=ehPrimeira?[]:lista.filter(e=>ultimoIds.has(e.id)&&mapa.get(e.id)!==ultimoMapa.get(e.id));
-        if(!ehPrimeira&&novas.length>0){ tocarAlerta("nova"); if(novas.length===1) S.Toast.info("🚚 Nova entrega: "+(novas[0].cliente||"ENT"+String(novas[0].numero).padStart(4,"0"))); else S.Toast.info("🚚 "+novas.length+" novas entregas"); }
-        else if(!ehPrimeira&&atualizadas.length>0){ tocarAlerta("atualizada"); S.Toast.info("🔄 Entrega atualizada: "+(atualizadas[0].cliente||"ENT"+String(atualizadas[0].numero).padStart(4,"0"))+" → "+atualizadas[0].status); }
-        entregas=lista; ultimaQtd=lista.length; ultimoIds=ids; ultimoMapa=mapa;
-        filtrar(); carregarRota();
-    }catch(e){
-        if(e.message&&e.message.includes("Sessão")) return;
-        const cont=document.getElementById("lista");
-        if(cont&&ultimaQtd===-1) cont.innerHTML='<div class="empty-state" style="padding:16px"><div class="empty-icon">⚠️</div><p style="color:#b91c1c">'+(e.message||"Erro ao carregar entregas")+'</p></div>';
-    }
-}
+async function carregar(){ try{ const r=await fetch("/api/entregas"); const lista=r.ok?await r.json():[]; const ids=new Set(lista.map(e=>e.id)); const mapa=new Map(lista.map(e=>[e.id, (e.status||"")+"|"+(e.cliente||"")+"|"+(e.endereco||"")])); const ehPrimeira=ultimaQtd===-1; const novas=lista.filter(e=>!ultimoIds.has(e.id)); const atualizadas=ehPrimeira?[]:lista.filter(e=> ultimoIds.has(e.id) && mapa.get(e.id)!==ultimoMapa.get(e.id)); if(!ehPrimeira && novas.length>0){ tocarAlerta("nova"); if(novas.length===1) S.Toast.info("🚚 Nova entrega: "+(novas[0].cliente||"ENT"+String(novas[0].numero).padStart(4,"0"))); else S.Toast.info("🚚 "+novas.length+" novas entregas"); } else if(!ehPrimeira && atualizadas.length>0){ tocarAlerta("atualizada"); S.Toast.info("🔄 Entrega atualizada: "+(atualizadas[0].cliente||"ENT"+String(atualizadas[0].numero).padStart(4,"0"))+" → "+atualizadas[0].status); } entregas=lista; ultimaQtd=lista.length; ultimoIds=ids; ultimoMapa=mapa; filtrar(); carregarRota(); }catch(e){} }
 function filtrar(){
     const termo=(document.getElementById("buscar").value||"").toLowerCase().trim(), status=document.getElementById("filtroStatus").value;
     const lista=entregas.filter(e=>{
@@ -281,7 +233,7 @@ function filtrar(){
     cont.innerHTML="";
     lista.forEach(e=>{
         const div=document.createElement("div"); div.className="entrega-card";
-        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="SAIU PARA ROTA"?"selected":""}>SAIU PARA ROTA</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-success btn-sm" onclick="imprimirEntrega(${e.id})" title="Imprimir na impressora (padrão do Windows — universal, funciona via acesso remoto)">🖨 Imprimir</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
+        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="SAIU PARA ROTA"?"selected":""}>SAIU PARA ROTA</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-outline btn-sm" onclick="imprimirEntrega(${e.id})">🖨</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
         cont.appendChild(div);
     });
 }
@@ -354,31 +306,34 @@ function imprimirEntrega(id){
     fetch("/api/entregas/"+id).then(r=>r.json()).then(e=>{
         const area=document.getElementById("areaImpressaoEntrega");
         const dataHora = (e.data_entrega ? e.data_entrega.split("-").reverse().join("/") : "") + (e.horario ? " " + e.horario : (e.criacao ? " " + e.criacao.split(" ")[1] : ""));
-        const emissao = e.criacao ? (e.criacao.slice(8,10) + "/" + e.criacao.slice(5,7) + "/" + e.criacao.slice(0,4) + " " + e.criacao.slice(11,16)) : "";
-                        function viaZebra(){
+                function viaZebra(){
             const taxaFmt = "R$ " + Number(e.taxa||0).toFixed(2).replace(".",",");
-            return `<div class="via-impressao" style="color:#000;font-family:Arial,Helvetica,sans-serif;font-weight:700">
-                <div style="text-align:center;padding-bottom:4px;border-bottom:1.8px solid #000;margin-bottom:4px">
-                    <div style="font-weight:900;font-size:12pt;letter-spacing:.04em;color:#000">SOMLED</div>
-                    <div style="font-weight:900;font-size:9pt;letter-spacing:.02em;color:#000">NOTA DE ENTREGA</div>
-                    <div style="margin-top:3px;display:inline-block;border:1.8px solid #000;padding:2px 10px;font-weight:900;font-size:11pt;color:#000">ENT${String(e.numero).padStart(4,"0")}</div>
-                    <div style="font-size:7pt;margin-top:2px;font-weight:700;color:#000">${dataHora.trim()||"-"} — ${e.status||""}</div>
-                    ${emissao ? '<div style="font-size:6.5pt;margin-top:1px;font-weight:700;color:#000">EMITIDO EM ' + emissao + '</div>' : ""}
+            // Estrutura conforme cupom termico 80mm - largura util 72-76mm, altura auto
+            return `<div class="via-impressao" style="color:#000;font-family:Arial,Helvetica,sans-serif">
+                <div style="text-align:center;padding-bottom:4px;border-bottom:1px solid #000;margin-bottom:4px">
+                    <div style="font-weight:900;font-size:11pt;letter-spacing:.03em">SOMLED</div>
+                    <div style="font-size:7pt;letter-spacing:.08em">NOTA DE ENTREGA</div>
+                    <div style="margin-top:3px;display:inline-block;border:1px solid #000;padding:2px 8px;font-weight:800;font-size:10pt">ENT${String(e.numero).padStart(4,"0")}</div>
+                    <div style="font-size:6.5pt;margin-top:2px">${dataHora.trim()||"-"}</div>
                 </div>
-                <div style="font-size:7.5pt;line-height:1.5;color:#000">
-                    <div><span style="font-weight:900">CLIENTE:</span> <span style="font-weight:800">${e.cliente||"-"}</span></div>
-                    <div><span style="font-weight:900">TELEFONE:</span> <span style="font-weight:800">${e.telefone||"-"}</span></div>
-                    <div><span style="font-weight:900">ENDEREÇO:</span> <span style="font-weight:800">${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</span></div>
-                    <div><span style="font-weight:900">ENTREGADOR:</span> <span style="font-weight:800">${e.entregador||"-"}</span></div>
-                    <div><span style="font-weight:900">VENDEDOR:</span> <span style="font-weight:800">${e.venda_vendedor||"-"}</span></div>
-                    <div style="display:flex;gap:10px"><span><span style="font-weight:900">TAXA:</span> <span style="font-weight:800">${taxaFmt}</span></span><span><span style="font-weight:900">STATUS:</span> <span style="font-weight:800">${e.status||""}</span></span></div>
+                <div style="font-size:7pt;line-height:1.45">
+                    <div><span style="font-weight:700">CLIENTE:</span> ${e.cliente||"-"}</div>
+                    <div><span style="font-weight:700">TELEFONE:</span> ${e.telefone||"-"}</div>
+                    <div><span style="font-weight:700">ENDEREÇO:</span> ${e.endereco||""}${e.bairro ? " — " + e.bairro : ""}</div>
+                    <div><span style="font-weight:700">ENTREGADOR:</span> ${e.entregador||"-"}</div>
+                    <div style="display:flex;gap:10px"><span><span style="font-weight:700">TAXA:</span> ${taxaFmt}</span><span><span style="font-weight:700">STATUS:</span> ${e.status||""}</span></div>
                 </div>
-                ${e.observacao ? '<div style="margin-top:4px;padding:3px 4px;border:1.5px solid #000;background:#fff;font-size:7.5pt;color:#000"><span style="font-weight:900">OBSERVAÇÕES:</span> <span style="font-weight:700">' + e.observacao + '</span></div>' : ""}
-                ${(() => { if(!(e.venda_id || e.ordem_id)) return ""; let rows=""; const itens = (e.itens && e.itens.length ? e.itens : Array(5).fill(0).map(()=>({quantidade:"", descricao:""}))).slice(0,12); for(const it of itens){ rows += '<div style="display:grid;grid-template-columns:12mm 1fr;min-height:8mm;border-bottom:1px solid #000;font-size:7.5pt;align-items:center;color:#000"><span style="text-align:center;border-right:1px solid #000;padding:2px;font-weight:800">' + (it.quantidade||"") + '</span><span style="padding:2px 4px;font-weight:700">' + (it.descricao||"") + '</span></div>'; } return '<div style="margin-top:5px;border:1.5px solid #000"><div style="display:grid;grid-template-columns:12mm 1fr;background:#000;color:#fff;font-weight:900;font-size:7.5pt;text-align:center;border-bottom:1.5px solid #000"><span style="padding:4px 2px;border-right:1px solid #fff">QTD.</span><span style="padding:4px 2px">PRODUTO / DESCRIÇÃO</span></div><div style="min-height:30mm">' + rows + '</div></div>'; })()}
-                <div style="margin-top:4px;font-size:7.5pt;color:#000"><span style="font-weight:900">COMPROVANTE:</span> <span style="font-weight:700">${e.comprovante||"—"}</span></div>
-                <div style="margin-top:10px;text-align:center"><div style="border-top:1.8px solid #000;width:62mm;margin:0 auto 3px"></div><div style="font-size:7.5pt;font-weight:900;color:#000">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;margin-top:1px;font-weight:700;color:#000">RECEBI OS PRODUTOS EM PERFEITAS CONDIÇÕES.</div></div>
-                <div style="margin-top:6px;display:flex;justify-content:center"><div id="qr-entrega" style="width:35mm;height:35mm;border:2px solid #000;padding:3px;background:#fff;box-shadow:0 0 0 1px #000"></div></div>
-                <div style="font-size:5.5pt;text-align:center;margin-top:2px;font-weight:700;letter-spacing:.04em;color:#000;border-top:1px solid #000;padding-top:2px;margin-top:4px">DOCUMENTO SEM VALOR FISCAL — CONTROLE INTERNO — SOMLED</div>
+                ${e.observacao ? `<div style="margin-top:4px;padding:3px 4px;border:1px solid #000;background:#fff;font-size:7pt"><span style="font-weight:800">OBSERVAÇÕES:</span> ${e.observacao}</div>` : ""}
+                <div style="margin-top:5px;border:1px solid #000">
+                    <div style="display:grid;grid-template-columns:12mm 1fr;background:#fff;color:#000;font-weight:700;font-size:7pt;text-align:center;border-bottom:1px solid #000"><span style="padding:3px 2px;border-right:1px solid #000">QTD.</span><span style="padding:3px 2px">PRODUTO / DESCRIÇÃO</span></div>
+                    <div style="min-height:28mm">
+                        ${(e.itens && e.itens.length ? e.itens : Array(5).fill(0).map(()=>({quantidade:"", descricao:""}))).slice(0,12).map(it=>`<div style="display:grid;grid-template-columns:12mm 1fr;min-height:7mm;border-bottom:1px dotted #999;font-size:7pt;align-items:center"><span style="text-align:center;border-right:1px dotted #999;padding:2px">${it.quantidade||""}</span><span style="padding:2px 4px">${it.descricao||""}</span></div>`).join("")}
+                    </div>
+                </div>
+                <div style="margin-top:4px;font-size:7pt"><span style="font-weight:700">COMPROVANTE:</span> ${e.comprovante||"—"}</div>
+                <div style="margin-top:8px;text-align:center"><div style="border-top:1px solid #000;width:62mm;margin:0 auto 3px"></div><div style="font-size:7pt;font-weight:700">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;margin-top:1px">RECEBI OS PRODUTOS EM PERFEITAS CONDIÇÕES.</div></div>
+                <div style="margin-top:6px;display:flex;justify-content:center"><div id="qr-entrega" style="width:22mm;height:22mm;border:1px solid #000;padding:1px;background:#fff"></div></div>
+                <div style="font-size:5pt;text-align:center;margin-top:1px;word-break:break-all">${window.location.origin}/m/entrega/${e.id}</div>
             </div>`;
         }
         area.innerHTML=`<div class="pagina-impressao">${viaZebra()}</div>`;
@@ -386,98 +341,19 @@ function imprimirEntrega(id){
             const qrEl=document.getElementById("qr-entrega");
             if(qrEl && window.QRCode){
                 qrEl.innerHTML="";
-                new QRCode(qrEl, {text: window.location.origin + "/m/entrega/" + e.id, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M});
-                // ajustar canvas/img para 30mm
+                new QRCode(qrEl, {text: window.location.origin + "/m/entrega/" + e.id, width: 76, height: 76, correctLevel: QRCode.CorrectLevel.M});
+                // ajustar canvas/img para 20mm
                 const c=qrEl.querySelector("canvas, img");
-                if(c){ c.style.width="30mm"; c.style.height="30mm"; }
+                if(c){ c.style.width="20mm"; c.style.height="20mm"; }
             }
             window.print();
         }, 350);
     });
 }
-let _qrScanner=null;
-async function abrirScannerQR(){
-    const box=document.getElementById("qrScanner");
-    box.style.display="block";
-    box.classList.add("qr-tela-cheia");
-    box.scrollIntoView({behavior:"smooth"});
-    if(!window.Html5Qrcode){ S.Toast.erro("Leitor QR não carregado. Verifique internet."); return; }
-    try{
-        _qrScanner=new Html5Qrcode("qr-reader");
-        await _qrScanner.start({facingMode:"environment"}, {fps:5, qrbox:{width:180, height:180}}, (decoded)=>{
-            try{ _qrScanner.stop(); }catch(e){}
-            const _qrBox=document.getElementById("qrScanner"); _qrBox.style.display="none"; _qrBox.classList.remove("qr-tela-cheia");
-            // extrai id de URL tipo /m/entrega/123 ou ENT0001
-            let id=null;
-            const m=String(decoded).match(/\/m\/entrega\/(\d+)/);
-            if(m) id=m[1];
-            else {
-                const m2=String(decoded).match(/ENT0*(\d+)/i);
-                if(m2) id=m2[1];
-                else if(/^\d+$/.test(String(decoded).trim())) id=String(decoded).trim();
-            }
-            if(id){
-                if(String(decoded).includes("/m/entrega/")){
-                    window.location.href=String(decoded).trim();
-                } else {
-                    // tenta por numero -> busca entrega por numero
-                    fetch("/api/entregas").then(r=>r.json()).then(lista=>{
-                        const ent=lista.find(e=> String(e.numero)===String(id).padStart(4,"0") || String(e.id)===String(id) || String(e.numero)===String(id));
-                        if(ent) window.location.href="/m/entrega/"+ent.id;
-                        else S.Toast.erro("Entrega não encontrada: "+decoded);
-                    });
-                }
-            } else {
-                // se for URL completa, abre direto
-                if(String(decoded).startsWith("http")) window.location.href=decoded;
-                else S.Toast.erro("QR inválido: "+decoded);
-            }
-        }, (err)=>{});
-    }catch(e){ S.Toast.erro("Câmera não disponível: "+(e.message||e)); }
-}
-async function fecharScannerQR(){
-    try{ if(_qrScanner){ await _qrScanner.stop(); _qrScanner.clear(); } }catch(e){}
-    const _qrBox=document.getElementById("qrScanner"); _qrBox.style.display="none"; _qrBox.classList.remove("qr-tela-cheia");
-}
-function fmtDataBR(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
-// Conexão universal com a Elgin i9: usa a impressora padrão do Windows (window.print),
-// que funciona em qualquer máquina, inclusive via acesso remoto à impressora compartilhada.
-// O Web Serial só é usado quando há uma porta Elgin local realmente pareada (USB física).
-async function imprimirZebraDireto(id){
-    let port=null;
-    try{
-        // Só tentamos o caminho direto se houver porta local já pareada nesta máquina (Elgin via USB).
-        if("serial" in navigator){
-            const ports=await navigator.serial.getPorts();
-            const elgin = ports.find(p=>{
-                const info = p.getInfo ? p.getInfo() : {};
-                return String(info.usbVendorId||"").toLowerCase().indexOf("elgin")>=0 || String(info.usbProductId||"").indexOf("i9")>=0;
-            });
-            port = elgin || ports[0] || null;
-        }
-        if(port){
-            const r=await fetch("/api/entregas/"+id); const e=await r.json(); if(!r.ok) throw new Error(e.erro||"Entrega não encontrada");
-            const ESC="\x1B", GS="\x1D";
-            let txt=ESC+"@"; txt+=ESC+"a\x01"; txt+="SOMLED\n"; txt+="NOTA DE ENTREGA\n"; txt+=`ENT${String(e.numero).padStart(4,"0")}\n`; txt+=`${fmtDataBR(e.data_entrega)} ${e.horario||""}\n`; txt+=ESC+"a\x00"; txt+="--------------------------------\n";
-            txt+=`CLIENTE: ${e.cliente||""}\n`; if(e.telefone) txt+=`TEL: ${e.telefone}\n`; txt+=`END: ${e.endereco||""}${e.bairro?" - "+e.bairro:""}\n`; txt+=`ENTREGADOR: ${e.entregador||"-"}\n`; txt+=`TAXA: R$ ${Number(e.taxa||0).toFixed(2).replace(".",",")}  STATUS: ${e.status||""}\n`; if(e.observacao) txt+=`OBS: ${e.observacao}\n`; txt+="--------------------------------\n"; txt+="QTD  DESCRICAO\n"; txt+="--------------------------------\n";
-            const itens=e.itens||[]; if(itens.length===0){ for(let i=0;i<5;i++) txt+="\n"; } else itens.slice(0,12).forEach(it=>{ txt+=`${String(it.quantidade||"").padEnd(4)}${(it.descricao||"").slice(0,28)}\n`; });
-            txt+="--------------------------------\n"; txt+=`COMPROVANTE: ${e.comprovante||"-"}\n\n`; txt+="ASSINATURA DO CLIENTE\n"; txt+="-------------------------------\n"; txt+="Recebi em perfeitas condicoes\n\n"; txt+=`ENT${String(e.numero).padStart(4,"0")} ${e.cliente||""}\n`; txt+=window.location.origin+"/m/entrega/"+e.id+"\n\n\n"; txt+=GS+"V\x00";
-            await port.open({baudRate:9600}); const writer=port.writable.getWriter(); await writer.write(new TextEncoder().encode(txt)); writer.releaseLock(); await port.close();
-            localStorage.setItem("zebra_auto","1");
-            S.Toast.sucesso("Enviado para Elgin i9 via USB!"); return;
-        }
-    }catch(e){
-        if(e && String(e.message||"").indexOf("No port")>=0){ S.Toast.aviso("Impressora USB não encontrada — usando impressora padrão do Windows"); }
-        else console.warn("Impressão direta falhou, usando impressora padrão do Windows", e);
-    }
-    // Universal: usa a impressora padrão do Windows (a Elgin i9 compartilhada na rede).
-    // Funciona em todos os computadores, inclusive via acesso remoto.
-    return imprimirEntrega(id);
-}
 document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
 </script>
 <script>
-if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=8").catch(()=>{}); }); }
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
 </script>
 </body>
 </html>

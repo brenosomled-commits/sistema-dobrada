@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
+<title>Acompanhamento Unificado </title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+<style>
+.filtros-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media(max-width:768px){ .filtros-grid{ grid-template-columns:1fr; } }
+.badge-tipo{ display:inline-block; padding:2px 10px; border-radius:999px; font-weight:800; font-size:.72rem; letter-spacing:.05em; }
+.badge-os{ background:#dbeafe; color:#1e40af; }
+.badge-venda{ background:#d1fae5; color:#065f46; }
+.badge-status-ativa{ background:#d1fae5; color:#065f46; }
+.badge-status-vencida{ background:#fee2e2; color:#991b1b; }
+.badge-status-andamento{ background:#dbeafe; color:#1e40af; }
+.badge-status-pronta{ background:#fef3c7; color:#92400e; }
+.badge-status-finalizada{ background:#d1fae5; color:#065f46; }
+.badge-status-aguardando{ background:#fce7f3; color:#9d174d; }
+</style>
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link ativa" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        {% if pode_visualizar_comissao %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/gerenciar_impressora"><span class="link-icon">🖨</span> Impressora Zebra</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ 'Gestão' if pode_visualizar_comissao else 'Vendedor' }}</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+    <div class="pagina-titulo"><h1>Acompanhamento Unificado</h1><p class="pagina-sub">Ordens de serviço e vendas — atualização automática a cada 30s</p></div>
+
+    <div class="card">
+        <div class="card-header"><h2 class="card-title">Registros de hoje</h2><span class="badge badge-pronta" id="badgeHoje">0 itens hoje</span></div>
+        <div class="stat-grid" style="margin-bottom:0">
+            <div class="stat-card"><h3>Quantidade</h3><div class="stat-numero" id="quantidadeHoje">0</div></div>
+            <div class="stat-card"><h3>OS Hoje</h3><div class="stat-numero" id="osHoje" style="font-size:1.2rem">0</div></div>
+            <div class="stat-card"><h3>Vendas Hoje</h3><div class="stat-numero" id="vendasHoje" style="font-size:1.2rem">0</div></div>
+            {% if pode_visualizar_comissao %}<div class="stat-card stat-warning"><h3>Comissão (2%)</h3><div class="stat-numero" id="comissaoHoje" style="font-size:1.35rem">R$ 0,00</div></div>{% endif %}
+            <div class="stat-card stat-success"><h3>Valor total</h3><div class="stat-numero" id="totalHoje" style="font-size:1.35rem">R$ 0,00</div></div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Nº</th><th>Cliente</th><th>Profissional/Vendedor</th><th>Status</th><th>Valor</th>{% if pode_visualizar_comissao %}<th>Comissão</th>{% endif %}<th style="min-width:210px">Ações</th></tr></thead><tbody id="listaHoje"></tbody></table></div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Filtros</h2><button class="btn btn-outline btn-sm" onclick="limparFiltros()">Limpar</button></div>
+        <div class="filtros-grid">
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Tipo</label><select class="form-select" id="tipoFiltro" onchange="aplicarFiltros()"><option value="">Todos</option><option value="OS">🔧 Ordem de Serviço</option><option value="VENDA">🧾 Venda</option></select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Mês</label><input type="month" class="form-input" id="mesFiltro" onchange="aplicarFiltros()"></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Profissional / Vendedor</label><select class="form-select" id="vendedorFiltro" onchange="aplicarFiltros()"><option value="">Todos</option></select></div>
+            <div class="form-group" style="margin-bottom:0"><label class="form-label">Status / Condição</label><select class="form-select" id="condicaoFiltro" onchange="aplicarFiltros()"><option value="">Todos</option><option value="ativa">Ativa</option><option value="vencida">Vencida</option><option value="Em andamento">Em andamento</option><option value="Pronta">Pronta</option><option value="Finalizada">Finalizada</option><option value="Aguardando peça">Aguardando peça</option><option value="dinheiro">DINHEIRO</option><option value="cartadebito">CARTAO DEBITO</option><option value="cartocredito">CARTAO CREDITO</option><option value="pix">PIX SICOOB</option><option value="pixinter">PIX INTER</option><option value="aprazo">A prazo</option></select></div>
+        </div>
+    </div>
+
+    <div class="stat-grid mt-3">
+        <div class="stat-card"><h3>Filtrados — qtd.</h3><div class="stat-numero" id="quantidadeFiltrada">0</div></div>
+        {% if pode_visualizar_comissao %}<div class="stat-card stat-warning"><h3>Comissão filtrada</h3><div class="stat-numero" id="comissaoFiltrada" style="font-size:1.25rem">R$ 0,00</div></div>{% endif %}
+        <div class="stat-card stat-success"><h3>Valor filtrado</h3><div class="stat-numero" id="totalFiltrado" style="font-size:1.25rem">R$ 0,00</div></div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><h2 class="card-title">Resultado</h2><span class="text-muted" style="font-size:.82rem" id="infoFiltradas"></span></div>
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Data</th><th>Nº</th><th>Cliente</th><th>Profissional/Vendedor</th><th>Status</th><th>Valor</th>{% if pode_visualizar_comissao %}<th>Comissão</th>{% endif %}<th style="min-width:210px">Ações</th></tr></thead><tbody id="listaFiltrada"></tbody></table></div>
+        <div class="card mt-3" style="background:var(--cor-fundo);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div><div class="font-bold">Total filtrado</div><div class="text-muted" style="font-size:.85rem"><span id="quantidadeFinal">0</span> registros</div></div>
+            <div class="font-bold" style="font-size:1.5rem" id="somatoriaFinal">R$ 0,00</div>
+        </div>
+    </div>
+</main>
+</div>
+<div id="areaImpressao" style="display:none"></div>
+<style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:3mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
+<script>
+let itens=[]; const podeVisualizarComissao={{ "true" if pode_visualizar_comissao else "false" }}; const S=window.SistemaUtil;
+function fmtMoeda(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }
+function fmtData(d){ if(!d) return ""; const p=d.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d; }
+function nomeCondicao(c){ if(c==="dinheiro")return"DINHEIRO"; if(c==="cartadebito")return"CARTAO DEBITO"; if(c==="cartocredito")return"CARTAO CREDITO"; if(c==="pix"||c==="sicoob")return"PIX SICOOB"; if(c==="pixinter")return"PIX INTER"; if(c==="pixmaq")return"PIX MAQUINA"; if(c==="avista")return"À vista"; if(c==="aprazo")return"A prazo"; return c||""; }
+function fmtNum(tipo,n){ return tipo==="OS" ? ("OS" + String(n||0).padStart(4,"0")) : ("SL" + String(n||0).padStart(4,"0")); }
+function badgeTipo(tipo){
+    if(tipo==="OS") return `<span class="badge-tipo badge-os">🔧 OS</span>`;
+    return `<span class="badge-tipo badge-venda">🧾 VENDA</span>`;
+}
+function badgeStatus(status){
+    if(!status) return "";
+    const s=status.toLowerCase();
+    let cls="badge-status-ativa";
+    if(s==="vencida") cls="badge-status-vencida";
+    else if(s==="em andamento") cls="badge-status-andamento";
+    else if(s==="pronta") cls="badge-status-pronta";
+    else if(s==="finalizada") cls="badge-status-finalizada";
+    else if(s==="aguardando peça"||s==="aguardando peca") cls="badge-status-aguardando";
+    return `<span class="badge-tipo ${cls}">${status}</span>`;
+}
+function condOuStatus(item){
+    if(item.tipo==="OS") return item.status || "-";
+    return nomeCondicao(item.condicao) || item.status || "-";
+}
+async function carregarItens(){
+    try{ const r=await fetch("/api/acompanhar"); if(!r.ok) throw new Error(); itens=await r.json(); atualizarHoje(); aplicarFiltros(); }
+    catch(e){ S.Toast.erro("Não foi possível carregar os registros."); }
+}
+async function carregarProfissionais(){
+    try{
+        const profSet=new Set();
+        itens.forEach(i=>{ if(i.profissional) profSet.add(i.profissional); });
+        const sel=document.getElementById("vendedorFiltro"); sel.innerHTML='<option value="">Todos</option>';
+        [...profSet].sort().forEach(nome=>{ const o=document.createElement("option"); o.value=nome; o.textContent=nome; sel.appendChild(o); });
+    }catch(e){ console.error(e); }
+}
+const LOGO_URL_ACOMP = "{{ url_for('static', filename='logo.png') }}";
+function acoesHTML(item){
+    let html=`<td style="display:flex;gap:6px;flex-wrap:wrap">`;
+    if(item.tipo==="VENDA"){
+        html+=`<button class="btn btn-outline btn-sm" onclick="editarVenda(${item.id})">✏ Editar</button>`;
+        html+=`<button class="btn btn-outline btn-sm" onclick="imprimirVenda(${item.id})">🖨</button>`;
+        if(podeVisualizarComissao) html+=`<button class="btn btn-danger btn-sm" onclick="excluirVenda(${item.id},${item.numero})">Excluir</button>`;
+    }else{
+        html+=`<button class="btn btn-outline btn-sm" onclick="window.location.href='/ordem/${item.id}'">✏ Ver/Editar</button>`;
+        if(podeVisualizarComissao) html+=`<button class="btn btn-danger btn-sm" onclick="excluirOS(${item.id},${item.numero})">Excluir</button>`;
+    }
+    html+=`</td>`; return html;
+}
+function atualizarHoje(){
+    const hoje=new Date().toISOString().split("T")[0];
+    const itensHoje=itens.filter(i=>i.data===hoje);
+    const osHoje=itensHoje.filter(i=>i.tipo==="OS");
+    const vendasHoje=itensHoje.filter(i=>i.tipo==="VENDA");
+    let total=0,comissao=0; itensHoje.forEach(i=>{ total+=Number(i.total)||0; comissao+=Number(i.comissao)||0; });
+    document.getElementById("quantidadeHoje").innerText=itensHoje.length;
+    document.getElementById("osHoje").innerText=osHoje.length+" OS";
+    document.getElementById("vendasHoje").innerText=vendasHoje.length+" Vendas";
+    document.getElementById("totalHoje").innerText=fmtMoeda(total);
+    document.getElementById("badgeHoje").innerText=`${itensHoje.length} registros hoje`;
+    if(podeVisualizarComissao) document.getElementById("comissaoHoje").innerText=fmtMoeda(comissao);
+    const lista=document.getElementById("listaHoje"); lista.innerHTML="";
+    const colunas = podeVisualizarComissao ? 8 : 7;
+    if(itensHoje.length===0){ lista.innerHTML=`<tr><td colspan="${colunas}" style="text-align:center;padding:24px;color:var(--cor-texto-muted)">Nenhum registro hoje.</td></tr>`; return; }
+    itensHoje.forEach(i=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${badgeTipo(i.tipo)}</td><td class="font-mono font-bold">${fmtNum(i.tipo,i.numero)}</td><td>${i.cliente||""}</td><td>${i.profissional||""}</td><td>${i.tipo==="VENDA"?badgeStatus(i.status||"ativa"):badgeStatus(i.status)}</td><td class="font-bold">${fmtMoeda(i.total)}</td>${podeVisualizarComissao?`<td>${i.comissao?fmtMoeda(i.comissao):"-"}</td>`:``}${acoesHTML(i)}`; lista.appendChild(tr); });
+}
+function aplicarFiltros(){
+    const tipo=document.getElementById("tipoFiltro").value;
+    const mes=document.getElementById("mesFiltro").value;
+    const vendedor=document.getElementById("vendedorFiltro").value;
+    const condicao=document.getElementById("condicaoFiltro").value;
+    let filtrados=[...itens];
+    if(tipo) filtrados=filtrados.filter(i=>i.tipo===tipo);
+    if(mes) filtrados=filtrados.filter(i=>(i.data||"").startsWith(mes));
+    if(vendedor) filtrados=filtrados.filter(i=>i.profissional===vendedor);
+    if(condicao){
+        filtrados=filtrados.filter(i=>{
+            if(i.tipo==="OS") return (i.status||"").toLowerCase().includes(condicao.toLowerCase());
+            return i.condicao===condicao || (i.status||"").toLowerCase().includes(condicao.toLowerCase());
+        });
+    }
+    let total=0,comissao=0; filtrados.forEach(i=>{ total+=Number(i.total)||0; comissao+=Number(i.comissao)||0; });
+    document.getElementById("quantidadeFiltrada").innerText=filtrados.length;
+    document.getElementById("totalFiltrado").innerText=fmtMoeda(total);
+    if(podeVisualizarComissao) document.getElementById("comissaoFiltrada").innerText=fmtMoeda(comissao);
+    document.getElementById("quantidadeFinal").innerText=filtrados.length;
+    document.getElementById("somatoriaFinal").innerText=fmtMoeda(total);
+    document.getElementById("infoFiltradas").innerText=filtrados.length?`${filtrados.length} registros encontrados`:"";
+    const lista=document.getElementById("listaFiltrada"); lista.innerHTML="";
+    const colunas2 = podeVisualizarComissao ? 9 : 8;
+    if(filtrados.length===0){ lista.innerHTML=`<tr><td colspan="${colunas2}" style="text-align:center;padding:24px;color:var(--cor-texto-muted)">Nenhum registro com os filtros selecionados.</td></tr>`; return; }
+    filtrados.forEach(i=>{ const tr=document.createElement("tr"); tr.innerHTML=`<td>${badgeTipo(i.tipo)}</td><td>${fmtData(i.data)}</td><td class="font-mono font-bold">${fmtNum(i.tipo,i.numero)}</td><td>${i.cliente||""}</td><td>${i.profissional||""}</td><td>${i.tipo==="VENDA"?badgeStatus(i.status||"ativa"):badgeStatus(i.status)}</td><td class="font-bold">${fmtMoeda(i.total)}</td>${podeVisualizarComissao?`<td>${i.comissao?fmtMoeda(i.comissao):"-"}</td>`:``}${acoesHTML(i)}`; lista.appendChild(tr); });
+}
+function limparFiltros(){
+    document.getElementById("tipoFiltro").value="";
+    document.getElementById("mesFiltro").value="";
+    document.getElementById("vendedorFiltro").value="";
+    document.getElementById("condicaoFiltro").value="";
+    aplicarFiltros();
+}
+function editarVenda(id){ window.location.href='/editar_venda?editar='+id; }
+async function imprimirVenda(id){
+    S.mostrarLoading("Gerando impressão...");
+    try{
+        const r=await fetch('/api/vendas/'+id); const v=await r.json(); if(!r.ok) throw new Error(v.erro||'Erro');
+        const area=document.getElementById('areaImpressao'); area.innerHTML='';
+        const pagina=document.createElement('div'); pagina.style.cssText='width:200mm;min-height:0;display:flex;flex-direction:column;align-items:center;';
+        function viaHTML(isSegunda){
+            let html=`<div style="width:190mm;min-height:133mm;max-height:138mm;padding:1.5mm 3mm;border:1px solid #000;background:#fff;display:flex;flex-direction:column;font-size:11px;page-break-inside:avoid;box-sizing:border-box">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#1a56db'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:8px"><img src="${LOGO_URL_ACOMP}" style="height:22px" onerror="this.style.display='none'"></span><span>NOTA DE ORÇAMENTO SEM VALOR FISCAL ${fmtNum("VENDA",v.numero)}</span></div>
+                <div style="border-top:1px solid #000;margin:8px 0"></div>
+                <div><b>CLIENTE:</b> ${v.cliente||''}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"><div><b>VENDA:</b> ${fmtNum("VENDA",v.numero)}</div><div><b>CONDIÇÃO:</b> <span style="display:inline-block;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:999px;font-size:9px;font-weight:800">${(v.condicao||"")==="aprazo" ? "A PRAZO" : (({dinheiro:'DINHEIRO',cartadebito:'CARTAO DEBITO',cartocredito:'CARTAO CREDITO',pix:'PIX SICOOB',sicoob:'PIX SICOOB',pixinter:'PIX INTER',pixmaq:'PIX MAQUINA',avista:'A VISTA',aprazo:'A PRAZO'}[String(v.condicao)])||(String(v.condicao)||'').toUpperCase())}</span> ${v.condicao==="aprazo" ? '<span style="font-size:9px;color:#92400e">· VENC '+(v.vencimento ? v.vencimento.split("-").reverse().join("/") : "30 DIAS")+"</span>" : ""}</div><div><b>VENDEDOR:</b> ${v.vendedor||''}</div><div><b>DATA:</b> ${(v.data||'').split('-').reverse().join('/')}</div></div>
+                <div><b>OBS:</b> ${v.observacao||''}</div>
+                <div style="border-top:1px solid #000;margin:8px 0"></div>
+                <div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;font-weight:700;border-bottom:1px solid #000;padding:4px 0"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>`;
+            (v.itens||[]).forEach(it=>{ const sub=(Number(it.quantidade)*Number(it.valor)).toFixed(2).replace('.',','); html+=`<div style="display:grid;grid-template-columns:16mm 1fr 28mm 28mm;padding:4px 0;border-bottom:1px solid #e8edf2"><span>${it.quantidade}</span><span>${it.descricao}</span><span>R$ ${Number(it.valor).toFixed(2).replace('.',',')}</span><span>R$ ${sub}</span></div>`; });
+            html+=`<div style="width:68mm;margin-left:auto;margin-top:auto;padding-top:10px;text-align:right"><div style="display:flex;justify-content:space-between"><b>TOTAL:</b><span>R$ ${Number(v.total).toFixed(2).replace('.',',')}</span></div><div style="display:flex;justify-content:space-between"><b>DESCONTO:</b><span>${v.desconto||0}%</span></div><div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:6px"><b>TOTAL FINAL:</b><b>R$ ${Number(v.total).toFixed(2).replace('.',',')}</b></div></div>`;
+            if(v.condicao==='aprazo'){ html+=`<div style="margin-top:14px;text-align:center"><div style="width:92mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">${isSegunda ? 'ASSINATURA DO CLIENTE — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>${v.vencimento ? '<div style="font-size:9px;margin-top:2px">VENCIMENTO: '+v.vencimento.split('-').reverse().join('/')+'</div>' : ''}</div>`; }
+            html+=`</div>`; return html;
+        }
+        const via1=document.createElement('div'); via1.innerHTML=viaHTML(false); via1.firstElementChild.style.margin='0 auto 0';
+        const via2=document.createElement('div'); via2.innerHTML=viaHTML(true);
+        const recorte=document.createElement('div');
+        recorte.style.cssText='width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;';
+        recorte.innerHTML='<div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div>';
+        pagina.appendChild(via1.firstElementChild); pagina.appendChild(recorte); pagina.appendChild(via2.firstElementChild);
+        area.appendChild(pagina); area.style.display='block'; window.print();
+        setTimeout(()=> area.style.display='none', 500);
+    }catch(e){ S.Toast.erro(e.message||'Erro ao imprimir'); } finally{ S.esconderLoading(); }
+}
+async function excluirVenda(id,numero){
+    const ok=await S.confirmacao({titulo:"Excluir venda",mensagem:`Excluir a venda <b>SL${String(numero).padStart(4,"0")}</b>?`,tipo:"danger",textoSim:"Excluir"}); if(!ok) return;
+    S.mostrarLoading("Excluindo...");
+    try{ const r=await fetch("/api/vendas/"+id,{method:"DELETE"}); const res=await r.json(); if(!r.ok){ S.Toast.erro(res.erro||"Erro ao excluir."); return; } S.Toast.sucesso(res.mensagem||"Venda excluída!"); await carregarItens(); }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
+}
+async function excluirOS(id,numero){
+    const ok=await S.confirmacao({titulo:"Excluir OS",mensagem:`Excluir a OS <b>OS${String(numero).padStart(4,"0")}</b>?`,tipo:"danger",textoSim:"Excluir"}); if(!ok) return;
+    S.mostrarLoading("Excluindo...");
+    try{ const r=await fetch("/excluir_os/"+id,{method:"DELETE"}); const res=await r.json(); if(!r.ok){ S.Toast.erro(res.erro||"Erro ao excluir."); return; } S.Toast.sucesso(res.mensagem||"OS excluída!"); await carregarItens(); }catch(e){ S.Toast.erro("Erro de conexão."); } finally{ S.esconderLoading(); }
+}
+function definirMesAtual(){ const h=new Date(); document.getElementById("mesFiltro").value=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,"0")}`; }
+S.initSidebar(); (async()=>{ definirMesAtual(); await carregarItens(); carregarProfissionais(); setInterval(carregarItens,30000); })();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+  });
+}
+</script>
+</body>
+</html>

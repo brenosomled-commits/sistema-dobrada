@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
+<title>Devolução </title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+<style>
+/* ===== DEVOLUÇÃO - VISUAL PREMIUM ===== */
+.nota-wrap{ max-width: 960px; margin: 0 auto; }
+.nota-via{
+    background: var(--cor-painel);
+    border: 1px solid var(--cor-borda);
+    border-radius: 16px;
+    box-shadow: var(--sombra);
+    overflow: hidden;
+}
+.nota-topo{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 60%, #dc2626 100%);
+    color: #fff;
+}
+.nota-topo-left{ display:flex; align-items:center; gap:12px; }
+.nota-topo-left img{ height:36px; width:auto; background:#fff; border-radius:8px; padding:4px; }
+.nota-topo-titulo{ font-weight:800; letter-spacing:.06em; font-size:1rem; }
+.nota-topo-sub{ font-size:.72rem; opacity:.85; letter-spacing:.08em; text-transform:uppercase; }
+.nota-topo-badge{
+    background: rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25);
+    padding: 8px 14px; border-radius: 999px; font-weight:700; font-size:.82rem; letter-spacing:.04em;
+    backdrop-filter: blur(6px);
+}
+.nota-corpo{ padding: 22px 24px; }
+.nota-secao-titulo{
+    font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+    color: var(--cor-perigo); margin-bottom:10px; display:flex; align-items:center; gap:8px;
+}
+.nota-secao-titulo::after{ content:""; flex:1; height:1px; background:var(--cor-borda); }
+.nota-grid-4{ display:grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap:12px; }
+@media(max-width:900px){ .nota-grid-4{ grid-template-columns:1fr 1fr; } }
+.campo-nota{ display:flex; flex-direction:column; gap:6px; }
+.campo-nota label{ font-size:.70rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--cor-texto-secundario); }
+.campo-nota input, .campo-nota select{
+    min-height:42px; border:1px solid var(--cor-borda); border-radius:10px; padding:10px 12px;
+    background:#fff; color:var(--cor-texto); font-family:var(--fonte); font-size:.9rem;
+    transition: border-color .15s, box-shadow .15s;
+}
+.campo-nota input:focus, .campo-nota select:focus{ border-color:var(--cor-primaria); box-shadow:0 0 0 3px var(--cor-primaria-light); outline:none; }
+.campo-nota input[readonly]{ background:var(--cor-fundo); color:var(--cor-texto-secundario); font-weight:600; }
+
+/* ITENS */
+.itens-head{
+    display:grid; grid-template-columns:40px 78px minmax(0,1fr) 140px 140px 44px; gap:10px;
+    padding:10px 12px; background:var(--cor-fundo); border:1px solid var(--cor-borda); border-radius:10px;
+    font-size:.70rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--cor-texto-secundario);
+}
+.nota-item-editor{
+    display:grid; grid-template-columns:40px 78px minmax(0,1fr) 140px 140px 44px; gap:10px; align-items:center;
+    padding:8px; background:#fff; border:1px solid var(--cor-borda); border-radius:10px; margin-top:8px;
+}
+.nota-item-editor .sel-cel{ display:flex; align-items:center; justify-content:center; height:40px; }
+.nota-item-editor .sel-cel input.selecionar{ width:22px; height:22px; min-height:0; cursor:pointer; accent-color:var(--cor-primaria); }
+.nota-item-editor input{ min-height:40px; border:1px solid var(--cor-borda); border-radius:8px; padding:8px 10px; font-family:var(--fonte); background:#fff; }
+.btn-remover{
+    width:40px; height:40px; border-radius:10px; border:1px solid var(--cor-borda); background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--cor-texto-muted); transition: all .15s;
+}
+.btn-remover:hover{ background:var(--cor-perigo-light); border-color:#fca5a5; color:var(--cor-perigo); }
+.add-produto{
+    width:100%; margin-top:10px; border:1.5px dashed var(--cor-borda-forte); background:transparent; border-radius:10px; padding:12px;
+    font-weight:700; font-size:.85rem; color:var(--cor-texto-secundario); cursor:pointer; transition: all .15s;
+}
+.add-produto:hover{ border-color:var(--cor-primaria); color:var(--cor-primaria); background:var(--cor-primaria-light); }
+
+.resumo-financeiro{
+    margin-top:16px; margin-left:auto; width:380px; max-width:100%;
+    background: var(--cor-painel); border:1px solid var(--cor-borda); border-radius:12px; overflow:hidden;
+}
+.resumo-linha{ display:flex; justify-content:space-between; align-items:center; padding:10px 16px; font-size:.88rem; border-bottom:1px solid var(--cor-borda); }
+.resumo-linha:last-child{ border-bottom:none; }
+.resumo-linha.total-final{ background:var(--cor-fundo); font-weight:800; color:var(--cor-perigo); }
+.aplicar-tudo{ display:none; }
+
+.motivo-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+@media(max-width:640px){ .motivo-grid{ grid-template-columns:1fr; } }
+
+.lista-devolucoes .devolucao-card{
+    border:1px solid var(--cor-borda); border-radius:12px; padding:14px 16px; background:var(--cor-painel); margin-bottom:10px;
+}
+.devolucao-card .dev-top{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.devolucao-card .badge-dev{
+    background:var(--cor-perigo-light); color:var(--cor-perigo); padding:3px 10px; border-radius:999px; font-weight:800; font-size:.72rem; letter-spacing:.05em;
+}
+.devolucao-card .acao-nota{
+    border:1px solid var(--cor-borda); background:#fff; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:.8rem; font-weight:700; color:var(--cor-texto); transition:all .15s;
+}
+.devolucao-card .acao-nota:hover{ border-color:var(--cor-primaria); color:var(--cor-primaria); background:var(--cor-primaria-light); }
+
+/* IMPRESSÃO DA NOTA DE DEVOLUÇÃO — 2 VIAS SINCRONIZADA COM VENDAS */
+#areaImpressaoDev{display:none}
+.pagina-impressao{ width:200mm; min-height:287mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
+.via-impressao{ width:190mm; min-height:132mm; padding:6mm 8mm; border:1px solid #000; overflow:hidden; margin:3mm auto 0; background:#fff; display:flex; flex-direction:column; font-size:13px; }
+.nota-linha{ border-top:1px solid #000; margin:8px 0; }
+.nota-tabela-cabecalho, .nota-item-impressao{ display:grid; gap:10px; align-items:center; }
+.nota-tabela-cabecalho{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; font-weight:700; font-size:.78rem; border-bottom:1px solid #000; padding:6px 0 5px; text-transform:uppercase; }
+.nota-item-impressao{ grid-template-columns:16mm minmax(0,1fr) 28mm 28mm; padding:4px 0; font-size:13px; border-bottom:1px solid #e8edf2; text-transform:uppercase; }
+@media print{
+    @page{ size:A4 portrait; margin:3mm; }
+    body{ background:#fff; }
+    body > .layout{ display:none!important; }
+    #areaImpressaoDev{ display:block!important; }
+    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+    .pagina-impressao:last-child{ page-break-after:auto; }
+    .via-impressao{ min-height:133mm; max-height:138mm; height:auto; padding:1.5mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link ativa" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        {% if papel in ["GERENTE", "DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div>
+  <a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a>
+  <a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/gerenciar_impressora"><span class="link-icon">🖨</span> Impressora Zebra</a>
+  <a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a>
+</div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+    <div class="nota-wrap">
+        <div class="pagina-titulo" style="margin-bottom:16px">
+            <h1 style="display:flex;align-items:center;gap:10px">↩️ Devolução de Produto <span class="badge badge-perigo" style="font-size:.65rem">Registro de devolução</span></h1>
+            <p class="pagina-sub">Registre devoluções vinculadas a uma venda ou avulsas — qualquer vendedor pode usar</p>
+        </div>
+
+        <div class="nota-via">
+            <div class="nota-topo">
+                <div class="nota-topo-left">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="" onerror="this.style.display='none'">
+                    <div>
+                        <div class="nota-topo-titulo">DEVOLUÇÃO DE PRODUTO</div>
+                        <div class="nota-topo-sub">Devolução · Sem valor fiscal</div>
+                    </div>
+                </div>
+                <div class="nota-topo-badge" id="badgeDevolucao">DEV --</div>
+            </div>
+
+            <div class="nota-corpo">
+                <div style="display:flex;gap:8px;margin-bottom:14px;border:1px solid var(--cor-borda);border-radius:10px;overflow:hidden;width:fit-content">
+                    <button type="button" id="btnModoVinculada" class="btn" style="border-radius:0;border:none;padding:10px 22px;font-weight:700;font-size:.85rem;background:var(--cor-primaria);color:#fff;transition:all .15s" onclick="trocarModoDevolucao('vinculada')">🔗 VINCULADA</button>
+                    <button type="button" id="btnModoAvulsa" class="btn" style="border-radius:0;border:none;padding:10px 22px;font-weight:700;font-size:.85rem;background:var(--cor-fundo);color:var(--cor-texto-secundario);transition:all .15s" onclick="trocarModoDevolucao('avulsa')">📦 AVULSA</button>
+                </div>
+                <input type="hidden" id="modoDevolucao" value="vinculada">
+
+                <div id="camposVinculada">
+                    <div class="nota-secao-titulo">Vincular à venda original</div>
+                    <div class="campo-nota" style="margin-bottom:10px"><label for="buscarVenda">Buscar venda (número, SL, cliente)</label><input type="text" id="buscarVenda" oninput="filtrarVendas()" placeholder="Ex.: SL0001 ou nome do cliente"></div>
+                    <div class="campo-nota" style="margin-bottom:12px"><label for="vendaSelect">Selecione a venda para vincular *</label><select id="vendaSelect" onchange="carregarItensVenda()"><option value="">Selecione a venda (SL0001...)</option></select></div>
+                    <div id="vendaVinculada" style="display:none;border:1.5px solid var(--cor-primaria);border-radius:12px;padding:12px 16px;background:var(--cor-primaria-light);margin-bottom:12px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                            <div style="font-weight:800;color:var(--cor-primaria);display:flex;align-items:center;gap:8px">🔗 Venda vinculada: <span id="vvNumero" style="font-family:monospace"></span></div>
+                            <span style="font-size:.75rem;color:var(--cor-texto-secundario)">Itens carregados da venda — ajuste as quantidades conforme o que foi devolvido</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;font-size:.84rem">
+                            <div><b>Cliente:</b> <span id="vvCliente"></span></div>
+                            <div><b>Vendedor:</b> <span id="vvVendedor"></span></div>
+                            <div><b>Data:</b> <span id="vvData"></span></div>
+                            <div><b>Total da venda:</b> <span id="vvTotal"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="camposAvulsa" style="display:none">
+                    <div class="nota-secao-titulo">Devolução avulsa (sem vínculo com venda)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                        <div class="campo-nota"><label for="vendedorAvulso">Vendedor responsável</label><select id="vendedorAvulso"><option value="">Selecione</option></select></div>
+                    </div>
+                </div>
+
+                <div class="motivo-grid">
+                    <div class="campo-nota"><label for="motivo">Motivo da devolução *</label><select id="motivo"><option value="">Selecione o motivo</option><option value="DEFEITO">Defeito de fabricação</option><option value="TROCA">Troca</option><option value="ARREPENDIMENTO">Arrependimento</option><option value="ERRO">Erro na venda</option><option value="OUTRO">Outro</option></select></div>
+                    <div class="campo-nota"><label for="condicao">Condição de pagamento</label><select id="condicao"><option value="">—</option><option value="dinheiro">DINHEIRO</option><option value="cartadebito">CARTAO DEBITO</option><option value="cartocredito">CARTAO CREDITO</option><option value="pix">PIX SICOOB</option><option value="pixinter">PIX INTER</option><option value="pixmaq">PIX MAQUINA</option><option value="aprazo">A PRAZO</option></select></div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px">
+                    <div class="campo-nota"><label for="data">Data</label><input type="date" id="data"></div>
+                    <div class="campo-nota"><label for="observacao">Observação</label><input type="text" id="observacao" placeholder="Observações sobre a devolução"></div>
+                </div>
+
+                <div style="margin-top:18px" class="nota-secao-titulo">Itens devolvidos</div>
+                <div class="itens-head"><span>Devolver</span><span>Qtd.</span><span>Descrição do produto</span><span>Valor unit.</span><span>Subtotal</span><span></span></div>
+                <div id="itens"></div>
+                <button type="button" class="add-produto" onclick="adicionarItem(true)">+ Adicionar item devolvido</button>
+
+                <div class="resumo-financeiro">
+                    <div class="resumo-linha total-final"><span>Total da devolução</span><b>R$ <span id="totalFinal">0,00</span></b></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3" id="cardRegistros">
+            <div class="card-header"><h2 class="card-title">Devoluções registradas</h2><button class="btn btn-ghost btn-sm" onclick="carregarDevolucoes()">↻</button></div>
+            <div id="listaDevolucoes"><div class="empty-state" style="padding:16px"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
+        </div>
+
+        <div class="area-acoes">
+            <button type="button" class="btn btn-outline" onclick="limparFormulario()">Limpar</button>
+            <button type="button" class="btn btn-danger" style="min-width:180px" id="btnSalvarDevolucao" onclick="registrarDevolucao()">↩️ Registrar devolução</button>
+            <button type="button" class="btn btn-primary" style="min-width:190px;background:var(--cor-texto);border-color:var(--cor-texto)" onclick="registrarEImprimir()">💾🖨 Salvar e Imprimir</button>
+        </div>
+    </div>
+</main>
+</div>
+<div id="areaImpressaoDev"></div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
+<script>
+const S = window.SistemaUtil; S.initSidebar();
+const LOGO_URL = "{{ url_for('static', filename='logo.png') }}";
+let listaVendas = [];
+let editandoId = null;
+
+function trocarModoDevolucao(modo){
+    document.getElementById("modoDevolucao").value = modo;
+    const btnV = document.getElementById("btnModoVinculada");
+    const btnA = document.getElementById("btnModoAvulsa");
+    if(modo==="avulsa"){
+        btnV.style.background="var(--cor-fundo)"; btnV.style.color="var(--cor-texto-secundario)";
+        btnA.style.background="var(--cor-primaria)"; btnA.style.color="#fff";
+        document.getElementById("camposVinculada").style.display="none";
+        document.getElementById("camposAvulsa").style.display="block";
+        document.getElementById("vendaVinculada").style.display="none";
+    }else{
+        btnV.style.background="var(--cor-primaria)"; btnV.style.color="#fff";
+        btnA.style.background="var(--cor-fundo)"; btnA.style.color="var(--cor-texto-secundario)";
+        document.getElementById("camposVinculada").style.display="block";
+        document.getElementById("camposAvulsa").style.display="none";
+    }
+}
+
+async function carregarVendedoresAvulso(){
+    try{
+        const r = await fetch("/api/vendedores");
+        const usuarios = await r.json();
+        const sel = document.getElementById("vendedorAvulso");
+        sel.innerHTML = '<option value="">Selecione</option>';
+        usuarios.forEach(function(u){
+            const nome = u.usuario || u.nome || "";
+            if(nome){ const o = document.createElement("option"); o.value = nome; o.textContent = nome; sel.appendChild(o); }
+        });
+    }catch(erro){ console.error(erro); }
+}
+
+function fmtMoedaV(valor){
+    const v = Number(valor) || 0;
+    return v.toFixed(2).replace(".", ",");
+}
+
+async function carregarNumerosVenda(){
+    try{
+        const resp = await fetch("/api/proximo_numero_venda");
+        if(resp.ok){ }
+    }catch(erro){}
+}
+
+function definirDataHoje(){
+    const hoje = new Date();
+    const dd = String(hoje.getDate()).padStart(2,"0");
+    const mm = String(hoje.getMonth()+1).padStart(2,"0");
+    const aaaa = hoje.getFullYear();
+    document.getElementById("data").value = `${aaaa}-${mm}-${dd}`;
+}
+
+async function carregarVendas(){
+    try{
+        const r = await fetch("/api/vendas");
+        if(!r.ok) throw new Error("Erro ao buscar vendas");
+        listaVendas = await r.json();
+        preencherSelectVendas();
+    }catch(erro){
+        console.error(erro);
+    }
+}
+
+function preencherSelectVendas(filtro){
+    const sel = document.getElementById("vendaSelect");
+    sel.innerHTML = '<option value="">Selecione a venda (SL0001...)</option>';
+    const termo = (filtro||"").trim().toLowerCase();
+    listaVendas.forEach(v=>{
+        const num = "SL" + String(v.numero).padStart(4,"0");
+        const cliente = (v.cliente||"").toLowerCase();
+        const vendedor = (v.vendedor||"").toLowerCase();
+        const match = !termo || num.toLowerCase().includes(termo) || String(v.numero).includes(termo) || cliente.includes(termo) || vendedor.includes(termo);
+        if(match){
+            const o = document.createElement("option");
+            o.value = v.id;
+            o.textContent = `${num} — ${v.cliente||""} (${fmtMoedaV(v.total)})`;
+            sel.appendChild(o);
+        }
+    });
+}
+
+function filtrarVendas(){
+    preencherSelectVendas(document.getElementById("buscarVenda").value);
+}
+
+async function carregarItensVenda(){
+    const vendaId = document.getElementById("vendaSelect").value;
+    const itensContainer = document.getElementById("itens");
+    itensContainer.innerHTML = "";
+    const vendaCard = document.getElementById("vendaVinculada");
+    if(!vendaId){
+        document.getElementById("totalFinal").innerText = "0,00";
+        vendaCard.style.display = "none";
+        return;
+    }
+    try{
+        const r = await fetch("/api/vendas/"+vendaId);
+        if(!r.ok) throw new Error("Erro ao buscar venda");
+        const v = await r.json();
+        document.getElementById("vvNumero").innerText = ("SL" + String(v.numero).padStart(4,"0"));
+        document.getElementById("vvCliente").innerText = v.cliente || "-";
+        document.getElementById("vvVendedor").innerText = v.vendedor || "-";
+        document.getElementById("vvData").innerText = v.data ? v.data.split('-').reverse().join('/') : "-";
+        document.getElementById("vvTotal").innerText = "R$ " + fmtMoedaV(v.total);
+        vendaCard.style.display = "block";
+        const itens = v.itens || [];
+        if(itens.length===0){
+            adicionarItem(true);
+        }else{
+            itens.forEach(item=>{
+                adicionarItemCom(item.descricao, item.valor);
+            });
+        }
+        calcularTotal();
+    }catch(erro){
+        console.error(erro);
+        vendaCard.style.display = "none";
+        S.Toast.erro("Não foi possível carregar os itens da venda.");
+    }
+}
+
+function adicionarItem(novoVazio){
+    const itens = document.getElementById("itens");
+    const div = document.createElement("div");
+    div.className = "nota-item-editor";
+    div.innerHTML = `
+        <span class="sel-cel"></span>
+        <input type="number" class="quantidade" min="1" value="1" oninput="calcularTotal()">
+        <input type="text" class="descricao" placeholder="Descrição do produto">
+        <input type="number" class="valor" min="0" step="0.01" placeholder="0,00" oninput="calcularTotal()">
+        <input type="text" class="subtotal" readonly value="0,00" style="background:var(--cor-fundo);font-weight:700;text-align:right">
+        <button type="button" class="btn-remover" onclick="removerItem(this)">✕</button>`;
+    itens.appendChild(div);
+    calcularTotal();
+}
+
+function adicionarItemCom(descricao, valor, quantidade){
+    const itens = document.getElementById("itens");
+    const div = document.createElement("div");
+    div.className = "nota-item-editor";
+    div.innerHTML = `
+        <span class="sel-cel"><input type="checkbox" class="selecionar" checked onchange="calcularTotal()" title="Devolver este item"></span>
+        <input type="number" class="quantidade" min="1" value="${quantidade||1}" oninput="calcularTotal()">
+        <input type="text" class="descricao" placeholder="Descrição do produto" value="${descricao||""}">
+        <input type="number" class="valor" min="0" step="0.01" placeholder="0,00" value="${valor||0}" oninput="calcularTotal()">
+        <input type="text" class="subtotal" readonly value="0,00" style="background:var(--cor-fundo);font-weight:700;text-align:right">
+        <button type="button" class="btn-remover" onclick="removerItem(this)">✕</button>`;
+    itens.appendChild(div);
+}
+
+function removerItem(botao){
+    botao.parentElement.remove();
+    calcularTotal();
+}
+
+function calcularTotal(){
+    let total = 0;
+    document.querySelectorAll(".nota-item-editor").forEach(item=>{
+        const sel = item.querySelector(".selecionar");
+        if(sel && !sel.checked) return;
+        const qtd = Number(item.querySelector(".quantidade").value) || 0;
+        const valor = Number(item.querySelector(".valor").value) || 0;
+        const sub = qtd * valor;
+        item.querySelector(".subtotal").value = sub.toFixed(2).replace(".", ",");
+        total += sub;
+    });
+    document.getElementById("totalFinal").innerText = fmtMoedaV(total);
+}
+
+async function registrarDevolucao(){
+    const modo = document.getElementById("modoDevolucao").value;
+    const motivo = document.getElementById("motivo").value;
+    const vendaId = document.getElementById("vendaSelect").value;
+    if(modo==="vinculada" && !vendaId){ S.Toast.erro("Selecione a venda original."); return; }
+    if(modo==="avulsa" && !document.getElementById("vendedorAvulso").value){ S.Toast.erro("Selecione o vendedor responsável."); return; }
+    if(!motivo){ S.Toast.erro("Informe o motivo da devolução."); return; }
+
+    const itens = [];
+    document.querySelectorAll(".nota-item-editor").forEach(item=>{
+        const sel = item.querySelector(".selecionar");
+        if(sel && !sel.checked) return;
+        const descricao = item.querySelector(".descricao").value.trim();
+        if(descricao){
+            itens.push({
+                descricao: descricao,
+                quantidade: Number(item.querySelector(".quantidade").value) || 1,
+                valor: Number(item.querySelector(".valor").value) || 0
+            });
+        }
+    });
+    if(itens.length===0){ S.Toast.erro("Selecione pelo menos um item para devolver."); return; }
+
+    const dados = {
+        venda_id: modo==="vinculada" && vendaId ? Number(vendaId) : null,
+        motivo: motivo,
+        observacao: document.getElementById("observacao").value.trim(),
+        data: document.getElementById("data").value || undefined,
+        vendedor: modo==="avulsa" ? document.getElementById("vendedorAvulso").value : undefined,
+        itens: itens
+    };
+
+    const editando = editandoId !== null;
+    const url = editando ? "/api/devolucoes/"+editandoId : "/api/devolucoes";
+    const metodo = editando ? "PUT" : "POST";
+    const carregandoMsg = editando ? "Atualizando devolução..." : "Registrando devolução...";
+
+    S.mostrarLoading(carregandoMsg);
+    try{
+        const r = await fetch(url, {
+            method: metodo,
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify(dados)
+        });
+        const res = await r.json();
+        if(!r.ok) throw new Error(res.erro || "Erro ao salvar devolução.");
+        S.Toast.sucesso(res.mensagem || "Devolução salva!");
+        limparFormulario();
+        carregarDevolucoes();
+    }catch(erro){
+        S.Toast.erro(erro.message);
+    }finally{
+        S.esconderLoading();
+    }
+}
+async function registrarEImprimir(){
+    const modo = document.getElementById("modoDevolucao").value;
+    const motivo = document.getElementById("motivo").value;
+    const vendaId = document.getElementById("vendaSelect").value;
+    if(modo==="vinculada" && !vendaId){ S.Toast.erro("Selecione a venda original."); return; }
+    if(modo==="avulsa" && !document.getElementById("vendedorAvulso").value){ S.Toast.erro("Selecione o vendedor responsável."); return; }
+    if(!motivo){ S.Toast.erro("Informe o motivo da devolução."); return; }
+    const itens = [];
+    document.querySelectorAll(".nota-item-editor").forEach(item=>{
+        const sel = item.querySelector(".selecionar");
+        if(sel && !sel.checked) return;
+        const descricao = item.querySelector(".descricao").value.trim();
+        if(descricao) itens.push({ descricao, quantidade: Number(item.querySelector(".quantidade").value)||1, valor: Number(item.querySelector(".valor").value)||0 });
+    });
+    if(itens.length===0){ S.Toast.erro("Selecione pelo menos um item para devolver."); return; }
+    const dados={ venda_id: modo==="vinculada" && vendaId ? Number(vendaId) : null, motivo, observacao: document.getElementById("observacao").value.trim(), data: document.getElementById("data").value||undefined, vendedor: modo==="avulsa" ? document.getElementById("vendedorAvulso").value : undefined, itens };
+    const editando=editandoId!==null, url=editando?"/api/devolucoes/"+editandoId:"/api/devolucoes", metodo=editando?"PUT":"POST";
+    S.mostrarLoading("Salvando e imprimindo...");
+    try{
+        const r=await fetch(url,{method:metodo,headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
+        const res=await r.json(); if(!r.ok) throw new Error(res.erro||"Erro");
+        S.Toast.sucesso(res.mensagem||"Devolução salva!");
+        const idImp = editando ? editandoId : res.id;
+        limparFormulario(); await carregarDevolucoes();
+        if(idImp) setTimeout(()=> abrirNotaDevolucao(idImp), 600);
+    }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
+}
+
+async function carregarDevolucoes(){
+    try{
+        const r = await fetch("/api/devolucoes");
+        if(!r.ok) throw new Error("Erro ao buscar devoluções");
+        const devs = await r.json();
+        const container = document.getElementById("listaDevolucoes");
+        if(devs.length===0){
+            container.innerHTML = '<div class="empty-state" style="padding:16px"><div class="empty-icon">↩️</div><p>Nenhuma devolução registrada</p></div>';
+            return;
+        }
+        container.innerHTML = "";
+        devs.forEach(d=>{
+            const div = document.createElement("div");
+            div.className = "devolucao-card";
+            div.innerHTML = `
+                <div class="dev-top">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><strong style="font-family:monospace">${("DEV" + String(d.numero).padStart(4,"0"))}</strong><span class="badge-dev">${motivoLabel(d.motivo)}</span></div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="color:var(--cor-texto-secundario);font-size:.82rem">${d.data ? d.data.split('-').reverse().join('/') : ''}</span><button type="button" class="acao-nota" onclick="abrirNotaDevolucao(${d.id})">👁 Ver nota</button><button type="button" class="acao-nota" onclick="carregarDevolucaoParaEdicao(${d.id})">✏️ Editar</button><button type="button" class="acao-nota" style="color:var(--cor-perigo)" onclick="cancelarDevolucao(${d.id})">✕ Cancelar</button></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:8px">
+                    <span style="font-size:.85rem;color:var(--cor-texto-secundario)">${d.observacao || '—'}</span>
+                    <b style="color:var(--cor-perigo)">R$ ${fmtMoedaV(d.total)}</b>
+                </div>`;
+            container.appendChild(div);
+        });
+    }catch(erro){
+        console.error(erro);
+    }
+}
+
+function abrirNotaDevolucao(id){
+    S.mostrarLoading("Carregando nota...");
+    fetch("/api/devolucoes/"+id)
+        .then(r=>{ if(!r.ok) throw new Error("Erro ao carregar nota."); return r.json(); })
+        .then(dev=>{
+            S.esconderLoading();
+            montarNotaDevolucao(dev);
+        })
+        .catch(erro=>{
+            S.esconderLoading();
+            console.error(erro);
+            S.Toast.erro(erro.message);
+        });
+}
+
+function etiquetaDev(isSegunda){
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda ? '#1e293b' : '#7f1d1d'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda ? '✦ VIA DA LOJA — 2ª VIA' : '✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75;font-weight:600">${isSegunda ? 'ARQUIVO INTERNO' : 'ENTREGAR AO CLIENTE'}</span></div>`;
+}
+function montarNotaDevolucao(dev){
+    const area = document.getElementById("areaImpressaoDev");
+    const logo = "<span style=\"display:flex;align-items:center;gap:8px\"><img src=\"" + LOGO_URL + "\" style=\"height:22px\" onerror=\"this.style.display='none'\"></span>";
+    let itensHtml = "";
+    (dev.itens || []).forEach(it=>{
+        const sub = (Number(it.quantidade) || 0) * (Number(it.valor) || 0);
+        itensHtml += `<div class="nota-item-impressao"><span>${it.quantidade}</span><span>${it.descricao||""}</span><span>R$ ${fmtMoedaV(it.valor)}</span><span>R$ ${fmtMoedaV(sub)}</span></div>`;
+    });
+    function viaDevHTML(isSegunda){
+        return `<div class="via-impressao">${etiquetaDev(isSegunda)}
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                ${logo}
+                <span><b>NOTA DE DEVOLUÇÃO</b> DEV${String(dev.numero).padStart(4,"0")}</span>
+            </div>
+            <div class="nota-linha"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                <div><b>DEVOLUÇÃO:</b> DEV${String(dev.numero).padStart(4,"0")}</div>
+                <div><b>DATA:</b> ${dev.data ? dev.data.split('-').reverse().join('/') : '-'}</div>
+                <div><b>VENDA VINCULADA:</b> ${dev.venda_numero ? ("SL" + String(dev.venda_numero).padStart(4,"0")) : '-'}</div>
+                <div><b>VENDEDOR:</b> ${dev.vendedor || '-'}</div>
+                <div><b>MOTIVO:</b> ${motivoLabel(dev.motivo)}</div>
+                <div><b>OBSERVAÇÃO:</b> ${dev.observacao || '-'}</div>
+            </div>
+            ${dev.venda_cliente ? `<div style="margin-top:6px"><b>CLIENTE (VENDA ${"SL" + String(dev.venda_numero).padStart(4,"0")}):</b> ${dev.venda_cliente}</div>` : ''}
+            <div class="nota-linha"></div>
+            <div class="nota-tabela-cabecalho"><span>QTD.</span><span>DESCRIÇÃO</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>
+            ${itensHtml}
+            <div style="display:flex;justify-content:flex-end;margin-top:12px">
+                <div style="border-top:1.5px solid #000;padding-top:6px;text-align:right;width:120mm">
+                    <div style="display:flex;justify-content:space-between;font-weight:800"><span>TOTAL DEVOLVIDO:</span><span>R$ ${fmtMoedaV(dev.total)}</span></div>
+                </div>
+            </div>
+            <div style="margin-top:14px;text-align:center">
+                <div style="width:90mm;border-top:1.5px solid #000;margin:0 auto 4px"></div>
+                <div style="font-size:10px;font-weight:700">${isSegunda ? 'ASSINATURA DO CLIENTE — VIA DA LOJA' : 'ASSINATURA DO CLIENTE'}</div>
+            </div>
+            <div style="margin-top:8px;text-align:center;font-size:7px;color:#6b7280;border-top:1px dashed #9ca3af;padding-top:4px;letter-spacing:.06em">DOCUMENTO SEM VALOR FISCAL — DEVOLUÇÃO</div>
+        </div>`;
+    }
+    const recorte = `<div style="width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;"><div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI <span style="font-weight:600;opacity:.6">|</span> VIA DO CLIENTE ↕ VIA DA LOJA</span><div style="flex:1;border-top:1.5px dashed #111827"></div></div>`;
+    const nota = `<div class="pagina-impressao">${viaDevHTML(false)}${recorte}${viaDevHTML(true)}</div>`;
+    area.innerHTML = nota;
+    window.print();
+}
+
+function carregarDevolucaoParaEdicao(id){
+    S.mostrarLoading("Carregando devolução...");
+    fetch("/api/devolucoes/"+id)
+        .then(r=>{ if(!r.ok) throw new Error("Erro ao carregar devolução."); return r.json(); })
+        .then(dev=>{
+            S.esconderLoading();
+            editandoId = id;
+            document.getElementById("motivo").value = dev.motivo || "";
+            document.getElementById("condicao").value = "";
+            document.getElementById("observacao").value = dev.observacao || "";
+            document.getElementById("data").value = dev.data || "";
+            const itensContainer = document.getElementById("itens");
+            itensContainer.innerHTML = "";
+            (dev.itens || []).forEach(item=>{
+                adicionarItemCom(item.descricao, item.valor, item.quantidade);
+            });
+            calcularTotal();
+            document.getElementById("badgeDevolucao").innerText = "EDITANDO DEV" + String(dev.numero).padStart(4,"0");
+            document.getElementById("btnSalvarDevolucao").innerText = "💾 Salvar alterações";
+            document.getElementById("btnSalvarDevolucao").onclick = registrarDevolucao;
+            if(dev.venda_id){
+                trocarModoDevolucao("vinculada");
+                document.getElementById("vendaSelect").value = String(dev.venda_id);
+                const vv = document.getElementById("vendaVinculada");
+                vv.style.display = "block";
+                document.getElementById("vvNumero").innerText = "SL" + String(dev.venda_numero||"").padStart(4,"0");
+                document.getElementById("vvCliente").innerText = dev.venda_cliente || "-";
+                document.getElementById("vvVendedor").innerText = dev.vendedor || "-";
+                document.getElementById("vvData").innerText = dev.data ? dev.data.split('-').reverse().join('/') : "-";
+                document.getElementById("vvTotal").innerText = "R$ " + fmtMoedaV(dev.total);
+            }else{
+                trocarModoDevolucao("avulsa");
+                document.getElementById("vendedorAvulso").value = dev.vendedor || "";
+            }
+            window.scrollTo({top:0, behavior:"smooth"});
+        })
+        .catch(erro=>{
+            S.esconderLoading();
+            console.error(erro);
+            S.Toast.erro(erro.message);
+        });
+}
+
+function cancelarDevolucao(id){
+    const confirma = confirm("Descartar essa devolução? Os itens vinculados serão removidos do histórico.");
+    if(!confirma) return;
+    S.mostrarLoading("Cancelando devolução...");
+    fetch("/api/devolucoes/"+id, {method:"DELETE"})
+        .then(r=>{ if(!r.ok) return r.json().then(e=>{throw new Error(e.erro||"Erro ao cancelar.");}); return r.json(); })
+        .then(res=>{
+            S.esconderLoading();
+            S.Toast.sucesso(res.mensagem || "Devolução cancelada!");
+            carregarDevolucoes();
+        })
+        .catch(erro=>{
+            S.esconderLoading();
+            console.error(erro);
+            S.Toast.erro(erro.message);
+        });
+}
+
+function motivoLabel(m){
+    const map = {
+        "DEFEITO":"Defeito de fabricação",
+        "TROCA":"Troca",
+        "ARREPENDIMENTO":"Arrependimento",
+        "ERRO":"Erro na venda",
+        "OUTRO":"Outro"
+    };
+    return map[m] || m || "-";
+}
+
+function limparFormulario(){
+    editandoId = null;
+    document.getElementById("vendaSelect").value = "";
+    document.getElementById("motivo").value = "";
+    document.getElementById("condicao").value = "";
+    document.getElementById("observacao").value = "";
+    document.getElementById("itens").innerHTML = "";
+    document.getElementById("vendaVinculada").style.display = "none";
+    trocarModoDevolucao("vinculada");
+    if(document.getElementById("vendedorAvulso")) document.getElementById("vendedorAvulso").value = "";
+    const btn = document.getElementById("btnSalvarDevolucao");
+    if(btn){ btn.innerText = "↩️ Registrar devolução"; btn.onclick = registrarDevolucao; }
+    document.getElementById("badgeDevolucao").innerText = "DEV --";
+    definirDataHoje();
+    calcularTotal();
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+    definirDataHoje();
+    carregarVendas();
+    carregarVendedoresAvulso();
+    carregarDevolucoes();
+});
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+  });
+}
+</script>
+</body>
+</html>

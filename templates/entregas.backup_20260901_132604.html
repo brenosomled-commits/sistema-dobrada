@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=3">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=3">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=3">
+<title>Entregas</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+<style>
+.nota-wrap{ max-width:960px; margin:0 auto; }
+.nota-via{ background:var(--cor-painel); border:1px solid var(--cor-borda); border-radius:16px; box-shadow:var(--sombra); overflow:hidden; }
+.nota-topo{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 24px; background:linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #0ea5e9 100%); color:#fff; }
+.nota-topo-left{ display:flex; align-items:center; gap:12px; }
+.nota-topo-left img{ height:36px; background:#fff; border-radius:8px; padding:4px; }
+.nota-topo-titulo{ font-weight:800; letter-spacing:.06em; font-size:1rem; }
+.nota-topo-sub{ font-size:.72rem; opacity:.85; letter-spacing:.08em; text-transform:uppercase; }
+.nota-topo-badge{ background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.25); padding:8px 14px; border-radius:999px; font-weight:700; font-size:.82rem; backdrop-filter:blur(6px); }
+.nota-corpo{ padding:22px 24px; }
+.nota-secao-titulo{ font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--cor-primaria); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.nota-secao-titulo::after{ content:""; flex:1; height:1px; background:var(--cor-borda); }
+.campo-nota{ display:flex; flex-direction:column; gap:6px; }
+.campo-nota label{ font-size:.70rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--cor-texto-secundario); }
+.campo-nota input, .campo-nota select, .campo-nota textarea{ min-height:42px; border:1px solid var(--cor-borda); border-radius:10px; padding:10px 12px; background:#fff; color:var(--cor-texto); font-family:var(--fonte); font-size:.9rem; }
+.campo-nota textarea{ min-height:70px; resize:vertical; }
+.entrega-card{ border:1px solid var(--cor-borda); border-radius:12px; padding:14px 16px; background:var(--cor-painel); margin-bottom:10px; }
+.badge-entrega{ padding:3px 10px; border-radius:999px; font-weight:800; font-size:.70rem; letter-spacing:.05em; text-transform:uppercase; }
+.badge-Pendente{ background:#fef3c7; color:#92400e; }
+.badge-Em\ rota{ background:#dbeafe; color:#1e40af; }
+.badge-Entregue{ background:#d1fae5; color:#065f46; }
+.badge-Falha{ background:#fee2e2; color:#991b1b; }
+.badge-Cancelada{ background:#f3f4f6; color:#6b7280; text-decoration:line-through; }
+.badge-Reagendada{ background:#ede9fe; color:#6d28d9; }
+#areaImpressaoEntrega{display:none}
+.pagina-impressao{ width:200mm; min-height:287mm; page-break-after:always; display:flex; flex-direction:column; align-items:center; }
+.via-impressao{ width:190mm; min-height:132mm; padding:6mm 8mm; border:1px solid #000; overflow:hidden; margin:3mm auto 0; background:#fff; display:flex; flex-direction:column; font-size:13px; }
+@media print{
+    @page{ size:A4 portrait; margin:3mm; }
+    body{ background:#fff; }
+    body > .layout{ display:none!important; }
+    #areaImpressaoEntrega{ display:block!important; }
+    .pagina-impressao{ min-height:0; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
+    .pagina-impressao:last-child{ page-break-after:auto; }
+    .via-impressao{ min-height:133mm; max-height:138mm; height:auto; padding:1.5mm 3mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:11px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Notas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link ativa" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/gerenciar_impressora"><span class="link-icon">🖨</span> Impressora Zebra</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+    <div class="nota-wrap">
+        <div class="pagina-titulo" style="margin-bottom:16px">
+            <h1 style="display:flex;align-items:center;gap:10px">🚚 Entregas <span class="badge badge-pronta" style="font-size:.65rem">Vinculada / Avulsa + Rota</span></h1>
+            <p class="pagina-sub">Cadastre entregas vinculadas à venda/OS ou avulsas — com taxa, entregador, horário e comprovante</p>
+        </div>
+
+        <div class="nota-via">
+            <div class="nota-topo">
+                <div class="nota-topo-left">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="" onerror="this.style.display='none'">
+                    <div><div class="nota-topo-titulo">ENTREGA</div><div class="nota-topo-sub">Controle de entregas</div></div>
+                </div>
+                <div class="nota-topo-badge" id="badgeEntrega">ENT --</div>
+            </div>
+            <div class="nota-corpo">
+                <div style="display:flex;gap:8px;margin-bottom:14px;border:1px solid var(--cor-borda);border-radius:10px;overflow:hidden;width:fit-content">
+                    <button type="button" id="btnModoVinculada" class="btn" style="border-radius:0;border:none;padding:10px 22px;font-weight:700;font-size:.85rem;background:var(--cor-primaria);color:#fff" onclick="trocarModo('vinculada')">🔗 VINCULADA</button>
+                    <button type="button" id="btnModoAvulsa" class="btn" style="border-radius:0;border:none;padding:10px 22px;font-weight:700;font-size:.85rem;background:var(--cor-fundo);color:var(--cor-texto-secundario)" onclick="trocarModo('avulsa')">📦 AVULSA</button>
+                </div>
+                <input type="hidden" id="modoEntrega" value="vinculada">
+
+                <div id="camposVinculada">
+                    <div class="nota-secao-titulo">Vincular origem</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+                        <div class="campo-nota"><label>Tipo</label><select id="tipoOrigem" onchange="atualizarOrigem()"><option value="venda">Venda (SL)</option><option value="os">Ordem de Serviço (OS)</option></select></div>
+                        <div class="campo-nota"><label>Buscar</label><input type="text" id="buscarOrigem" oninput="filtrarOrigem()" placeholder="SL0001 / OS0001 / cliente"></div>
+                    </div>
+                    <div class="campo-nota" style="margin-bottom:10px"><label>Selecione a origem *</label><select id="origemSelect" onchange="carregarOrigem()"><option value="">Selecione</option></select></div>
+                    <div id="origemCard" style="display:none;border:1.5px solid var(--cor-primaria);border-radius:12px;padding:12px 16px;background:var(--cor-primaria-light);margin-bottom:12px">
+                        <div style="font-weight:800;color:var(--cor-primaria)" id="origemInfo">—</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px;font-size:.84rem">
+                            <div><b>Cliente:</b> <span id="origemCliente"></span></div>
+                            <div><b>Endereço:</b> <span id="origemEndereco"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="camposAvulsa" style="display:none">
+                    <div class="nota-secao-titulo">Entrega avulsa</div>
+                    <p class="text-muted" style="font-size:.82rem;margin-bottom:10px">Preencha manualmente cliente e endereço — sem vínculo</p>
+                </div>
+
+                <div class="nota-secao-titulo">Dados da entrega</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="campo-nota"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="Nome do cliente"></div>
+                    <div class="campo-nota"><label for="telefone">Telefone</label><input type="text" id="telefone" placeholder="(00) 00000-0000"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-top:12px">
+                    <div class="campo-nota"><label for="endereco">Endereço *</label><input type="text" id="endereco" placeholder="Rua, número, bairro, cidade"></div>
+                    <div class="campo-nota"><label for="bairro">Bairro</label><input type="text" id="bairro" placeholder="Bairro"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
+                    <div class="campo-nota"><label for="entregador">Entregador</label><select id="entregador"><option value="">Selecione</option></select></div>
+                    <div class="campo-nota"><label for="dataEntrega">Data</label><input type="date" id="dataEntrega"></div>
+                    <div class="campo-nota"><label for="horario">Horário</label><input type="text" id="horario" placeholder="08:00 - 12:00"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
+                    <div class="campo-nota"><label for="taxa">Taxa (R$)</label><input type="number" id="taxa" min="0" step="0.01" placeholder="0,00"></div>
+                    <div class="campo-nota"><label for="status">Status</label><select id="status"><option value="Pendente">Pendente</option><option value="Em rota">Em rota</option><option value="Entregue">Entregue</option><option value="Falha">Falha</option><option value="Cancelada">Cancelada</option><option value="Reagendada">Reagendada</option></select></div>
+                    <div class="campo-nota"><label for="comprovante">Comprovante</label><input type="text" id="comprovante" placeholder="Assinatura / código"></div>
+                </div>
+                <div class="campo-nota" style="margin-top:12px"><label for="observacao">Observação</label><textarea id="observacao" placeholder="Ponto de referência, instruções..."></textarea></div>
+            </div>
+        </div>
+
+        <div class="area-acoes" style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap">
+            <button type="button" class="btn btn-outline" onclick="limpar()">Limpar</button>
+            <button type="button" class="btn btn-primary" style="min-width:180px" id="btnSalvar" onclick="salvar()">💾 Salvar entrega</button>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><h2 class="card-title">Rota do dia</h2><div style="display:flex;gap:8px;align-items:center"><input type="date" id="dataRota" class="form-input" style="width:auto;min-height:36px" onchange="carregarRota()"><button class="btn btn-outline btn-sm" onclick="abrirRotaMapa()">🗺 Ver no Maps</button><button class="btn btn-ghost btn-sm" onclick="carregarRota()">↻</button></div></div>
+            <div id="listaRota"><div class="empty-state" style="padding:16px"><p>Selecione a data</p></div></div>
+        </div>
+
+        <div class="card mt-3" id="cardRegistros">
+            <div class="card-header"><h2 class="card-title">Entregas registradas</h2><div style="display:flex;gap:8px"><select id="filtroStatus" class="form-select" style="width:auto;min-height:36px" onchange="filtrar()"><option value="">Todos status</option><option>Pendente</option><option>Em rota</option><option>Entregue</option><option>Falha</option><option>Cancelada</option><option>Reagendada</option></select><button class="btn btn-ghost btn-sm" onclick="carregar()">↻</button></div></div>
+            <div class="campo-busca" style="margin-bottom:12px"><span class="busca-icon">🔍</span><input type="text" class="form-input" id="buscar" placeholder="Buscar cliente, endereço, entregador..." oninput="filtrar()"></div>
+            <div id="lista"><div class="empty-state" style="padding:16px"><div class="empty-icon">⏳</div><p>Carregando...</p></div></div>
+        </div>
+    </div>
+</main>
+</div>
+<div id="areaImpressaoEntrega"></div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}"></script>
+<script>
+const S=window.SistemaUtil; S.initSidebar();
+let listaVendas=[], listaOS=[], entregas=[], rotaAtual=[], editandoId=null;
+function definirDataHoje(){ const h=new Date(); document.getElementById("dataEntrega").value=h.toISOString().split("T")[0]; document.getElementById("dataRota").value=h.toISOString().split("T")[0]; }
+function trocarModo(modo){
+    document.getElementById("modoEntrega").value=modo;
+    const bV=document.getElementById("btnModoVinculada"), bA=document.getElementById("btnModoAvulsa");
+    if(modo==="avulsa"){ bV.style.background="var(--cor-fundo)"; bV.style.color="var(--cor-texto-secundario)"; bA.style.background="var(--cor-primaria)"; bA.style.color="#fff"; document.getElementById("camposVinculada").style.display="none"; document.getElementById("camposAvulsa").style.display="block"; document.getElementById("origemCard").style.display="none"; }
+    else{ bV.style.background="var(--cor-primaria)"; bV.style.color="#fff"; bA.style.background="var(--cor-fundo)"; bA.style.color="var(--cor-texto-secundario)"; document.getElementById("camposVinculada").style.display="block"; document.getElementById("camposAvulsa").style.display="none"; }
+}
+async function carregarVendedores(){ try{ const r=await fetch("/api/vendedores"); const j=await r.json(); const sel=document.getElementById("entregador"); sel.innerHTML='<option value=\"\">Selecione</option>'; j.forEach(u=>{ const n=u.usuario||u.nome||""; if(n){ const o=document.createElement("option"); o.value=n; o.textContent=n; sel.appendChild(o); } }); }catch(e){} }
+async function carregarOrigens(){
+    try{ const [rv, ro]=await Promise.all([fetch("/api/vendas"), fetch("/ordens")]); listaVendas=rv.ok?await rv.json():[]; listaOS=ro.ok?await ro.json():[]; filtrarOrigem(); }catch(e){}
+}
+function filtrarOrigem(){
+    const tipo=document.getElementById("tipoOrigem").value, termo=(document.getElementById("buscarOrigem").value||"").toLowerCase().trim(), sel=document.getElementById("origemSelect"); sel.innerHTML='<option value=\"\">Selecione</option>';
+    const lista=tipo==="venda"?listaVendas:listaOS;
+    lista.forEach(v=>{
+        const num=String(v.numero).padStart(4,"0"); const cliente=(v.cliente||"").toLowerCase();
+        const match=!termo||num.includes(termo)||cliente.includes(termo);
+        if(match){ const o=document.createElement("option"); const pref=tipo==="venda"?"SL":"OS"; o.value=v.id; o.textContent=`${pref}${num} — ${v.cliente||""} ${v.endereco?('· '+v.endereco):''}`; sel.appendChild(o); }
+    });
+}
+function atualizarOrigem(){ filtrarOrigem(); document.getElementById("origemCard").style.display="none"; }
+async function carregarOrigem(){
+    const tipo=document.getElementById("tipoOrigem").value, id=document.getElementById("origemSelect").value;
+    if(!id){ document.getElementById("origemCard").style.display="none"; return; }
+    try{
+        if(tipo==="venda"){ const r=await fetch("/api/vendas/"+id); const v=await r.json(); document.getElementById("cliente").value=v.cliente||""; document.getElementById("endereco").value=v.endereco||v.observacao||""; document.getElementById("telefone").value=v.telefone||""; document.getElementById("origemInfo").innerText=`SL${String(v.numero).padStart(4,"0")} — ${v.cliente||""}`; document.getElementById("origemCliente").innerText=v.cliente||"-"; document.getElementById("origemEndereco").innerText=v.endereco||v.observacao||"-"; }
+        else{ const r=await fetch("/ordem/"+id); const o=await r.json(); document.getElementById("cliente").value=o.cliente||""; document.getElementById("telefone").value=o.telefone||""; document.getElementById("origemInfo").innerText=`OS${String(o.numero).padStart(5,"0")} — ${o.cliente||""}`; document.getElementById("origemCliente").innerText=o.cliente||"-"; document.getElementById("origemEndereco").innerText=o.endereco||o.problema||"-"; }
+        document.getElementById("origemCard").style.display="block";
+    }catch(e){}
+}
+function statusBadge(s){ return `<span class="badge-entrega badge-${s}">${s}</span>`; }
+async function carregar(){ try{ const r=await fetch("/api/entregas"); entregas=r.ok?await r.json():[]; filtrar(); carregarRota(); }catch(e){} }
+function filtrar(){
+    const termo=(document.getElementById("buscar").value||"").toLowerCase().trim(), status=document.getElementById("filtroStatus").value;
+    const lista=entregas.filter(e=>{
+        const t=[e.cliente||"", e.endereco||"", e.bairro||"", e.entregador||"", e.observacao||"", "ENT"+String(e.numero).padStart(4,"0")].join(" ").toLowerCase();
+        const okBusca=!termo||t.includes(termo), okStatus=!status||e.status===status;
+        return okBusca&&okStatus;
+    });
+    const cont=document.getElementById("lista");
+    if(lista.length===0){ cont.innerHTML='<div class="empty-state" style="padding:16px"><p>Nenhuma entrega</p></div>'; return; }
+    cont.innerHTML="";
+    lista.forEach(e=>{
+        const div=document.createElement("div"); div.className="entrega-card";
+        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-outline btn-sm" onclick="imprimirEntrega(${e.id})">🖨</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
+        cont.appendChild(div);
+    });
+}
+async function alterarStatus(id, novo){ try{ const r=await fetch("/api/entregas/"+id+"/status",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:novo})}); const j=await r.json(); if(!r.ok) throw new Error(j.erro); S.Toast.sucesso(j.mensagem); carregar(); }catch(e){ S.Toast.erro(e.message); } }
+async function salvar(){
+    const modo=document.getElementById("modoEntrega").value;
+    const tipo=document.getElementById("tipoOrigem").value, origemId=document.getElementById("origemSelect").value;
+    if(modo==="vinculada" && !origemId){ S.Toast.erro("Selecione a origem vinculada."); return; }
+    const cliente=document.getElementById("cliente").value.trim(), endereco=document.getElementById("endereco").value.trim();
+    if(!cliente){ S.Toast.erro("Informe o cliente."); return; }
+    if(!endereco){ S.Toast.erro("Informe o endereço."); return; }
+    const dados={ cliente, telefone:document.getElementById("telefone").value.trim(), endereco, bairro:document.getElementById("bairro").value.trim(), entregador:document.getElementById("entregador").value, data_entrega:document.getElementById("dataEntrega").value, horario:document.getElementById("horario").value.trim(), taxa:Number(document.getElementById("taxa").value)||0, status:document.getElementById("status").value, observacao:document.getElementById("observacao").value.trim(), comprovante:document.getElementById("comprovante").value.trim(), venda_id: modo==="vinculada"&&tipo==="venda"?Number(origemId):null, ordem_id: modo==="vinculada"&&tipo==="os"?Number(origemId):null };
+    const url=editandoId?"/api/entregas/"+editandoId:"/api/entregas", method=editandoId?"PUT":"POST";
+    S.mostrarLoading(editandoId?"Atualizando...":"Salvando...");
+    try{ const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)}); const j=await r.json(); if(!r.ok) throw new Error(j.erro); S.Toast.sucesso(j.mensagem); limpar(); carregar(); }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
+}
+async function editarEntrega(id){
+    try{ const r=await fetch("/api/entregas/"+id); const e=await r.json(); if(!r.ok) throw new Error(e.erro); editandoId=id;
+        if(e.venda_id){ trocarModo("vinculada"); document.getElementById("tipoOrigem").value="venda"; await carregarOrigens(); document.getElementById("origemSelect").value=String(e.venda_id); document.getElementById("origemCard").style.display="block"; } else if(e.ordem_id){ trocarModo("vinculada"); document.getElementById("tipoOrigem").value="os"; await carregarOrigens(); document.getElementById("origemSelect").value=String(e.ordem_id); document.getElementById("origemCard").style.display="block"; } else trocarModo("avulsa");
+        document.getElementById("cliente").value=e.cliente||""; document.getElementById("telefone").value=e.telefone||""; document.getElementById("endereco").value=e.endereco||""; document.getElementById("bairro").value=e.bairro||""; document.getElementById("entregador").value=e.entregador||""; document.getElementById("dataEntrega").value=e.data_entrega||""; document.getElementById("horario").value=e.horario||""; document.getElementById("taxa").value=e.taxa||0; document.getElementById("status").value=e.status||"Pendente"; document.getElementById("observacao").value=e.observacao||""; document.getElementById("comprovante").value=e.comprovante||"";
+        document.getElementById("badgeEntrega").innerText="ENT"+String(e.numero).padStart(4,"0"); document.getElementById("btnSalvar").innerText="💾 Salvar alterações"; window.scrollTo({top:0,behavior:"smooth"});
+    }catch(e){ S.Toast.erro(e.message); }
+}
+async function excluirEntrega(id){ if(!confirm("Excluir entrega ENT"+String(id).padStart(4,"0")+"?")) return; S.mostrarLoading("Excluindo..."); try{ const r=await fetch("/api/entregas/"+id,{method:"DELETE"}); const j=await r.json(); if(!r.ok) throw new Error(j.erro); S.Toast.sucesso(j.mensagem); carregar(); }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); } }
+function limpar(){ editandoId=null; document.getElementById("badgeEntrega").innerText="ENT --"; document.getElementById("btnSalvar").innerText="💾 Salvar entrega"; document.getElementById("origemSelect").value=""; document.getElementById("origemCard").style.display="none"; ["cliente","telefone","endereco","bairro","horario","taxa","observacao","comprovante"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; }); document.getElementById("status").value="Pendente"; definirDataHoje(); }
+async function carregarRota(){
+    const data=document.getElementById("dataRota").value; if(!data) return;
+    try{ const r=await fetch("/api/entregas/rota?data="+data); const lista=r.ok?await r.json():[]; rotaAtual=lista;
+        const cont=document.getElementById("listaRota");
+        if(lista.length===0){ cont.innerHTML='<div class="empty-state" style="padding:16px"><p>Nenhuma entrega pendente para '+data.split("-").reverse().join("/")+'</p></div>'; return; }
+        cont.innerHTML=`<div style="font-size:.82rem;color:var(--cor-texto-secundario);margin-bottom:8px">${lista.length} paradas · ordenado por bairro/endereço · <span style="font-weight:700">${lista.filter(e=>e.status==="Pendente").length} pendentes</span></div>`;
+        lista.forEach((e,i)=>{
+            const div=document.createElement("div"); div.style.cssText="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--cor-borda);border-radius:10px;margin-bottom:8px;background:#fff";
+            div.innerHTML=`<span style="width:28px;height:28px;border-radius:50%;background:var(--cor-primaria);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem">${i+1}</span><div style="flex:1;min-width:0"><div style="font-weight:700">${e.cliente||""} — ${e.endereco||""} ${e.bairro?("("+e.bairro+")"):""}</div><div style="font-size:.78rem;color:var(--cor-texto-secundario)">${e.horario||""} · ${e.entregador||""} · ${e.status} ${e.taxa?("· R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div></div><a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.endereco+" "+(e.bairro||""))}" target="_blank">📍 Mapa</a>`;
+            cont.appendChild(div);
+        });
+        const qtdPend=lista.filter(e=>e.status==="Em rota").length; // keep for badge?
+    }catch(e){}
+}
+function abrirRotaMapa(){
+    if(rotaAtual.length===0){ S.Toast.aviso("Nenhuma entrega na rota."); return; }
+    const dest=encodeURIComponent(rotaAtual[rotaAtual.length-1].endereco+" "+(rotaAtual[rotaAtual.length-1].bairro||""));
+    const waypoints=rotaAtual.slice(0,-1).map(e=>encodeURIComponent(e.endereco+" "+(e.bairro||""))).join("|");
+    let url=`https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+    if(waypoints) url+=`&waypoints=${waypoints}`;
+    window.open(url, "_blank");
+}
+function imprimirEntrega(id){
+    fetch("/api/entregas/"+id).then(r=>r.json()).then(e=>{
+        const area=document.getElementById("areaImpressaoEntrega");
+        function viaHTML(isSegunda){
+            return `<div class="via-impressao"><div style="display:flex;justify-content:space-between;align-items:center;padding:4px 10px;margin:-2px -2px 8px -2px;border-radius:6px;background:${isSegunda?'#1e293b':'#0ea5e9'};color:#fff;font-size:8px;font-weight:800;letter-spacing:.1em"><span>${isSegunda?'✦ VIA DA LOJA — 2ª VIA':'✦ VIA DO CLIENTE — 1ª VIA'}</span><span style="opacity:.75">${isSegunda?'ARQUIVO INTERNO':'ENTREGAR AO CLIENTE'}</span></div><div style="display:flex;justify-content:space-between;align-items:center"><span><b>ENTREGA ENT${String(e.numero).padStart(4,"0")}</b></span><span style="font-size:10px">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="border-top:1px solid #000;margin:8px 0"></div><div><b>CLIENTE:</b> ${e.cliente||""} ${e.telefone?"· "+e.telefone:""}</div><div><b>ENDEREÇO:</b> ${e.endereco||""} ${e.bairro?"· "+e.bairro:""}</div><div><b>ENTREGADOR:</b> ${e.entregador||"-"} · <b>TAXA:</b> R$ ${Number(e.taxa||0).toFixed(2).replace(".",",")} · <b>STATUS:</b> ${e.status||""}</div><div><b>OBS:</b> ${e.observacao||"-"}</div><div><b>COMPROVANTE:</b> ${e.comprovante||"-"}</div>${e.venda_id?`<div><b>VINCULADA:</b> SL${String(e.venda_numero||"").padStart(4,"0")} ${e.venda_cliente||""}</div>`:""}${e.ordem_id?`<div><b>OS:</b> OS${String(e.ordem_numero||"").padStart(5,"0")}</div>`:""}<div style="margin-top:14px;text-align:center"><div style="width:90mm;border-top:1.5px solid #000;margin:0 auto 4px"></div><div style="font-size:10px;font-weight:700">ASSINATURA DO CLIENTE</div></div></div>`;
+        }
+        const recorte='<div style="width:190mm;display:flex;align-items:center;justify-content:center;gap:8px;padding:2px 0;page-break-inside:avoid;"><div style="flex:1;border-top:1.5px dashed #111827"></div><span style="display:flex;align-items:center;gap:5px;font-size:7.5px;font-weight:800;color:#111827;letter-spacing:.07em;white-space:nowrap"><span style="font-size:11px">✂</span> RECORTE AQUI</span><div style="flex:1;border-top:1.5px dashed #111827"></div></div>';
+        area.innerHTML=`<div class="pagina-impressao">${viaHTML(false)}${recorte}${viaHTML(true)}</div>`; window.print();
+    });
+}
+document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); });
+</script>
+<script>
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=3").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(()=>{}); }); }
+</script>
+</body>
+</html>
