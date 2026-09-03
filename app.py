@@ -78,6 +78,16 @@ def json_body():
     return dados
 
 
+def agora_sp():
+    """Data/hora atual no fuso America/Sao_Paulo (UTC-3, sem DST).
+
+    O servidor (Vercel) roda em UTC; usar este helper em todo lugar
+    que precise da hora local da loja (criacao, hoje, mes, etc.).
+    """
+    from datetime import datetime, timedelta, timezone
+    return datetime.now(timezone(timedelta(hours=-3)))
+
+
 def senha_valida(senha):
     return isinstance(senha, str) and len(senha) >= 4
 
@@ -196,7 +206,7 @@ def validar_itens(itens, campo_nome):
 def verificar_vencimentos():
     """Marca como 'vencida' todas as vendas a prazo cujo vencimento já passou."""
     from datetime import datetime
-    hoje = datetime.now().strftime("%Y-%m-%d")
+    hoje = agora_sp().strftime("%Y-%m-%d")
     try:
         conexao = conectar()
         cur = conexao.cursor()
@@ -2122,7 +2132,7 @@ def resumo_dashboard():
     from datetime import datetime
     mes = (request.args.get("mes") or "").strip()
     if not mes:
-        mes = datetime.now().strftime("%Y-%m")
+        mes = agora_sp().strftime("%Y-%m")
     conexao = conectar()
     cursor = conexao.cursor()
 
@@ -2550,7 +2560,7 @@ def criar_devolucao():
     ultimo = 0 if not ctrl else ctrl["ultimo_numero"]
     novo = ultimo + 1
     from datetime import datetime
-    data = dados.get("data") or datetime.now().strftime("%Y-%m-%d")
+    data = dados.get("data") or agora_sp().strftime("%Y-%m-%d")
     cur.execute("""
         INSERT INTO devolucoes (numero, venda_id, data, motivo, observacao, total, vendedor)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -2599,7 +2609,7 @@ def editar_devolucao(id):
 
     cur.execute("BEGIN IMMEDIATE")
     from datetime import datetime
-    data = dados.get("data") or datetime.now().strftime("%Y-%m-%d")
+    data = dados.get("data") or agora_sp().strftime("%Y-%m-%d")
     cur.execute("""
         UPDATE devolucoes
         SET venda_id=?, data=?, motivo=?, observacao=?, total=?, vendedor=?
@@ -2735,7 +2745,7 @@ def criar_entrega():
     novo=(row["ultimo_numero"] if row else 0)+1
     from datetime import datetime
     import secrets
-    criacao=datetime.now().strftime("%Y-%m-%d %H:%M")
+    criacao=agora_sp().strftime("%Y-%m-%d %H:%M")
     qr_token=secrets.token_hex(6)
     cur.execute("""INSERT INTO entregas (numero, venda_id, ordem_id, cliente, telefone, endereco, bairro, entregador, data_entrega, horario, taxa, status, observacao, comprovante, criacao, qr_token)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -2893,7 +2903,7 @@ def avancar_entrega(id):
         conexao.close()
         return jsonify({"erro":"Entrega cancelada/falha não pode avançar."}),400
     from datetime import datetime
-    agora=datetime.now().strftime("%Y-%m-%d %H:%M")
+    agora=agora_sp().strftime("%Y-%m-%d %H:%M")
     usuario=session.get("usuario","")
     if status_atual=="Pendente":
         novo="SAIU PARA ROTA"

@@ -320,6 +320,7 @@ function imprimirEntrega(id){
     fetch("/api/entregas/"+id).then(r=>r.json()).then(e=>{
         const area=document.getElementById("areaImpressaoEntrega");
         const dataHora = (e.data_entrega ? e.data_entrega.split("-").reverse().join("/") : "") + (e.horario ? " " + e.horario : (e.criacao ? " " + e.criacao.split(" ")[1] : ""));
+        const emissao = e.criacao ? (e.criacao.slice(8,10) + "/" + e.criacao.slice(5,7) + "/" + e.criacao.slice(0,4) + " " + e.criacao.slice(11,16)) : "";
                         function viaZebra(){
             const taxaFmt = "R$ " + Number(e.taxa||0).toFixed(2).replace(".",",");
             return `<div class="via-impressao" style="color:#000;font-family:Arial,Helvetica,sans-serif;font-weight:700">
@@ -328,6 +329,7 @@ function imprimirEntrega(id){
                     <div style="font-weight:900;font-size:9pt;letter-spacing:.02em;color:#000">NOTA DE ENTREGA</div>
                     <div style="margin-top:3px;display:inline-block;border:1.8px solid #000;padding:2px 10px;font-weight:900;font-size:11pt;color:#000">ENT${String(e.numero).padStart(4,"0")}</div>
                     <div style="font-size:7pt;margin-top:2px;font-weight:700;color:#000">${dataHora.trim()||"-"} — ${e.status||""}</div>
+                    ${emissao ? '<div style="font-size:6.5pt;margin-top:1px;font-weight:700;color:#000">EMITIDO EM ' + emissao + '</div>' : ""}
                 </div>
                 <div style="font-size:7.5pt;line-height:1.5;color:#000">
                     <div><span style="font-weight:900">CLIENTE:</span> <span style="font-weight:800">${e.cliente||"-"}</span></div>
