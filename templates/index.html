@@ -365,6 +365,40 @@
     }
 }
 
+/* ===== ATALHOS DO PAINEL ===== */
+
+.stat-atalho {
+    cursor: pointer;
+    position: relative;
+    transition: transform var(--transicao), box-shadow var(--transicao), border-color var(--transicao);
+}
+
+.stat-atalho:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--sombra-md);
+    border-color: var(--cor-primaria);
+}
+
+.stat-atalho:focus-visible {
+    outline: 2px solid var(--cor-primaria);
+    outline-offset: 2px;
+}
+
+.stat-atalho::after {
+    content: "›";
+    position: absolute;
+    right: 12px;
+    top: 6px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--cor-borda);
+}
+
+.stat-atalho:hover::after {
+    color: var(--cor-primaria);
+}
+
 /* ===== ITENS DA OS NO DETALHE ===== */
 
 .detalhe-itens {
@@ -591,41 +625,41 @@
     </div>
 
     <div class="stat-grid">
-        <div class="stat-card">
+        <div class="stat-card stat-atalho" role="button" tabindex="0" title="Consultar ordens de serviço" onclick="mostrarConsulta()">
             <h3>Total de OS</h3>
             <div class="stat-numero" id="totalOS">0</div>
         </div>
-        <div class="stat-card stat-warning">
+        <div class="stat-card stat-warning stat-atalho" role="button" tabindex="0" title="Consultar ordens de serviço" onclick="mostrarConsulta()">
             <h3>Em Andamento</h3>
             <div class="stat-numero" id="andamentoOS">0</div>
         </div>
-        <div class="stat-card stat-info">
+        <div class="stat-card stat-info stat-atalho" role="button" tabindex="0" title="Consultar ordens de serviço" onclick="mostrarConsulta()">
             <h3>Prontas</h3>
             <div class="stat-numero" id="prontaOS">0</div>
         </div>
-        <div class="stat-card stat-success">
+        <div class="stat-card stat-success stat-atalho" role="button" tabindex="0" title="Consultar ordens de serviço" onclick="mostrarConsulta()">
             <h3>Finalizadas</h3>
             <div class="stat-numero" id="finalizadaOS">0</div>
         </div>
     </div>
 
     <div class="stat-grid">
-        <div class="stat-card" style="border-top-color:#0ea5e9">
+        <div class="stat-card stat-atalho" style="border-top-color:#0ea5e9" role="button" tabindex="0" title="Abrir Nota Dobrada (vendas)" onclick="window.location.href='/nota_dobrada'">
             <h3>Vendas Hoje</h3>
             <div class="stat-numero" id="vendasHoje">0</div>
             <div class="stat-sub" id="vendasHojeSub">R$ 0,00</div>
         </div>
-        <div class="stat-card" style="border-top-color:#f59e0b">
+        <div class="stat-card stat-atalho" style="border-top-color:#f59e0b" role="button" tabindex="0" title="Abrir Entregas" onclick="window.location.href='/entregas'">
             <h3>Entregas Hoje</h3>
             <div class="stat-numero" id="entregasHoje">0</div>
             <div class="stat-sub" id="entregasHojeSub">0 pendentes</div>
         </div>
-        <div class="stat-card" style="border-top-color:#8b5cf6">
+        <div class="stat-card stat-atalho" style="border-top-color:#8b5cf6" role="button" tabindex="0" title="Abrir Entregas" onclick="window.location.href='/entregas'">
             <h3>Entregas Pendentes</h3>
             <div class="stat-numero" id="entregasPendentes">0</div>
             <div class="stat-sub">em rota + pendentes</div>
         </div>
-        <div class="stat-card stat-success">
+        <div class="stat-card stat-success stat-atalho" role="button" tabindex="0" title="Acompanhar notas e faturamento" onclick="window.location.href='/acompanhamento_notas'">
             <h3>Faturamento Hoje</h3>
             <div class="stat-numero" id="faturamentoHoje" style="font-size:1.25rem">R$ 0,00</div>
         </div>
