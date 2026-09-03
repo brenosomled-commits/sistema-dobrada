@@ -142,12 +142,13 @@ function limparForm(){
     document.getElementById('btnSalvar').innerText='💾 Salvar Orçamento';
     document.getElementById('btnConverter').style.display='none';
     document.getElementById('cardEditor').style.display='block';
+    document.getElementById('cardLista').style.display='none';
     document.getElementById('tituloEditor').innerText='Novo Orçamento';
     fetch('/api/orcamentos/proximo_numero').then(r=>r.json()).then(j=>{ document.getElementById('numeroExibido').innerText='ORC'+String(j.numero||0).padStart(4,'0'); }).catch(()=>{});
     adicionarLinha();
 }
 function novoOrcamento(){ limparForm(); }
-function cancelarEdicao(){ document.getElementById('cardEditor').style.display='none'; carregar(); }
+function cancelarEdicao(){ document.getElementById('cardEditor').style.display='none'; document.getElementById('cardLista').style.display='block'; carregar(); }
 function adicionarLinha(item){
     const tipo=item&&item.tipo?item.tipo:'PRODUTO';
     const q=item&&item.quantidade!=null?item.quantidade:'';
@@ -208,8 +209,17 @@ async function salvarOrcamento(){
         const r=await fetch(url,{method:metodo,headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
         const j=await r.json();
         if(!r.ok) throw new Error(j.erro||'Erro ao salvar');
+        // Atualiza o id para edições futuras (primeiro salvamento)
+        if(!orcamentoEditando && j.id){
+            orcamentoEditando=j.id;
+            document.getElementById('btnSalvar').innerText='💾 Salvar Alterações';
+            document.getElementById('btnConverter').style.display='inline-block';
+            if(j.numero) document.getElementById('numeroExibido').innerText='ORC'+String(j.numero).padStart(4,'0');
+            document.getElementById('tituloEditor').innerText='Editar Orçamento';
+        }
         S.Toast.sucesso('Orçamento salvo!');
-        await carregar(true);
+        // Atualiza lista em background sem fechar o editor
+        _carregarLista();
     }catch(e){ S.Toast.erro('Erro: '+e.message); }
     finally{ S.esconderLoading(); }
 }
@@ -274,16 +284,16 @@ function editarOrcamento(id){
         window.scrollTo({top:0,behavior:'smooth'});
     }).catch(()=>S.Toast.erro('Erro ao carregar orçamento'));
 }
-async function carregar(manterAberto){
-    S.mostrarLoading('Carregando...');
+// Atualiza apenas a tabela em background (não toca no editor)
+async function _carregarLista(){
     try{
         const r=await fetch('/api/orcamentos'); const j=await r.json();
-        if(!r.ok){ S.Toast.erro(j.erro||'Erro'); return; }
+        if(!r.ok) return;
         const lista=j||[];
         document.getElementById('badgeCount').innerText=lista.length+' orçamento(s)';
         const tbody=document.getElementById('tbodyLista'); tbody.innerHTML='';
         const empty=document.getElementById('emptyLista');
-        if(lista.length===0){ empty.style.display='block'; } else { empty.style.display='none'; }
+        empty.style.display=lista.length===0?'block':'none';
         lista.forEach(function(o){
             const st=estadoOrcamento(o);
             const tr=document.createElement('tr');
@@ -303,6 +313,18 @@ async function carregar(manterAberto){
                 '<td class="no-print">'+acoes+'</td>';
             tbody.appendChild(tr);
         });
+    }catch(e){}
+}
+// carregar(): exibe a lista e opcionalmente mantém o editor aberto
+async function carregar(manterAberto){
+    S.mostrarLoading('Carregando...');
+    try{
+        await _carregarLista();
+        // Só mostra a lista e oculta o editor se não estiver editando
+        if(!manterAberto){
+            document.getElementById('cardEditor').style.display='none';
+            document.getElementById('cardLista').style.display='block';
+        }
     }catch(e){ S.Toast.erro('Erro de conexão'); }
     finally{ S.esconderLoading(); }
 }
@@ -323,7 +345,7 @@ carregar();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=8").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+    navigator.serviceWorker.register("/sw.js?v=8").catch(function(e){ console.warn("SW:", e); });
   });
 }
 </script>
