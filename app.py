@@ -186,6 +186,44 @@ def validar_desconto_percentual(desconto, papel):
     return None
 
 
+def _autorizar_desconto(dados, desconto, papel):
+    """Se o desconto ultrapassar o limite do papel logado, exige no payload as
+    credenciais de um usuário autorizado (GERENTE/DONO ou AUTORIZADORES), valida
+    no servidor e registra a aprovação. Retorna (erro, gerente_aprovador)."""
+    limite = desconto_maximo_por_papel(papel)
+    if desconto <= limite:
+        return None, None
+    login = str(dados.get("gerente_login") or "").strip().upper()
+    senha = str(dados.get("gerente_senha") or "")
+    if not login or not senha:
+        return f"Desconto acima do limite ({limite}%) — é necessária a aprovação de um gerente.", None
+    conexao = conectar()
+    gerente = conexao.execute(
+        "SELECT * FROM usuarios WHERE upper(usuario) = upper(?)", (login,)
+    ).fetchone()
+    if not gerente:
+        conexao.close()
+        return "Usuário autorizador não encontrado.", None
+    papel_g = str(gerente["papel"] or "").upper()
+    if papel_g not in PAPEIS_GESTAO and login not in AUTORIZADORES:
+        conexao.close()
+        return "Apenas usuários autorizados podem aprovar.", None
+    hash_s = gerente["senha"]
+    ok_senha = check_password_hash(hash_s, senha) if hash_s.startswith(("pbkdf2:", "scrypt:")) else hash_s == senha
+    if not ok_senha:
+        conexao.close()
+        return "Senha do autorizador inválida.", None
+    vendedor = session.get("usuario") or "?"
+    agora = agora_sp().strftime("%d/%m/%Y %H:%M")
+    conexao.execute(
+        "INSERT INTO aprovacoes (acao, referencia, vendedor, detalhe, gerente, status, criacao, aprovado_em) VALUES (?,?,?,?,?,?,?,?)",
+        ("Desconto acima do limite", "", vendedor, "Desconto de %s%% (limite %s%%)" % (desconto, limite), login, "APROVADO", agora, agora)
+    )
+    conexao.commit()
+    conexao.close()
+    return None, login
+
+
 def validar_itens(itens, campo_nome):
     if not isinstance(itens, list):
         return None, "A lista de itens é inválida."
@@ -607,6 +645,50 @@ def _criar_banco_sqlite():
     cursor.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)", ("zebra_largura", "80"))
     cursor.execute("INSERT OR IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)", ("zebra_auto", "1"))
 
+    # =========================
+    # ORÇAMENTOS
+    # =========================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orcamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero INTEGER UNIQUE NOT NULL,
+            vendedor TEXT,
+            cliente TEXT,
+            telefone TEXT,
+            endereco TEXT,
+            condicao TEXT,
+            validade_dias INTEGER DEFAULT 30,
+            observacao TEXT,
+            total REAL DEFAULT 0,
+            status TEXT DEFAULT 'aberto',
+            venda_id INTEGER,
+            criacao TEXT,
+            created_by TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orcamento_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            orcamento_id INTEGER NOT NULL,
+            tipo TEXT DEFAULT 'PRODUTO',
+            quantidade REAL DEFAULT 1,
+            descricao TEXT,
+            valor REAL DEFAULT 0,
+            FOREIGN KEY (orcamento_id) REFERENCES orcamentos(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_orcamentos (
+            id INTEGER PRIMARY KEY,
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("SELECT id FROM controle_orcamentos WHERE id = 1")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO controle_orcamentos (id, ultimo_numero) VALUES (1, 0)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_orcamentos_numero ON orcamentos(numero DESC)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_orcamento_itens_orcamento ON orcamento_itens(orcamento_id)")
+
     # Índices mantêm as telas de triagem e acompanhamento rápidas quando a
     # base crescer.
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_ordens_numero ON ordens(numero DESC)")
@@ -950,6 +1032,53 @@ def _criar_banco_postgres():
     cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO NOTHING", ("zebra_nome", "ELGIN i9 (USB)"))
     cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO NOTHING", ("zebra_largura", "80"))
     cursor.execute("INSERT INTO configuracoes (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO NOTHING", ("zebra_auto", "1"))
+
+    # =========================
+    # ORÇAMENTOS
+    # =========================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orcamentos (
+            id SERIAL PRIMARY KEY,
+            numero INTEGER UNIQUE NOT NULL,
+            vendedor TEXT,
+            cliente TEXT,
+            telefone TEXT,
+            endereco TEXT,
+            condicao TEXT,
+            validade_dias INTEGER DEFAULT 30,
+            observacao TEXT,
+            total DOUBLE PRECISION DEFAULT 0,
+            status TEXT DEFAULT 'aberto',
+            venda_id INTEGER,
+            criacao TEXT,
+            created_by TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS orcamento_itens (
+            id SERIAL PRIMARY KEY,
+            orcamento_id INTEGER NOT NULL,
+            tipo TEXT DEFAULT 'PRODUTO',
+            quantidade DOUBLE PRECISION DEFAULT 1,
+            descricao TEXT,
+            valor DOUBLE PRECISION DEFAULT 0,
+            FOREIGN KEY (orcamento_id) REFERENCES orcamentos(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS controle_orcamentos (
+            id INTEGER PRIMARY KEY,
+            ultimo_numero INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("SELECT id FROM controle_orcamentos WHERE id = 1")
+    if not cursor.fetchone():
+        cursor.execute("INSERT INTO controle_orcamentos (id, ultimo_numero) VALUES (%s, %s)", (1, 0))
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_orcamentos_numero ON orcamentos(numero DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_orcamento_itens_orcamento ON orcamento_itens(orcamento_id)")
+    except Exception:
+        pass
 
     # Índices
     try:
@@ -1981,9 +2110,9 @@ def salvar_venda():
     except (TypeError, ValueError):
         return jsonify({"erro": "Desconto inválido."}), 400
     papel_usuario = obter_papel_usuario(session["usuario"]) or "VENDEDOR"
-    erro_desconto = validar_desconto_percentual(desconto, papel_usuario)
+    erro_desconto, _ = _autorizar_desconto(dados, desconto, papel_usuario)
     if erro_desconto:
-        return jsonify({"erro": erro_desconto}), 400
+        return jsonify({"erro": erro_desconto, "precisa_aprovacao": True}), 403
 
     total = max(0, sum(quantidade * valor for _, quantidade, valor in itens) * (1 - desconto / 100))
     comissao = round(total * COMISSAO_PERCENTUAL / 100, 2)
@@ -2331,9 +2460,9 @@ def atualizar_venda(id):
     except (TypeError, ValueError):
         return jsonify({"erro": "Desconto inválido."}), 400
     papel_usuario = obter_papel_usuario(session["usuario"]) or "VENDEDOR"
-    erro_desconto = validar_desconto_percentual(desconto, papel_usuario)
+    erro_desconto, _ = _autorizar_desconto(dados, desconto, papel_usuario)
     if erro_desconto:
-        return jsonify({"erro": erro_desconto}), 400
+        return jsonify({"erro": erro_desconto, "precisa_aprovacao": True}), 403
 
     total = max(0, sum(quantidade * valor for _, quantidade, valor in itens) * (1 - desconto / 100))
     comissao = round(total * COMISSAO_PERCENTUAL / 100, 2)
@@ -2616,6 +2745,226 @@ def proximo_numero_devolucao():
     r = cur.fetchone()
     conexao.close()
     return jsonify({"numero": (r["ultimo_numero"] if r else 0) + 1})
+
+
+# =========================
+# ORÇAMENTOS
+# =========================
+
+@app.route("/orcamentos")
+@login_obrigatorio
+def pagina_orcamentos():
+    return render_template(
+        "orcamentos.html",
+        usuario=session["usuario"],
+        papel=obter_papel_usuario(session["usuario"])
+    )
+
+
+@app.route("/api/orcamentos/proximo_numero")
+@login_obrigatorio
+def proximo_numero_orcamento():
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT ultimo_numero FROM controle_orcamentos WHERE id=1")
+    r = cur.fetchone()
+    conexao.close()
+    return jsonify({"numero": (r["ultimo_numero"] if r else 0) + 1})
+
+
+@app.route("/api/orcamentos", methods=["GET"])
+@login_obrigatorio
+def listar_orcamentos():
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT * FROM orcamentos ORDER BY numero DESC")
+    orcs = cur.fetchall()
+    conexao.close()
+    return jsonify([{
+        "id": o["id"], "numero": o["numero"], "vendedor": o["vendedor"],
+        "cliente": o["cliente"], "telefone": o["telefone"], "endereco": o["endereco"],
+        "condicao": o["condicao"], "validade_dias": o["validade_dias"],
+        "observacao": o["observacao"], "total": o["total"], "status": o["status"],
+        "venda_id": o["venda_id"], "criacao": o["criacao"]
+    } for o in orcs])
+
+
+@app.route("/api/orcamentos/<int:id>")
+@login_obrigatorio
+def buscar_orcamento(id):
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT * FROM orcamentos WHERE id=?", (id,))
+    o = cur.fetchone()
+    if not o:
+        conexao.close()
+        return jsonify({"erro": "Orçamento não encontrado"}), 404
+    cur.execute("SELECT * FROM orcamento_itens WHERE orcamento_id=? ORDER BY id", (id,))
+    its = cur.fetchall()
+    conexao.close()
+    return jsonify({
+        "id": o["id"], "numero": o["numero"], "vendedor": o["vendedor"],
+        "cliente": o["cliente"], "telefone": o["telefone"], "endereco": o["endereco"],
+        "condicao": o["condicao"], "validade_dias": o["validade_dias"],
+        "observacao": o["observacao"], "total": o["total"], "status": o["status"],
+        "venda_id": o["venda_id"], "criacao": o["criacao"],
+        "itens": [{"id": it["id"], "tipo": it["tipo"], "quantidade": it["quantidade"], "descricao": it["descricao"], "valor": it["valor"]} for it in its]
+    })
+
+
+def _orcamento_tipo_do_item(dados_itens, idx):
+    """Retorna o tipo (PRODUTO/SERVIÇO) do item alinhado por índice."""
+    if idx < len(dados_itens) and isinstance(dados_itens[idx], dict):
+        t = str(dados_itens[idx].get("tipo") or "").strip().upper().replace("SERVICO", "SERVIÇO")
+        if t == "SERVIÇO":
+            return "SERVIÇO"
+    return "PRODUTO"
+
+
+@app.route("/api/orcamentos", methods=["POST"])
+@login_obrigatorio
+def criar_orcamento():
+    dados = json_body()
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
+    cliente = str(dados.get("cliente") or "").strip()
+    if not cliente:
+        return jsonify({"erro": "Informe o cliente."}), 400
+    itens, erro = validar_itens(dados.get("itens", []), "descricao")
+    if erro:
+        return jsonify({"erro": erro}), 400
+    if not itens:
+        return jsonify({"erro": "Adicione pelo menos um item."}), 400
+    total = sum(q * valor for _, q, valor in itens)
+    try:
+        validade_dias = int(dados.get("validade_dias") or 30)
+    except (TypeError, ValueError):
+        validade_dias = 30
+    validade_dias = min(max(validade_dias, 0), 365)
+    origem_itens = dados.get("itens", [])
+    conexao = conectar()
+    cur = conexao.cursor()
+    vendedor = str(dados.get("vendedor") or "").strip() or session["usuario"]
+    cur.execute("BEGIN IMMEDIATE")
+    cur.execute("SELECT ultimo_numero FROM controle_orcamentos WHERE id=1")
+    ctrl = cur.fetchone()
+    ultimo = 0 if not ctrl else ctrl["ultimo_numero"]
+    novo = ultimo + 1
+    cur.execute("""
+        INSERT INTO orcamentos (numero, vendedor, cliente, telefone, endereco, condicao, validade_dias, observacao, total, status, criacao, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'aberto', ?, ?)
+    """, (novo, vendedor, cliente, dados.get("telefone", ""), dados.get("endereco", ""), dados.get("condicao", ""), validade_dias, dados.get("observacao", ""), total, agora_sp().strftime("%Y-%m-%d %H:%M:%S"), session["usuario"]))
+    orc_id = cur.lastrowid
+    for idx, (desc, q, v) in enumerate(itens):
+        cur.execute("INSERT INTO orcamento_itens (orcamento_id, tipo, quantidade, descricao, valor) VALUES (?, ?, ?, ?, ?)", (orc_id, _orcamento_tipo_do_item(origem_itens, idx), q, desc, v))
+    cur.execute("UPDATE controle_orcamentos SET ultimo_numero=? WHERE id=1", (novo,))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Orçamento criado!", "numero": novo, "id": orc_id, "total": total})
+
+
+@app.route("/api/orcamentos/<int:id>", methods=["PUT"])
+@login_obrigatorio
+def editar_orcamento(id):
+    dados = json_body()
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
+    cliente = str(dados.get("cliente") or "").strip()
+    if not cliente:
+        return jsonify({"erro": "Informe o cliente."}), 400
+    itens, erro = validar_itens(dados.get("itens", []), "descricao")
+    if erro:
+        return jsonify({"erro": erro}), 400
+    if not itens:
+        return jsonify({"erro": "Adicione pelo menos um item."}), 400
+    total = sum(q * valor for _, q, valor in itens)
+    try:
+        validade_dias = int(dados.get("validade_dias") or 30)
+    except (TypeError, ValueError):
+        validade_dias = 30
+    validade_dias = min(max(validade_dias, 0), 365)
+    origem_itens = dados.get("itens", [])
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT * FROM orcamentos WHERE id=?", (id,))
+    o = cur.fetchone()
+    if not o:
+        conexao.close()
+        return jsonify({"erro": "Orçamento não encontrado"}), 404
+    if o["status"] == "convertido":
+        conexao.close()
+        return jsonify({"erro": "Orçamento já convertido em venda não pode ser alterado."}), 400
+    cur.execute("""
+        UPDATE orcamentos SET cliente=?, telefone=?, endereco=?, condicao=?, validade_dias=?, observacao=?, total=?
+        WHERE id=?
+    """, (cliente, dados.get("telefone", ""), dados.get("endereco", ""), dados.get("condicao", ""), validade_dias, dados.get("observacao", ""), total, id))
+    cur.execute("DELETE FROM orcamento_itens WHERE orcamento_id=?", (id,))
+    for idx, (desc, q, v) in enumerate(itens):
+        cur.execute("INSERT INTO orcamento_itens (orcamento_id, tipo, quantidade, descricao, valor) VALUES (?, ?, ?, ?, ?)", (id, _orcamento_tipo_do_item(origem_itens, idx), q, desc, v))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Orçamento atualizado!", "id": id, "total": total})
+
+
+@app.route("/api/orcamentos/<int:id>", methods=["DELETE"])
+@login_obrigatorio
+def excluir_orcamento(id):
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT * FROM orcamentos WHERE id=?", (id,))
+    o = cur.fetchone()
+    if not o:
+        conexao.close()
+        return jsonify({"erro": "Orçamento não encontrado"}), 404
+    if o["status"] == "convertido":
+        conexao.close()
+        return jsonify({"erro": "Orçamento convertido em venda não pode ser excluído."}), 400
+    cur.execute("DELETE FROM orcamento_itens WHERE orcamento_id=?", (id,))
+    cur.execute("DELETE FROM orcamentos WHERE id=?", (id,))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Orçamento excluído!"})
+
+
+@app.route("/api/orcamentos/<int:id>/converter", methods=["POST"])
+@login_obrigatorio
+def converter_orcamento_em_venda(id):
+    conexao = conectar()
+    cur = conexao.cursor()
+    cur.execute("SELECT * FROM orcamentos WHERE id=?", (id,))
+    o = cur.fetchone()
+    if not o:
+        conexao.close()
+        return jsonify({"erro": "Orçamento não encontrado"}), 404
+    if o["status"] == "convertido":
+        conexao.close()
+        return jsonify({"erro": "Orçamento já foi convertido em venda."}), 400
+    cur.execute("SELECT * FROM orcamento_itens WHERE orcamento_id=? ORDER BY id", (id,))
+    its = cur.fetchall()
+    if not its:
+        conexao.close()
+        return jsonify({"erro": "Orçamento sem itens."}), 400
+    total = o["total"]
+    vendedor = o["vendedor"] or session["usuario"]
+    cliente_final = o["cliente"] or "CONSUMIDOR FINAL"
+    hoje = agora_sp().strftime("%Y-%m-%d")
+    cur.execute("BEGIN IMMEDIATE")
+    cur.execute("SELECT ultimo_numero FROM controle_vendas WHERE id=1")
+    ctrl = cur.fetchone()
+    ultimo = 0 if not ctrl else ctrl["ultimo_numero"]
+    novo = ultimo + 1
+    cur.execute("""
+        INSERT INTO vendas (numero, cliente, fantasia, telefone, vendedor, data, condicao, vencimento, desconto, observacao, endereco, total, comissao, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 'ativa')
+    """, (novo, cliente_final, "", o["telefone"], vendedor, hoje, o["condicao"] or "dinheiro", "", o["observacao"], o["endereco"], total, round(total * COMISSAO_PERCENTUAL / 100, 2)))
+    venda_id = cur.lastrowid
+    for item in its:
+        cur.execute("INSERT INTO venda_itens (venda_id, quantidade, descricao, valor) VALUES (?, ?, ?, ?)", (venda_id, item["quantidade"], item["descricao"], item["valor"]))
+    cur.execute("UPDATE controle_vendas SET ultimo_numero=? WHERE id=1", (novo,))
+    cur.execute("UPDATE orcamentos SET status='convertido', venda_id=? WHERE id=?", (venda_id, id))
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Orçamento convertido em venda!", "venda_id": venda_id, "venda_numero": novo})
 
 
 @app.route("/api/devolucoes", methods=["GET"])

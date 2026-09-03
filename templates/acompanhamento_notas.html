@@ -47,7 +47,7 @@
     <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
     <nav class="sidebar-nav">
         <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
-        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link ativa" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/orcamentos"><span class="link-icon">📋</span> Orçamento</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link ativa" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
         {% if pode_visualizar_comissao %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/aprovacoes"><span class="link-icon">🔒</span> Aprovações</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
     </nav>
     <div class="sidebar-footer">
@@ -103,7 +103,7 @@
 </div>
 <div id="areaImpressao" style="display:none"></div>
 <style>@media print{ body > .layout{display:none!important} #areaImpressao{display:block!important} @page{ size:A4 portrait; margin:6mm 5mm 6mm 5mm; } #areaImpressao > div{ page-break-inside:avoid; } }</style>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
 <script>
 let itens=[]; const podeVisualizarComissao={{ "true" if pode_visualizar_comissao else "false" }}; const S=window.SistemaUtil;
 function fmtMoeda(v){ return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}); }

@@ -311,6 +311,7 @@
     function _esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
     function _fmtNumDoc(c, n) {
         if (String(c || "").toUpperCase() === "OS") return "OS" + String(n || 0).padStart(5, "0");
+        if (String(c || "").toUpperCase() === "ORC") return "ORC" + String(n || 0).padStart(4, "0");
         return "SL" + String(n || 0).padStart(4, "0");
     }
 
@@ -464,6 +465,63 @@
         _imprimirDocumento(html);
     }
 
+    function imprimirOrcamento(o) {
+        const dados = o || {};
+        const itens = Array.isArray(dados.itens) ? dados.itens : [];
+        const numero = _fmtNumDoc("ORC", dados.numero);
+        const cliente = _esc(dados.cliente) || "CONSUMIDOR FINAL";
+        const telefone = _esc(dados.telefone);
+        const endereco = _esc(dados.endereco);
+        const obs = _esc(dados.observacao) || "-";
+        const vendedor = _esc(dados.vendedor) || "-";
+        const condTxt = _condTxt(dados.condicao);
+        const data = _fmtDMA(dados.criacao ? String(dados.criacao).slice(0, 10) : (dados.data || ""));
+        const validadeDias = Number(dados.validade_dias != null ? dados.validade_dias : 30);
+        const totalFinal = Number(dados.total || 0);
+
+        let linhas = "";
+        itens.forEach(function (it) {
+            const tipo = String(it.tipo || "PRODUTO") === "SERVIÇO" ? "SRV" : "PRO";
+            const q = it.quantidade != null ? it.quantidade : "";
+            const nome = _esc(it.descricao != null ? it.descricao : it.nome);
+            const valor = Number(it.valor || 0);
+            const sub = Number(q || 0) * valor;
+            linhas +=
+                '<div class="nota-item-impressao"><span>[' + tipo + '] ' + q + 'x ' + nome + '</span>' +
+                '<span>R$ ' + _f2(valor) + '</span><span>R$ ' + _f2(sub) + '</span></div>';
+        });
+
+        const html = '<div class="pagina-impressao">' +
+            '<div class="via-impressao">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 5px;border-bottom:1.2px solid #000">' +
+                '<div style="flex:1"></div>' +
+                '<div style="text-align:center;flex:1"><div style="font-weight:900;font-size:16pt;letter-spacing:.02em;line-height:1">SOMLED</div><div style="font-size:6pt;letter-spacing:.14em;margin-top:1px">SOLUÇÕES EM ILUMINAÇÃO</div></div>' +
+                '<div style="flex:1;display:flex;justify-content:flex-end"><div style="border:1.2px solid #000;padding:3px 8px;text-align:center;min-width:28mm"><div style="font-size:6.5pt;font-weight:700;letter-spacing:.06em;line-height:1.1">ORÇAMENTO<br>SEM VALOR FISCAL</div><div style="font-size:12pt;font-weight:900;margin-top:2px">' + numero + '</div></div></div>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;margin-top:5px;font-size:8.5pt;line-height:1.35">' +
+                '<div><span style="font-size:7pt;font-weight:700">CLIENTE:</span> <span style="font-weight:600">' + cliente + '</span>' + (telefone ? ' <span style="font-size:7pt;font-weight:600">· TEL: ' + telefone + '</span>' : '') + '</div>' +
+                '<div><span style="font-size:7pt;font-weight:700">CONDIÇÃO:</span> <span style="border:1px solid #000;padding:1px 5px;font-size:7pt;font-weight:700">' + condTxt + '</span></div>' +
+                '<div><span style="font-size:7pt;font-weight:700">DATA:</span> ' + data + '</div>' +
+                '<div><span style="font-size:7pt;font-weight:700">VALIDADE:</span> ' + validadeDias + ' DIAS</div>' +
+                '<div><span style="font-size:7pt;font-weight:700">VENDEDOR:</span> ' + vendedor + '</div>' +
+                '<div><span style="font-size:7pt;font-weight:700">ENDEREÇO:</span> ' + (endereco || '-') + '</div>' +
+                '<div style="grid-column:1/-1"><span style="font-size:7pt;font-weight:700">OBSERVAÇÃO:</span> ' + obs + '</div>' +
+            '</div>' +
+            '<div style="border-top:1px solid #000;margin:5px 0 0"></div>' +
+            '<div class="nota-tabela-cabecalho"><span>ITEM</span><span>VALOR UNIT.</span><span>SUBTOTAL</span></div>' +
+            linhas +
+            '<div style="display:flex;gap:12px;align-items:flex-end;margin-top:6px;flex:1">' +
+                '<div style="flex:1;text-align:center;padding-top:8px"><div class="via-assinatura-linha" style="width:68mm"></div><div class="via-assinatura-rotulo">ASSINATURA DO CLIENTE</div><div style="font-size:6pt;color:#374151;margin-top:2px">Ao assinar, declaro estar ciente do valor e das condições deste orçamento.<br>Obrigações somente após conversão em venda.</div></div>' +
+                '<div style="width:86mm;border:1px solid #000;padding:4px 6px;font-size:8pt">' +
+                    '<div style="display:flex;justify-content:space-between;border-top:1px solid #000;padding-top:3px;margin-top:0"><span style="font-weight:800">TOTAL:</span><span style="font-weight:800">R$ ' + _f2(totalFinal) + '</span></div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="via-rodape">CUPOM NÃO FISCAL — DOCUMENTO SEM VALOR FISCAL — APENAS ORÇAMENTO</div>' +
+            '</div>' +
+        '</div>';
+        _imprimirDocumento(html);
+    }
+
     function solicitarAprovacao(acao, referencia, detalhe){
         return new Promise(function(resolver){
             var fundo=document.createElement('div');
@@ -487,13 +545,13 @@
                 fetch('/api/aprovacoes', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ acao:acao, referencia:referencia||'', detalhe:detalhe||'', gerente_login:login.value.trim().toUpperCase(), gerente_senha:senha.value }) })
                 .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
                 .then(function(res){
-                    if(res.ok && res.j.ok){ fechar(); resolver(true); }
+                    if(res.ok && res.j.ok){ fechar(); resolver({ gerente_login: login.value.trim().toUpperCase(), gerente_senha: senha.value }); }
                     else { ok.disabled=false; ok.textContent='Aprovar'; alert(res.j.erro||'Não foi possível aprovar'); }
                 })
                 .catch(function(){ ok.disabled=false; ok.textContent='Aprovar'; alert('Erro de conexão ao validar'); });
             }
             ok.addEventListener('click', confirmar);
-            cx.addEventListener('click', function(){ fechar(); resolver(false); });
+            cx.addEventListener('click', function(){ fechar(); resolver(null); });
             senha.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); confirmar(); } });
             login.focus();
         });
@@ -517,6 +575,7 @@
         imprimirOS: imprimirOS,
         imprimirNotaDobrada: imprimirNotaDobrada,
         imprimirEntrega: imprimirEntrega,
+        imprimirOrcamento: imprimirOrcamento,
         solicitarAprovacao: solicitarAprovacao
     };
 

@@ -165,7 +165,7 @@
     <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
     <nav class="sidebar-nav">
         <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
-        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link ativa" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link ativa" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link" href="/orcamentos"><span class="link-icon">📋</span> Orçamento</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
         {% if papel in ["GERENTE", "DONO"] %}
         <div class="sidebar-section"><div class="sidebar-section-label">Sistema</div>
   <a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a>
@@ -263,7 +263,7 @@
 </main>
 </div>
 <div id="areaImpressao"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
 <script>
 const papelUsuario = "{{ papel or 'VENDEDOR' }}";
 const chaveRascunho = "notaDobradaRascunho:" + {{ usuario|tojson }};
@@ -389,6 +389,7 @@ function calcularTotal(){
     document.getElementById("totalFinal").innerText = totalFinal.toFixed(2).replace(".",",");
 }
 async function salvarVendaNota(){
+    let credAprov = null;
     const descontoSolicitado = Number(document.getElementById("desconto").value) || 0;
     if(descontoSolicitado > descontoMaximo && !aprovacaoDescontoAtiva){
         const aprovado = await S.solicitarAprovacao(
@@ -397,7 +398,7 @@ async function salvarVendaNota(){
             "Venda para " + (document.getElementById("cliente").value.trim() || "cliente")
         );
         if(!aprovado){ S.Toast.aviso("Desconto não aprovado. Ajuste o valor dentro do limite."); return null; }
-        aprovacaoDescontoAtiva = true;
+        aprovacaoDescontoAtiva = true; credAprov = aprovado;
     }
     calcularTotal();
     const itens = [];
@@ -417,6 +418,8 @@ async function salvarVendaNota(){
         desconto: Number(document.getElementById("desconto").value) || 0,
         observacao: document.getElementById("obs").value.trim(),
         endereco: document.getElementById("endereco").value.trim(),
+        gerente_login: credAprov ? credAprov.gerente_login : undefined,
+        gerente_senha: credAprov ? credAprov.gerente_senha : undefined,
         total: total, itens: itens
     };
     try{

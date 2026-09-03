@@ -689,6 +689,9 @@
             <a class="sidebar-link" data-rota="/nota_dobrada" href="/nota_dobrada">
                 <span class="link-icon">🧾</span> Nota Dobrada
             </a>
+            <a class="sidebar-link" data-rota="/orcamentos" href="/orcamentos">
+                <span class="link-icon">📋</span> Orçamento
+            </a>
             <a class="sidebar-link" data-rota="/editar_venda" href="/editar_venda">
                 <span class="link-icon">✏️</span> Editar Venda
             </a>
@@ -782,6 +785,11 @@
             <h3>Entregas Pendentes</h3>
             <div class="stat-numero" id="entregasPendentes">0</div>
             <div class="stat-sub">em rota + pendentes</div>
+        </div>
+        <div class="stat-card stat-atalho" style="border-top-color:#16a34a" role="button" tabindex="0" title="Abrir Orçamentos" onclick="window.location.href='/orcamentos'">
+            <h3>Orçamentos</h3>
+            <div class="stat-numero" id="orcamentosAbertos">0</div>
+            <div class="stat-sub">abertos — clique para criar</div>
         </div>
         <div class="stat-card stat-success stat-atalho" role="button" tabindex="0" title="Acompanhar notas e faturamento" onclick="window.location.href='/acompanhamento_notas'">
             <h3>Faturamento Hoje</h3>
@@ -1074,7 +1082,7 @@
 
 </div>
 
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
 <script>
 
 const S = window.SistemaUtil;
@@ -1175,7 +1183,7 @@ async function carregarDashboard() {
     // Vendas e Entregas do dia — só o mais importante
     try{
         const hoje = new Date().toISOString().split("T")[0];
-        const [rv, re] = await Promise.all([fetch("/api/vendas").then(r=>r.ok?r.json():[]).catch(()=>[]), fetch("/api/entregas").then(r=>r.ok?r.json():[]).catch(()=>[])]);
+        const [rv, re, ro] = await Promise.all([fetch("/api/vendas").then(r=>r.ok?r.json():[]).catch(()=>[]), fetch("/api/entregas").then(r=>r.ok?r.json():[]).catch(()=>[]), fetch("/api/orcamentos").then(r=>r.ok?r.json():[]).catch(()=>[])]);
         const vendasHoje = (rv||[]).filter(v=> (v.data||"").slice(0,10)===hoje);
         const faturamentoHoje = vendasHoje.reduce((s,v)=> s + (Number(v.total)||0), 0);
         const elVendas = document.getElementById("vendasHoje");
@@ -1192,6 +1200,8 @@ async function carregarDashboard() {
         if(elEntHojeSub){ elEntHojeSub.innerText = pendentes.filter(e=> (e.data_entrega||"").slice(0,10)===hoje).length + " pendentes hoje"; }
         const elPend = document.getElementById("entregasPendentes");
         if(elPend){ elPend.innerText = pendentes.length; }
+        const elOrc = document.getElementById("orcamentosAbertos");
+        if(elOrc){ elOrc.innerText = (ro||[]).filter(o=> o.status!=="convertido").length; }
     }catch(e){ console.error("vendas/entregas hoje", e); }
 }
 

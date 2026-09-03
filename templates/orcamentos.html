@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest?v=8">
+<meta name="theme-color" content="#123a7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOMLED">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=8">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=8">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=8">
+<title>Orçamentos</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=8">
+<style>
+.orcam-hero{ background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #16a34a 100%); color:#fff; border-radius:16px; padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+.orcam-hero h1{ font-size:1.25rem; margin:0; }
+.orcam-hero p{ margin:4px 0 0; opacity:.85; font-size:.85rem; }
+.badge-orc{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+.badge-orc.aber{ background:#dbeafe; color:#1e40af; }
+.badge-orc.conv{ background:#dcfce7; color:#166534; }
+.badge-orc.venc{ background:#fee2e2; color:#991b1b; }
+.monospace{ font-family:ui-monospace,Consolas,monospace; font-size:.82rem; }
+.item-editor{ width:100%; border-collapse:collapse; }
+.item-editor th{ font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; color:#6b7280; text-align:left; padding:6px 4px; border-bottom:1px solid #e5e7eb; }
+.item-editor td{ padding:4px; border-bottom:1px solid #f3f4f6; }
+.item-editor td .form-input, .item-editor td .form-select{ width:100%; box-sizing:border-box; margin:0; }
+.item-editor td .form-input:focus, .item-editor td .form-select:focus{ border-color:#1a56db; outline:none; }
+.item-row-remover{ background:#fee2e2; border:0; border-radius:8px; color:#b91c1c; width:32px; height:32px; font-weight:800; cursor:pointer; }
+@media print{ .no-print{ display:none !important; } }
+</style>
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Operação</div><a class="sidebar-link" href="/"><span class="link-icon">📊</span> Painel</a><a class="sidebar-link" href="/?nova=1"><span class="link-icon">🛠</span> Nova OS</a><a class="sidebar-link" href="/?consulta=1"><span class="link-icon">🔍</span> Consultar OS</a></div>
+        <div class="sidebar-section"><div class="sidebar-section-label">Vendas</div><a class="sidebar-link" href="/nota_dobrada"><span class="link-icon">🧾</span> Nota Dobrada</a><a class="sidebar-link ativa" href="/orcamentos"><span class="link-icon">📋</span> Orçamento</a><a class="sidebar-link" href="/editar_venda"><span class="link-icon">✏️</span> Editar Venda</a><a class="sidebar-link" href="/acompanhamento_notas"><span class="link-icon">📈</span> Acompanhar Vendas</a><a class="sidebar-link" href="/devolucoes"><span class="link-icon">↩️</span> Devolução</a><a class="sidebar-link" href="/entregas"><span class="link-icon">🚚</span> Entregas</a></div>
+        {% if papel in ["GERENTE","DONO"] %}<div class="sidebar-section"><div class="sidebar-section-label">Sistema</div><a class="sidebar-link" href="/dashboard"><span class="link-icon">📊</span> Dashboard</a><a class="sidebar-link" href="/controle_comissao"><span class="link-icon">💰</span> Comissão</a><a class="sidebar-link" href="/aprovacoes"><span class="link-icon">🔒</span> Aprovações</a><a class="sidebar-link" href="/minha_senha"><span class="link-icon">🔑</span> Minha Senha</a></div>{% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <div class="sidebar-user"><div class="user-avatar">{{ (usuario or '?')[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">{{ papel }}</div></div></div>
+        <a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a>
+    </div>
+</aside>
+<main class="conteudo">
+
+    <div class="orcam-hero">
+        <div>
+            <h1>📋 Orçamentos</h1>
+            <p>Elabore um orçamento (produtos e/ou serviços) antes de fechar a venda. Validade padrão de 30 dias.</p>
+        </div>
+        <button class="btn" style="background:#fff;color:#0f172a;font-weight:800" onclick="novoOrcamento()">＋ Novo Orçamento</button>
+    </div>
+
+    <div class="card mt-3" id="cardLista">
+        <div class="card-header"><h2 class="card-title">Lista de orçamentos</h2><span class="badge badge-pronta" id="badgeCount">—</span></div>
+        <div class="tabela-container"><table class="tabela">
+            <thead><tr><th>#</th><th>Cliente</th><th>Vendedor</th><th>Data</th><th>Validade</th><th>Total</th><th>Status</th><th class="no-print">Ações</th></tr></thead>
+            <tbody id="tbodyLista"></tbody>
+        </table></div>
+        <div id="emptyLista" class="empty-state" style="display:none"><div class="empty-icon">📋</div><h3>Nenhum orçamento criado</h3><p>Clique em "Novo Orçamento" para começar.</p></div>
+    </div>
+
+    <div class="card mt-3" id="cardEditor" style="display:none">
+        <div class="card-header">
+            <h2 class="card-title" id="tituloEditor">Novo Orçamento</h2>
+            <span class="badge badge-pronta monospace" id="numeroExibido">—</span>
+        </div>
+
+        <div class="form-row mt-2">
+            <div class="form-group"><label class="form-label">Cliente *</label><input type="text" class="form-input" id="camCliente" placeholder="Nome do cliente"></div>
+            <div class="form-group"><label class="form-label">Telefone</label><input type="text" class="form-input" id="camTelefone" placeholder="(00) 00000-0000" maxlength="15"></div>
+            <div class="form-group"><label class="form-label">Vendedor</label><input type="text" class="form-input" id="camVendedor" value="{{ usuario }}" placeholder="Vendedor"></div>
+            <div class="form-group"><label class="form-label">Condição</label>
+                <select class="form-select" id="camCondicao"><option value="dinheiro">DINHEIRO</option><option value="cartadebito">CARTÃO DÉBITO</option><option value="cartacredito">CARTÃO CRÉDITO</option><option value="pix">PIX</option><option value="aprazo">A PRAZO</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Validade (dias)</label><input type="number" class="form-input" id="camValidade" min="0" max="365" value="30"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Endereço</label><input type="text" class="form-input" id="camEndereco" placeholder="Endereço de entrega (opcional)"></div>
+        </div>
+
+        <div class="mt-3">
+            <div class="card-header" style="padding-left:0"><h3 class="card-title">Itens do orçamento</h3></div>
+            <div class="tabela-container"><table class="item-editor" id="tblItens">
+                <thead><tr><th style="width:110px">Tipo</th><th style="width:64px">Qtd</th><th>Descrição</th><th style="width:100px">Valor</th><th style="width:34px"></th></tr></thead>
+                <tbody id="tbodyItens"></tbody>
+            </table></div>
+            <button class="btn btn-outline btn-sm mt-2" onclick="adicionarLinha()">＋ Adicionar item</button>
+        </div>
+
+        <div class="mt-3">
+            <label class="form-label">Observação</label>
+            <textarea class="form-textarea" id="camObservacao" rows="2" placeholder="Observações do orçamento"></textarea>
+        </div>
+
+        <div class="card-header mt-3" style="padding-left:0;padding-right:0">
+            <div style="font-size:1.05rem;font-weight:800">TOTAL: <span id="totalExibido">R$ 0,00</span></div>
+        </div>
+
+        <div class="mt-3 no-print" style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-success" id="btnSalvar" onclick="salvarOrcamento()">💾 Salvar Orçamento</button>
+            <button class="btn btn-outline" id="btnImprimir" onclick="imprimirAtual()">🖨 Imprimir</button>
+            <button class="btn" style="background:#16a34a;color:#fff" id="btnConverter" onclick="converterAtual()">↩Converter em Venda</button>
+            <button class="btn btn-outline" onclick="cancelarEdicao()">Cancelar</button>
+        </div>
+    </div>
+<div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
+</main>
+</div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
+<script>
+const S=window.SistemaUtil; S.initSidebar();
+const usuLogado="{{ usuario|e }}";
+let orcamentoEditando=null;
+let itensCarregados=false;
+
+function hojeISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function dataBrasil(iso){ if(!iso) return '—'; const p=String(iso).split(' ')[0].split('-'); if(p.length<3) return String(iso); return p[2]+'/'+p[1]+'/'+p[0]; }
+function fmtMoeda(v){ return 'R$ '+(Number(v||0)).toFixed(2).replace('.',','); }
+function addDias(iso, dias){ const p=String(iso).split(' ')[0].split('-'); const d=new Date(Number(p[0]),Number(p[1])-1,Number(p[2])); d.setDate(d.getDate()+Number(dias||0)); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function estadoOrcamento(o){ if(o.status==='convertido') return {txt:'CONVERTIDO', cls:'conv'}; const venc=addDias(o.criacao, o.validade_dias); if(venc < hojeISO()) return {txt:'VENCIDO', cls:'venc'}; return {txt:'ABERTO', cls:'aber'}; }
+
+function limparForm(){
+    orcamentoEditando=null; itensCarregados=false;
+    document.getElementById('camCliente').value='';
+    document.getElementById('camTelefone').value='';
+    document.getElementById('camVendedor').value=usuLogado;
+    document.getElementById('camCondicao').value='dinheiro';
+    document.getElementById('camValidade').value='30';
+    document.getElementById('camEndereco').value='';
+    document.getElementById('camObservacao').value='';
+    document.getElementById('tbodyItens').innerHTML='';
+    document.getElementById('totalExibido').innerText='R$ 0,00';
+    document.getElementById('numeroExibido').innerText='NOVO';
+    document.getElementById('btnSalvar').innerText='💾 Salvar Orçamento';
+    document.getElementById('btnConverter').style.display='none';
+    document.getElementById('cardEditor').style.display='block';
+    document.getElementById('tituloEditor').innerText='Novo Orçamento';
+    fetch('/api/orcamentos/proximo_numero').then(r=>r.json()).then(j=>{ document.getElementById('numeroExibido').innerText='ORC'+String(j.numero||0).padStart(4,'0'); }).catch(()=>{});
+    adicionarLinha();
+}
+function novoOrcamento(){ limparForm(); }
+function cancelarEdicao(){ document.getElementById('cardEditor').style.display='none'; carregar(); }
+function adicionarLinha(item){
+    const tipo=item&&item.tipo?item.tipo:'PRODUTO';
+    const q=item&&item.quantidade!=null?item.quantidade:'';
+    const desc=item&&item.descricao?item.descricao:'';
+    const val=item&&item.valor!=null?item.valor:'';
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+        '<td><select class="form-select tipo">'+
+            '<option value="PRODUTO"'+(tipo==='PRODUTO'?' selected':'')+'>PRODUTO</option>'+
+            '<option value="SERVIÇO"'+(tipo==='SERVIÇO'?' selected':'')+'>SERVIÇO</option>'+
+        '</select></td>'+
+        '<td><input class="form-input quantidade" type="number" min="0" step="any" value="'+q+'"></td>'+
+        '<td><input class="form-input descricao" placeholder="Descrição" value="'+String(desc).replace(/"/g,'&quot;')+'"></td>'+
+        '<td><input class="form-input valor" type="number" min="0" step="any" value="'+val+'" oninput="calcularTotalAtual()"></td>'+
+        '<td><button type="button" class="item-row-remover" onclick="removerLinha(this)">✕</button></td>';
+    document.getElementById('tbodyItens').appendChild(tr);
+}
+function removerLinha(btn){ const tr=btn.closest('tr'); tr.parentNode.removeChild(tr); calcularTotalAtual(); }
+function lerItens(){
+    const rows=document.querySelectorAll('#tbodyItens tr'); const out=[];
+    rows.forEach(function(tr){
+        const desc=tr.querySelector('.descricao').value.trim();
+        if(desc!=='') out.push({ tipo: tr.querySelector('.tipo').value, quantidade:Number(tr.querySelector('.quantidade').value)||1, descricao:desc, valor:Number(tr.querySelector('.valor').value)||0 });
+    });
+    return out;
+}
+function calcularTotalAtual(){
+    let t=0; document.querySelectorAll('#tbodyItens tr').forEach(function(tr){
+        const q=Number(tr.querySelector('.quantidade').value)||0; const v=Number(tr.querySelector('.valor').value)||0; t+=q*v;
+    });
+    document.getElementById('totalExibido').innerText=fmtMoeda(t);
+}
+function lerDadosOrcamento(){
+    return {
+        cliente: document.getElementById('camCliente').value.trim(),
+        telefone: document.getElementById('camTelefone').value.trim(),
+        vendedor: document.getElementById('camVendedor').value.trim(),
+        condicao: document.getElementById('camCondicao').value,
+        validade_dias: Number(document.getElementById('camValidade').value)||30,
+        endereco: document.getElementById('camEndereco').value.trim(),
+        observacao: document.getElementById('camObservacao').value.trim(),
+        itens: lerItens()
+    };
+}
+function validarDados(d){
+    if(!d.cliente){ S.Toast.erro('Informe o cliente.'); document.getElementById('camCliente').focus(); return false; }
+    if(d.itens.length===0){ S.Toast.erro('Adicione pelo menos um item.'); return false; }
+    for(const it of d.itens){ if(!it.descricao){ S.Toast.erro('Preencha a descrição de todos os itens.'); return false; } if(it.quantidade<=0||it.valor<0){ S.Toast.erro('Quantidade e valor inválidos.'); return false; } }
+    return true;
+}
+async function salvarOrcamento(){
+    const dados=lerDadosOrcamento();
+    if(!validarDados(dados)) return;
+    S.mostrarLoading('Salvando orçamento...');
+    try{
+        const url=orcamentoEditando?'/api/orcamentos/'+orcamentoEditando:'/api/orcamentos';
+        const metodo=orcamentoEditando?'PUT':'POST';
+        const r=await fetch(url,{method:metodo,headers:{'Content-Type':'application/json'},body:JSON.stringify(dados)});
+        const j=await r.json();
+        if(!r.ok) throw new Error(j.erro||'Erro ao salvar');
+        S.Toast.sucesso('Orçamento salvo!');
+        await carregar(true);
+    }catch(e){ S.Toast.erro('Erro: '+e.message); }
+    finally{ S.esconderLoading(); }
+}
+function imprimirObjeto(j){
+    S.imprimirOrcamento({
+        numero:j.numero, cliente:j.cliente, telefone:j.telefone, endereco:j.endereco,
+        condicao:j.condicao, validade_dias:j.validade_dias, criacao:j.criacao,
+        observacao:j.observacao, vendedor:j.vendedor, total:j.total, itens:j.itens
+    });
+}
+function imprimirAtual(){
+    if(orcamentoEditando===null){ S.Toast.aviso('Salve o orçamento antes de imprimir.'); return; }
+    fetch('/api/orcamentos/'+orcamentoEditando).then(r=>r.json()).then(j=>{ if(j.erro){ S.Toast.erro(j.erro); return; } imprimirObjeto(j); }).catch(()=>S.Toast.erro('Erro ao consultar'));
+}
+async function converterAtual(){
+    if(orcamentoEditando===null){ S.Toast.aviso('Salve o orçamento antes de converter.'); return; }
+    const ok=await S.confirmacao({titulo:'Converter em venda?', mensagem:'O orçamento vira uma venda (Nota Dobrada) e será bloqueado contra edição.', tipo:'warning'});
+    if(!ok) return;
+    S.mostrarLoading('Convertendo...');
+    try{
+        const r=await fetch('/api/orcamentos/'+orcamentoEditando+'/converter',{method:'POST'});
+        const j=await r.json();
+        if(!r.ok) throw new Error(j.erro||'Erro ao converter');
+        S.Toast.sucesso('Orçamento convertido em venda!');
+        await carregar(true);
+    }catch(e){ S.Toast.erro('Erro: '+e.message); }
+    finally{ S.esconderLoading(); }
+}
+async function excluirOrcamento(id, numero){
+    const ok=await S.confirmacao({titulo:'Excluir orçamento?', mensagem:'ORC'+String(numero).padStart(4,'0')+' será removido.', tipo:'danger'});
+    if(!ok) return;
+    S.mostrarLoading('Excluindo...');
+    try{
+        const r=await fetch('/api/orcamentos/'+id,{method:'DELETE'}); const j=await r.json();
+        if(!r.ok) throw new Error(j.erro||'Erro ao excluir');
+        S.Toast.sucesso('Orçamento excluído!'); carregar(true);
+    }catch(e){ S.Toast.erro('Erro: '+e.message); }
+    finally{ S.esconderLoading(); }
+}
+function editarOrcamento(id){
+    fetch('/api/orcamentos/'+id).then(r=>r.json()).then(j=>{
+        if(j.erro){ S.Toast.erro(j.erro); return; }
+        orcamentoEditando=j.id; itensCarregados=true;
+        document.getElementById('cardEditor').style.display='block';
+        document.getElementById('cardLista').style.display='none';
+        document.getElementById('tituloEditor').innerText='Editar Orçamento';
+        document.getElementById('numeroExibido').innerText='ORC'+String(j.numero).padStart(4,'0');
+        document.getElementById('camCliente').value=j.cliente||'';
+        document.getElementById('camTelefone').value=j.telefone||'';
+        document.getElementById('camVendedor').value=j.vendedor||usuLogado;
+        document.getElementById('camCondicao').value=j.condicao||'dinheiro';
+        document.getElementById('camValidade').value=j.validade_dias!=null?j.validade_dias:30;
+        document.getElementById('camEndereco').value=j.endereco||'';
+        document.getElementById('camObservacao').value=j.observacao||'';
+        document.getElementById('tbodyItens').innerHTML='';
+        (j.itens||[]).forEach(adicionarLinha);
+        if(!j.itens||j.itens.length===0) adicionarLinha();
+        document.getElementById('totalExibido').innerText=fmtMoeda(j.total);
+        document.getElementById('btnSalvar').innerText='💾 Salvar Alterações';
+        const conv=document.getElementById('btnConverter');
+        conv.style.display= j.status==='convertido' ? 'none' : 'inline-block';
+        window.scrollTo({top:0,behavior:'smooth'});
+    }).catch(()=>S.Toast.erro('Erro ao carregar orçamento'));
+}
+async function carregar(manterAberto){
+    S.mostrarLoading('Carregando...');
+    try{
+        const r=await fetch('/api/orcamentos'); const j=await r.json();
+        if(!r.ok){ S.Toast.erro(j.erro||'Erro'); return; }
+        const lista=j||[];
+        document.getElementById('badgeCount').innerText=lista.length+' orçamento(s)';
+        const tbody=document.getElementById('tbodyLista'); tbody.innerHTML='';
+        const empty=document.getElementById('emptyLista');
+        if(lista.length===0){ empty.style.display='block'; } else { empty.style.display='none'; }
+        lista.forEach(function(o){
+            const st=estadoOrcamento(o);
+            const tr=document.createElement('tr');
+            const acoes=
+                '<button class="btn btn-outline btn-sm" onclick="editarOrcamento('+o.id+')">Abrir</button> '+
+                '<button class="btn btn-outline btn-sm" onclick="imprimirLista('+o.id+')">🖨</button> '+
+                (o.status!=='convertido'?'<button class="btn btn-success btn-sm" onclick="converterLista('+o.id+')">↩Venda</button> ':'')+
+                (o.status!=='convertido'?'<button class="btn btn-danger btn-sm" onclick="excluirOrcamento('+o.id+','+o.numero+')">✕</button>':'');
+            tr.innerHTML=
+                '<td class="monospace">ORC'+String(o.numero).padStart(4,'0')+'</td>'+
+                '<td class="font-bold">'+String(o.cliente||'—').replace(/</g,'&lt;')+'</td>'+
+                '<td>'+String(o.vendedor||'—').replace(/</g,'&lt;')+'</td>'+
+                '<td>'+dataBrasil(o.criacao)+'</td>'+
+                '<td>vence '+dataBrasil(addDias(o.criacao,o.validade_dias))+(o.validade_dias?' ('+o.validade_dias+'d)':'')+'</td>'+
+                '<td>'+fmtMoeda(o.total)+'</td>'+
+                '<td><span class="badge-orc '+st.cls+'">'+st.txt+'</span></td>'+
+                '<td class="no-print">'+acoes+'</td>';
+            tbody.appendChild(tr);
+        });
+    }catch(e){ S.Toast.erro('Erro de conexão'); }
+    finally{ S.esconderLoading(); }
+}
+function imprimirLista(id){
+    fetch('/api/orcamentos/'+id).then(r=>r.json()).then(j=>{ if(j.erro){ S.Toast.erro(j.erro); return; } imprimirObjeto(j); }).catch(()=>S.Toast.erro('Erro'));
+}
+async function converterLista(id){
+    const ok=await S.confirmacao({titulo:'Converter em venda?', mensagem:'O orçamento vira uma venda e será bloqueado contra edição.', tipo:'warning'});
+    if(!ok) return;
+    S.mostrarLoading('Convertendo...');
+    try{
+        const r=await fetch('/api/orcamentos/'+id+'/converter',{method:'POST'}); const j=await r.json();
+        if(!r.ok) throw new Error(j.erro||'Erro'); S.Toast.sucesso('Convertido em venda!'); carregar(true);
+    }catch(e){ S.Toast.erro('Erro: '+e.message); } finally{ S.esconderLoading(); }
+}
+carregar();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js?v=8").then(function(reg){ reg.addEventListener("updatefound", function(){ const nw=reg.installing; if(nw) nw.addEventListener("statechange", function(){ if(nw.state==="installed" && navigator.serviceWorker.controller){ window.location.reload(); } }); }); }).catch(function(e){ console.warn("SW:", e); }); let refreshing=false; navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!refreshing){ refreshing=true; window.location.reload(); } });
+  });
+}
+</script>
+</body>
+</html>
