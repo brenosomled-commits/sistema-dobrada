@@ -15,20 +15,92 @@
 <title>Orçamentos</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=8">
 <style>
-.orcam-hero{ background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #16a34a 100%); color:#fff; border-radius:16px; padding:20px 24px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
-.orcam-hero h1{ font-size:1.25rem; margin:0; }
-.orcam-hero p{ margin:4px 0 0; opacity:.85; font-size:.85rem; }
-.badge-orc{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+/* ===== ORÇAMENTOS — VISUAL LIMPO ===== */
+.orc-wrap{ max-width:900px; margin:0 auto; }
+
+/* Topo da página */
+.orc-topo{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.orc-topo h1{ font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:8px; margin:0; }
+.orc-topo p{ font-size:.78rem; color:var(--cor-texto-secundario); margin:2px 0 0; }
+
+/* Badges de status */
+.badge-orc{ display:inline-block; padding:2px 10px; border-radius:999px; font-size:.70rem; font-weight:700; white-space:nowrap; }
 .badge-orc.aber{ background:#dbeafe; color:#1e40af; }
 .badge-orc.conv{ background:#dcfce7; color:#166534; }
 .badge-orc.venc{ background:#fee2e2; color:#991b1b; }
+
 .monospace{ font-family:ui-monospace,Consolas,monospace; font-size:.82rem; }
-.item-editor{ width:100%; border-collapse:collapse; }
-.item-editor th{ font-size:.72rem; text-transform:uppercase; letter-spacing:.03em; color:#6b7280; text-align:left; padding:6px 4px; border-bottom:1px solid #e5e7eb; }
-.item-editor td{ padding:4px; border-bottom:1px solid #f3f4f6; }
-.item-editor td .form-input, .item-editor td .form-select{ width:100%; box-sizing:border-box; margin:0; }
-.item-editor td .form-input:focus, .item-editor td .form-select:focus{ border-color:#1a56db; outline:none; }
-.item-row-remover{ background:#fee2e2; border:0; border-radius:8px; color:#b91c1c; width:32px; height:32px; font-weight:800; cursor:pointer; }
+
+/* Lista de orçamentos — cards em vez de tabela */
+.orc-grid{ display:flex; flex-direction:column; gap:8px; }
+.orc-card{
+    background:#fff; border:1px solid var(--cor-borda); border-radius:10px;
+    padding:12px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    transition: box-shadow .15s;
+}
+.orc-card:hover{ box-shadow:var(--sombra-md); }
+.orc-card-num{ font-family:ui-monospace,Consolas,monospace; font-weight:800; font-size:.85rem; color:var(--cor-primaria); min-width:72px; }
+.orc-card-info{ flex:1; min-width:0; }
+.orc-card-cliente{ font-weight:700; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.orc-card-meta{ font-size:.74rem; color:var(--cor-texto-secundario); margin-top:1px; }
+.orc-card-total{ font-weight:800; font-size:.95rem; white-space:nowrap; }
+.orc-card-acoes{ display:flex; gap:6px; flex-wrap:wrap; }
+
+/* Editor */
+.orc-editor{ background:#fff; border:1px solid var(--cor-borda); border-radius:12px; overflow:hidden; }
+.orc-editor-topo{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:14px 20px; border-bottom:1px solid var(--cor-borda);
+    background:var(--cor-fundo);
+}
+.orc-editor-topo h2{ font-size:.95rem; font-weight:800; margin:0; }
+.orc-editor-body{ padding:20px; }
+
+/* Seção dentro do editor */
+.orc-secao{ margin-bottom:18px; }
+.orc-secao-titulo{
+    font-size:.68rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--cor-primaria); border-bottom:1px solid var(--cor-borda); padding-bottom:6px; margin-bottom:12px;
+}
+
+/* Campos */
+.orc-grid-campos{ display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; }
+.orc-campo{ display:flex; flex-direction:column; gap:4px; }
+.orc-campo label{ font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--cor-texto-secundario); }
+.orc-campo input, .orc-campo select, .orc-campo textarea{
+    min-height:38px; border:1px solid var(--cor-borda); border-radius:8px;
+    padding:8px 10px; font-family:var(--fonte); font-size:.88rem; background:#fff;
+    transition:border-color .15s, box-shadow .15s;
+}
+.orc-campo input:focus, .orc-campo select:focus, .orc-campo textarea:focus{
+    border-color:var(--cor-primaria); box-shadow:0 0 0 3px var(--cor-primaria-light); outline:none;
+}
+.orc-campo textarea{ min-height:60px; resize:vertical; }
+
+/* Tabela de itens */
+.itens-tbl{ width:100%; border-collapse:collapse; }
+.itens-tbl th{ font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:var(--cor-texto-secundario); text-align:left; padding:6px 6px; border-bottom:1.5px solid var(--cor-borda); background:var(--cor-fundo); }
+.itens-tbl td{ padding:4px 4px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+.itens-tbl td input, .itens-tbl td select{ width:100%; min-height:34px; border:1px solid #e2e8f0; border-radius:6px; padding:5px 7px; font-size:.85rem; font-family:var(--fonte); background:#fff; }
+.itens-tbl td input:focus, .itens-tbl td select:focus{ border-color:var(--cor-primaria); outline:none; }
+.btn-rm{ background:none; border:none; color:#94a3b8; cursor:pointer; width:28px; height:28px; border-radius:6px; font-size:1rem; display:flex; align-items:center; justify-content:center; }
+.btn-rm:hover{ background:#fee2e2; color:#b91c1c; }
+
+/* Barra de total + ações */
+.orc-rodape{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    padding:14px 20px; border-top:1px solid var(--cor-borda); background:var(--cor-fundo);
+    margin-top:4px;
+}
+.orc-total-txt{ font-size:1.1rem; font-weight:900; }
+.orc-total-val{ color:var(--cor-primaria); }
+.orc-acoes{ display:flex; gap:8px; flex-wrap:wrap; }
+
+@media(max-width:600px){
+    .orc-grid-campos{ grid-template-columns:1fr 1fr; }
+    .orc-card-acoes{ width:100%; }
+    .orc-rodape{ flex-direction:column; align-items:flex-start; }
+}
 @media print{ .no-print{ display:none !important; } }
 </style>
 </head>
@@ -49,69 +121,110 @@
     </div>
 </aside>
 <main class="conteudo">
+<div class="orc-wrap"></div>
 
-    <div class="orcam-hero">
+    <!-- Topo -->
+    <div class="orc-topo">
         <div>
             <h1>📋 Orçamentos</h1>
-            <p>Elabore um orçamento (produtos e/ou serviços) antes de fechar a venda. Validade padrão de 30 dias.</p>
+            <p>Elabore propostas antes de fechar a venda. Validade padrão: 30 dias.</p>
         </div>
-        <button class="btn" style="background:#fff;color:#0f172a;font-weight:800" onclick="novoOrcamento()">＋ Novo Orçamento</button>
+        <button class="btn btn-primary" onclick="novoOrcamento()">＋ Novo Orçamento</button>
     </div>
 
-    <div class="card mt-3" id="cardLista">
-        <div class="card-header"><h2 class="card-title">Lista de orçamentos</h2><span class="badge badge-pronta" id="badgeCount">—</span></div>
-        <div class="tabela-container"><table class="tabela">
-            <thead><tr><th>#</th><th>Cliente</th><th>Vendedor</th><th>Data</th><th>Validade</th><th>Total</th><th>Status</th><th class="no-print">Ações</th></tr></thead>
-            <tbody id="tbodyLista"></tbody>
-        </table></div>
-        <div id="emptyLista" class="empty-state" style="display:none"><div class="empty-icon">📋</div><h3>Nenhum orçamento criado</h3><p>Clique em "Novo Orçamento" para começar.</p></div>
+    <!-- Lista -->
+    <div id="cardLista">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:.78rem;font-weight:700;color:var(--cor-texto-secundario)" id="badgeCount"></span>
+        </div>
+        <div class="orc-grid" id="tbodyLista"></div>
+        <div id="emptyLista" class="empty-state" style="display:none">
+            <div class="empty-icon">📋</div>
+            <h3>Nenhum orçamento criado</h3>
+            <p>Clique em "Novo Orçamento" para começar.</p>
+        </div>
     </div>
 
-    <div class="card mt-3" id="cardEditor" style="display:none">
-        <div class="card-header">
-            <h2 class="card-title" id="tituloEditor">Novo Orçamento</h2>
-            <span class="badge badge-pronta monospace" id="numeroExibido">—</span>
+    <!-- Editor -->
+    <div class="orc-editor" id="cardEditor" style="display:none">
+        <div class="orc-editor-topo">
+            <h2 id="tituloEditor">Novo Orçamento</h2>
+            <span class="monospace badge badge-pronta" id="numeroExibido">—</span>
         </div>
 
-        <div class="form-row mt-2">
-            <div class="form-group"><label class="form-label">Cliente *</label><input type="text" class="form-input" id="camCliente" placeholder="Nome do cliente"></div>
-            <div class="form-group"><label class="form-label">Telefone</label><input type="text" class="form-input" id="camTelefone" placeholder="(00) 00000-0000" maxlength="15"></div>
-            <div class="form-group"><label class="form-label">Vendedor</label><input type="text" class="form-input" id="camVendedor" value="{{ usuario }}" placeholder="Vendedor"></div>
-            <div class="form-group"><label class="form-label">Condição</label>
-                <select class="form-select" id="camCondicao"><option value="dinheiro">DINHEIRO</option><option value="cartadebito">CARTÃO DÉBITO</option><option value="cartacredito">CARTÃO CRÉDITO</option><option value="pix">PIX</option><option value="aprazo">A PRAZO</option></select>
+        <div class="orc-editor-body">
+
+            <!-- Dados do cliente -->
+            <div class="orc-secao">
+                <div class="orc-secao-titulo">Dados do cliente</div>
+                <div class="orc-grid-campos">
+                    <div class="orc-campo" style="grid-column:span 2"><label>Cliente *</label><input type="text" id="camCliente" placeholder="Nome do cliente"></div>
+                    <div class="orc-campo"><label>Telefone</label><input type="text" id="camTelefone" placeholder="(00) 00000-0000" maxlength="15"></div>
+                    <div class="orc-campo"><label>Vendedor</label><input type="text" id="camVendedor" value="{{ usuario }}" placeholder="Vendedor"></div>
+                </div>
             </div>
-            <div class="form-group"><label class="form-label">Validade (dias)</label><input type="number" class="form-input" id="camValidade" min="0" max="365" value="30"></div>
-        </div>
-        <div class="form-row">
-            <div class="form-group"><label class="form-label">Endereço</label><input type="text" class="form-input" id="camEndereco" placeholder="Endereço de entrega (opcional)"></div>
+
+            <!-- Condições -->
+            <div class="orc-secao">
+                <div class="orc-secao-titulo">Condições</div>
+                <div class="orc-grid-campos">
+                    <div class="orc-campo">
+                        <label>Condição</label>
+                        <select id="camCondicao">
+                            <option value="dinheiro">DINHEIRO</option>
+                            <option value="cartadebito">CARTÃO DÉBITO</option>
+                            <option value="cartacredito">CARTÃO CRÉDITO</option>
+                            <option value="pix">PIX</option>
+                            <option value="aprazo">A PRAZO</option>
+                        </select>
+                    </div>
+                    <div class="orc-campo"><label>Validade (dias)</label><input type="number" id="camValidade" min="0" max="365" value="30"></div>
+                    <div class="orc-campo" style="grid-column:span 2"><label>Endereço (opcional)</label><input type="text" id="camEndereco" placeholder="Endereço de entrega"></div>
+                </div>
+            </div>
+
+            <!-- Itens -->
+            <div class="orc-secao">
+                <div class="orc-secao-titulo">Itens</div>
+                <div style="overflow-x:auto">
+                    <table class="itens-tbl" id="tblItens">
+                        <thead>
+                            <tr>
+                                <th style="width:100px">Tipo</th>
+                                <th style="width:60px">Qtd</th>
+                                <th>Descrição</th>
+                                <th style="width:110px">Valor unit.</th>
+                                <th style="width:32px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyItens"></tbody>
+                    </table>
+                </div>
+                <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="adicionarLinha()">＋ Adicionar item</button>
+            </div>
+
+            <!-- Observação -->
+            <div class="orc-secao">
+                <div class="orc-secao-titulo">Observação</div>
+                <div class="orc-campo"><textarea id="camObservacao" placeholder="Observações do orçamento"></textarea></div>
+            </div>
+
         </div>
 
-        <div class="mt-3">
-            <div class="card-header" style="padding-left:0"><h3 class="card-title">Itens do orçamento</h3></div>
-            <div class="tabela-container"><table class="item-editor" id="tblItens">
-                <thead><tr><th style="width:110px">Tipo</th><th style="width:64px">Qtd</th><th>Descrição</th><th style="width:100px">Valor</th><th style="width:34px"></th></tr></thead>
-                <tbody id="tbodyItens"></tbody>
-            </table></div>
-            <button class="btn btn-outline btn-sm mt-2" onclick="adicionarLinha()">＋ Adicionar item</button>
-        </div>
-
-        <div class="mt-3">
-            <label class="form-label">Observação</label>
-            <textarea class="form-textarea" id="camObservacao" rows="2" placeholder="Observações do orçamento"></textarea>
-        </div>
-
-        <div class="card-header mt-3" style="padding-left:0;padding-right:0">
-            <div style="font-size:1.05rem;font-weight:800">TOTAL: <span id="totalExibido">R$ 0,00</span></div>
-        </div>
-
-        <div class="mt-3 no-print" style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn btn-success" id="btnSalvar" onclick="salvarOrcamento()">💾 Salvar Orçamento</button>
-            <button class="btn btn-outline" id="btnImprimir" onclick="imprimirAtual()">🖨 Imprimir</button>
-            <button class="btn" style="background:#16a34a;color:#fff" id="btnConverter" onclick="converterAtual()">↩Converter em Venda</button>
-            <button class="btn btn-outline" onclick="cancelarEdicao()">Cancelar</button>
+        <!-- Rodapé com total e ações -->
+        <div class="orc-rodape no-print">
+            <div class="orc-total-txt">TOTAL: <span class="orc-total-val" id="totalExibido">R$ 0,00</span></div>
+            <div class="orc-acoes">
+                <button class="btn btn-success" id="btnSalvar" onclick="salvarOrcamento()">💾 Salvar</button>
+                <button class="btn btn-outline" id="btnImprimir" onclick="imprimirAtual()">🖨 Imprimir</button>
+                <button class="btn btn-primary" id="btnConverter" style="display:none;background:#16a34a;border-color:#16a34a" onclick="converterAtual()">↩ Converter em Venda</button>
+                <button class="btn btn-outline" onclick="cancelarEdicao()">✕ Cancelar</button>
+            </div>
         </div>
     </div>
-<div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
+
+</div>
+<div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:20px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
 <script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
@@ -151,19 +264,19 @@ function novoOrcamento(){ limparForm(); }
 function cancelarEdicao(){ document.getElementById('cardEditor').style.display='none'; document.getElementById('cardLista').style.display='block'; carregar(); }
 function adicionarLinha(item){
     const tipo=item&&item.tipo?item.tipo:'PRODUTO';
-    const q=item&&item.quantidade!=null?item.quantidade:'';
+    const q=item&&item.quantidade!=null?item.quantidade:'1';
     const desc=item&&item.descricao?item.descricao:'';
     const val=item&&item.valor!=null?item.valor:'';
     const tr=document.createElement('tr');
     tr.innerHTML=
-        '<td><select class="form-select tipo">'+
+        '<td><select class="tipo">'+
             '<option value="PRODUTO"'+(tipo==='PRODUTO'?' selected':'')+'>PRODUTO</option>'+
             '<option value="SERVIÇO"'+(tipo==='SERVIÇO'?' selected':'')+'>SERVIÇO</option>'+
         '</select></td>'+
-        '<td><input class="form-input quantidade" type="number" min="0" step="any" value="'+q+'"></td>'+
-        '<td><input class="form-input descricao" placeholder="Descrição" value="'+String(desc).replace(/"/g,'&quot;')+'"></td>'+
-        '<td><input class="form-input valor" type="number" min="0" step="any" value="'+val+'" oninput="calcularTotalAtual()"></td>'+
-        '<td><button type="button" class="item-row-remover" onclick="removerLinha(this)">✕</button></td>';
+        '<td><input class="quantidade" type="number" min="0" step="any" value="'+q+'" oninput="calcularTotalAtual()"></td>'+
+        '<td><input class="descricao" placeholder="Descrição do item" value="'+String(desc).replace(/"/g,'&quot;')+'"></td>'+
+        '<td><input class="valor" type="number" min="0" step="any" placeholder="0,00" value="'+val+'" oninput="calcularTotalAtual()"></td>'+
+        '<td><button type="button" class="btn-rm" onclick="removerLinha(this)" title="Remover">✕</button></td>';
     document.getElementById('tbodyItens').appendChild(tr);
 }
 function removerLinha(btn){ const tr=btn.closest('tr'); tr.parentNode.removeChild(tr); calcularTotalAtual(); }
@@ -284,34 +397,39 @@ function editarOrcamento(id){
         window.scrollTo({top:0,behavior:'smooth'});
     }).catch(()=>S.Toast.erro('Erro ao carregar orçamento'));
 }
-// Atualiza apenas a tabela em background (não toca no editor)
+// Atualiza apenas a lista em background (não toca no editor)
 async function _carregarLista(){
     try{
         const r=await fetch('/api/orcamentos'); const j=await r.json();
         if(!r.ok) return;
         const lista=j||[];
-        document.getElementById('badgeCount').innerText=lista.length+' orçamento(s)';
-        const tbody=document.getElementById('tbodyLista'); tbody.innerHTML='';
+        document.getElementById('badgeCount').innerText=lista.length ? lista.length+' orçamento(s)' : '';
+        const cont=document.getElementById('tbodyLista'); cont.innerHTML='';
         const empty=document.getElementById('emptyLista');
         empty.style.display=lista.length===0?'block':'none';
         lista.forEach(function(o){
             const st=estadoOrcamento(o);
-            const tr=document.createElement('tr');
-            const acoes=
-                '<button class="btn btn-outline btn-sm" onclick="editarOrcamento('+o.id+')">Abrir</button> '+
-                '<button class="btn btn-outline btn-sm" onclick="imprimirLista('+o.id+')">🖨</button> '+
-                (o.status!=='convertido'?'<button class="btn btn-success btn-sm" onclick="converterLista('+o.id+')">↩Venda</button> ':'')+
-                (o.status!=='convertido'?'<button class="btn btn-danger btn-sm" onclick="excluirOrcamento('+o.id+','+o.numero+')">✕</button>':'');
-            tr.innerHTML=
-                '<td class="monospace">ORC'+String(o.numero).padStart(4,'0')+'</td>'+
-                '<td class="font-bold">'+String(o.cliente||'—').replace(/</g,'&lt;')+'</td>'+
-                '<td>'+String(o.vendedor||'—').replace(/</g,'&lt;')+'</td>'+
-                '<td>'+dataBrasil(o.criacao)+'</td>'+
-                '<td>vence '+dataBrasil(addDias(o.criacao,o.validade_dias))+(o.validade_dias?' ('+o.validade_dias+'d)':'')+'</td>'+
-                '<td>'+fmtMoeda(o.total)+'</td>'+
-                '<td><span class="badge-orc '+st.cls+'">'+st.txt+'</span></td>'+
-                '<td class="no-print">'+acoes+'</td>';
-            tbody.appendChild(tr);
+            const vence=dataBrasil(addDias(o.criacao,o.validade_dias));
+            const div=document.createElement('div');
+            div.className='orc-card';
+            div.innerHTML=
+                '<div class="orc-card-num">ORC'+String(o.numero).padStart(4,'0')+'</div>'+
+                '<div class="orc-card-info">'+
+                    '<div class="orc-card-cliente">'+String(o.cliente||'—').replace(/</g,'&lt;')+'</div>'+
+                    '<div class="orc-card-meta">'+
+                        String(o.vendedor||'—').replace(/</g,'&lt;')+' · '+dataBrasil(o.criacao)+
+                        ' · vence '+vence+
+                    '</div>'+
+                '</div>'+
+                '<div class="orc-card-total">'+fmtMoeda(o.total)+'</div>'+
+                '<span class="badge-orc '+st.cls+'">'+st.txt+'</span>'+
+                '<div class="orc-card-acoes no-print">'+
+                    '<button class="btn btn-outline btn-sm" onclick="editarOrcamento('+o.id+')">✏ Abrir</button>'+
+                    '<button class="btn btn-outline btn-sm" onclick="imprimirLista('+o.id+')">🖨</button>'+
+                    (o.status!=='convertido'?'<button class="btn btn-success btn-sm" onclick="converterLista('+o.id+')">↩ Venda</button>':'')+
+                    (o.status!=='convertido'?'<button class="btn btn-danger btn-sm" onclick="excluirOrcamento('+o.id+','+o.numero+')">✕</button>':'')+
+                '</div>';
+            cont.appendChild(div);
         });
     }catch(e){}
 }
