@@ -467,6 +467,7 @@ a:hover {
 .layout {
     display: flex;
     min-height: 100vh;
+    width: 100%;
 }
 
 .sidebar {
@@ -626,6 +627,7 @@ a:hover {
     margin-left: 260px;
     padding: 32px;
     min-height: 100vh;
+    min-width: 0;
     background: rgba(255,255,255,0.14);
 }
 
@@ -1248,6 +1250,7 @@ input, select, textarea, button {
     .conteudo {
         padding: 16px 14px;
         padding-bottom: calc(76px + env(safe-area-inset-bottom));
+        width: 100%;
     }
 
     .sidebar {
@@ -1302,6 +1305,20 @@ input, select, textarea, button {
 
     .nota-wrap {
         width: 100%;
+    }
+
+    .card, .os-doc, .nota-via, .form-inline, .toolbar {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    [style*="grid-template-columns:1fr 1fr"],
+    [style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    .btn {
+        white-space: normal;
     }
 
     .toast {

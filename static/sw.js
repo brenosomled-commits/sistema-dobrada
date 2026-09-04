@@ -1,4 +1,4 @@
-const CACHE = "somled-v9";
+const CACHE = "somled-v10";
 const CORE = [
   "/static/manifest.webmanifest?v=8",
   "/static/icon-192.png?v=8",
@@ -6,8 +6,8 @@ const CORE = [
   "/static/apple-touch-icon.png?v=8",
   "/static/favicon-32.png?v=8",
   "/static/favicon-16.png?v=8",
-  "/static/estilo.css?v=8",
-  "/static/utilitarios.js?v=8",
+  "/static/estilo.css?v=10",
+  "/static/utilitarios.js?v=10",
 ];
 
 self.addEventListener("install", (event) => {
