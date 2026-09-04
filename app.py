@@ -21,14 +21,32 @@ app.config.update(
 )
 
 _ultima_verificacao_vencimentos = 0.0
+_verificacao_vencimentos_lock = threading.Lock()
+_verificacao_vencimentos_em_andamento = False
+
+
+def _executar_verificacao_vencimentos_async():
+    global _verificacao_vencimentos_em_andamento
+    try:
+        verificar_vencimentos()
+    finally:
+        _verificacao_vencimentos_em_andamento = False
+
 
 @app.before_request
 def _verificar_vencimentos_startup():
-    global _ultima_verificacao_vencimentos
+    global _ultima_verificacao_vencimentos, _verificacao_vencimentos_em_andamento
     agora = time.time()
-    if agora - _ultima_verificacao_vencimentos > 1800:
+    if agora - _ultima_verificacao_vencimentos <= 1800:
+        return
+    with _verificacao_vencimentos_lock:
+        if agora - _ultima_verificacao_vencimentos <= 1800:
+            return
+        if _verificacao_vencimentos_em_andamento:
+            return
         _ultima_verificacao_vencimentos = agora
-        threading.Thread(target=verificar_vencimentos, daemon=True).start()
+        _verificacao_vencimentos_em_andamento = True
+    threading.Thread(target=_executar_verificacao_vencimentos_async, daemon=True).start()
 
 BANCO = None  # reservado (backward compatibility)
 USAR_POSTGRES = db.banco_eh_postgres()
@@ -696,6 +714,24 @@ def _criar_banco_sqlite():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_ordem ON itens(ordem_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_vendas_numero ON vendas(numero DESC)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_venda_itens_venda ON venda_itens(venda_id)")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS financeiro_lancamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA')),
+            categoria TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            valor REAL NOT NULL DEFAULT 0,
+            vencimento TEXT,
+            pagamento TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDENTE',
+            venda_id INTEGER,
+            criado_por TEXT,
+            criado_em TEXT,
+            FOREIGN KEY (venda_id) REFERENCES vendas(id)
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_status ON financeiro_lancamentos(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_vencimento ON financeiro_lancamentos(vencimento)")
 
     conexao.commit()
     conexao.close()
@@ -1087,6 +1123,24 @@ def _criar_banco_postgres():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_itens_ordem ON itens(ordem_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_vendas_numero ON vendas(numero DESC)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_venda_itens_venda ON venda_itens(venda_id)")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS financeiro_lancamentos (
+                id SERIAL PRIMARY KEY,
+                tipo TEXT NOT NULL CHECK(tipo IN ('ENTRADA', 'SAIDA')),
+                categoria TEXT NOT NULL,
+                descricao TEXT NOT NULL,
+                valor DOUBLE PRECISION NOT NULL DEFAULT 0,
+                vencimento TEXT,
+                pagamento TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDENTE',
+                venda_id INTEGER,
+                criado_por TEXT,
+                criado_em TEXT,
+                FOREIGN KEY (venda_id) REFERENCES vendas(id)
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_status ON financeiro_lancamentos(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_vencimento ON financeiro_lancamentos(vencimento)")
     except Exception:
         conexao.rollback()
         conexao.close()
@@ -1177,6 +1231,18 @@ def financeiro_obrigatorio(funcao):
         papel = obter_papel_usuario(session["usuario"])
         if not papel or papel.upper() not in PAPEIS_FINANCEIRO:
             return jsonify({"erro": "Acesso permitido somente para Dono, Gerente ou Financeiro."}), 403
+        return funcao(*args, **kwargs)
+    return verificar
+
+
+def financeiro_exclusivo(funcao):
+    @wraps(funcao)
+    def verificar(*args, **kwargs):
+        if "usuario" not in session:
+            return redirect(url_for("login"))
+        papel = obter_papel_usuario(session["usuario"])
+        if not papel or papel.upper() != "FINANCEIRO":
+            return jsonify({"erro": "Acesso permitido somente para o usuário Financeiro."}), 403
         return funcao(*args, **kwargs)
     return verificar
 
@@ -2026,6 +2092,148 @@ def pagina_nota_dobrada():
     )
 
 
+@app.route("/financeiro")
+@financeiro_exclusivo
+def pagina_financeiro():
+    return render_template(
+        "financeiro.html",
+        usuario=session["usuario"],
+        papel="FINANCEIRO",
+    )
+
+
+def _sincronizar_contas_receber(cursor):
+    cursor.execute("""
+        SELECT v.id, v.numero, v.cliente, v.total, v.vencimento, v.data,
+               v.condicao
+        FROM vendas v
+        LEFT JOIN financeiro_lancamentos f
+          ON f.venda_id = v.id AND f.tipo = 'ENTRADA'
+        WHERE f.id IS NULL AND COALESCE(v.status, 'ativa') <> 'cancelada'
+    """)
+    agora = agora_sp().strftime("%Y-%m-%d %H:%M:%S")
+    for venda in cursor.fetchall():
+        a_prazo = str(venda["condicao"] or "").lower() == "aprazo"
+        cursor.execute("""
+            INSERT INTO financeiro_lancamentos
+            (tipo, categoria, descricao, valor, vencimento, pagamento, status,
+             venda_id, criado_por, criado_em)
+            VALUES (?, 'VENDAS', ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            "ENTRADA",
+            "Venda SL" + str(venda["numero"]).zfill(4) + " - " + (venda["cliente"] or "CONSUMIDOR FINAL"),
+            float(venda["total"] or 0),
+            venda["vencimento"] or venda["data"],
+            None if a_prazo else venda["data"],
+            "PENDENTE" if a_prazo else "PAGO",
+            venda["id"],
+            "SISTEMA",
+            agora,
+        ))
+
+
+@app.route("/api/financeiro/resumo")
+@financeiro_exclusivo
+def api_financeiro_resumo():
+    conexao = conectar()
+    cursor = conexao.cursor()
+    _sincronizar_contas_receber(cursor)
+    conexao.commit()
+    cursor.execute("""
+        SELECT
+            COALESCE(SUM(CASE WHEN tipo='ENTRADA' AND status='PAGO' THEN valor ELSE 0 END), 0) AS entradas,
+            COALESCE(SUM(CASE WHEN tipo='SAIDA' AND status='PAGO' THEN valor ELSE 0 END), 0) AS saidas,
+            COALESCE(SUM(CASE WHEN tipo='ENTRADA' AND status='PENDENTE' THEN valor ELSE 0 END), 0) AS receber,
+            COALESCE(SUM(CASE WHEN tipo='SAIDA' AND status='PENDENTE' THEN valor ELSE 0 END), 0) AS pagar
+        FROM financeiro_lancamentos
+    """)
+    resumo = cursor.fetchone()
+    conexao.close()
+    return jsonify({
+        "entradas": float(resumo["entradas"] or 0),
+        "saidas": float(resumo["saidas"] or 0),
+        "saldo": float(resumo["entradas"] or 0) - float(resumo["saidas"] or 0),
+        "receber": float(resumo["receber"] or 0),
+        "pagar": float(resumo["pagar"] or 0),
+    })
+
+
+@app.route("/api/financeiro/lancamentos")
+@financeiro_exclusivo
+def api_financeiro_lancamentos():
+    filtro = (request.args.get("status") or "").strip().upper()
+    conexao = conectar()
+    cursor = conexao.cursor()
+    _sincronizar_contas_receber(cursor)
+    conexao.commit()
+    if filtro in {"PENDENTE", "PAGO", "CANCELADO"}:
+        cursor.execute(
+            "SELECT * FROM financeiro_lancamentos WHERE status = ? ORDER BY vencimento ASC, id DESC",
+            (filtro,)
+        )
+    else:
+        cursor.execute("SELECT * FROM financeiro_lancamentos ORDER BY vencimento ASC, id DESC")
+    registros = cursor.fetchall()
+    conexao.close()
+    return jsonify([dict(registro) for registro in registros])
+
+
+@app.route("/api/financeiro/lancamentos", methods=["POST"])
+@financeiro_exclusivo
+def criar_lancamento_financeiro():
+    dados = json_body()
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
+    tipo = str(dados.get("tipo", "")).strip().upper()
+    categoria = str(dados.get("categoria", "")).strip()
+    descricao = str(dados.get("descricao", "")).strip()
+    try:
+        valor = float(dados.get("valor", 0))
+    except (TypeError, ValueError):
+        return jsonify({"erro": "Informe um valor válido."}), 400
+    if tipo not in {"ENTRADA", "SAIDA"} or not categoria or not descricao or valor <= 0:
+        return jsonify({"erro": "Preencha tipo, categoria, descrição e valor corretamente."}), 400
+    status = str(dados.get("status", "PENDENTE")).strip().upper()
+    if status not in {"PENDENTE", "PAGO"}:
+        status = "PENDENTE"
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("""
+        INSERT INTO financeiro_lancamentos
+        (tipo, categoria, descricao, valor, vencimento, pagamento, status, criado_por, criado_em)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        tipo, categoria, descricao, valor, dados.get("vencimento") or None,
+        dados.get("pagamento") or (agora_sp().strftime("%Y-%m-%d") if status == "PAGO" else None),
+        status, session["usuario"], agora_sp().strftime("%Y-%m-%d %H:%M:%S")
+    ))
+    novo_id = cursor.lastrowid
+    conexao.commit()
+    conexao.close()
+    return jsonify({"id": novo_id, "mensagem": "Lançamento financeiro criado."}), 201
+
+
+@app.route("/api/financeiro/lancamentos/<int:id>", methods=["PUT"])
+@financeiro_exclusivo
+def atualizar_lancamento_financeiro(id):
+    dados = json_body()
+    status = str((dados or {}).get("status", "")).strip().upper()
+    if status not in {"PENDENTE", "PAGO", "CANCELADO"}:
+        return jsonify({"erro": "Status financeiro inválido."}), 400
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute(
+        "UPDATE financeiro_lancamentos SET status = ?, pagamento = ? WHERE id = ?",
+        (status, agora_sp().strftime("%Y-%m-%d") if status == "PAGO" else None, id)
+    )
+    if cursor.rowcount == 0:
+        conexao.close()
+        return jsonify({"erro": "Lançamento não encontrado."}), 404
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Lançamento atualizado."})
+
+
 @app.route("/editar_venda")
 @login_obrigatorio
 def pagina_editar_venda():
@@ -2240,8 +2448,10 @@ def listar_vendas():
             "vencimento": venda["vencimento"],
             "desconto": venda["desconto"],
             "observacao": venda["observacao"],
+            "endereco": venda["endereco"],
             "total": venda["total"],
-            "comissao": venda["comissao"]
+            "comissao": venda["comissao"],
+            "status": venda["status"]
         }
         for venda in vendas
     ])
@@ -2415,8 +2625,10 @@ def buscar_venda(id):
         "vencimento": venda["vencimento"],
         "desconto": venda["desconto"],
         "observacao": venda["observacao"],
+        "endereco": venda["endereco"],
         "total": venda["total"],
         "comissao": venda["comissao"],
+        "status": venda["status"],
         "itens": [
             {
                 "id": item["id"],
@@ -2489,15 +2701,15 @@ def atualizar_venda(id):
         WHERE id = ?
     """, (
         cliente_final,
-        dados.get("fantasia", ""),
-        dados.get("telefone", ""),
-        dados.get("vendedor", ""),
-        dados.get("data", ""),
-        dados.get("condicao", ""),
-        dados.get("vencimento", ""),
+        str(dados.get("fantasia", "") or "").strip(),
+        str(dados.get("telefone", "") or "").strip(),
+        str(dados.get("vendedor", "") or "").strip(),
+        str(dados.get("data", "") or "").strip(),
+        str(dados.get("condicao", "") or "").strip(),
+        str(dados.get("vencimento", "") or "").strip(),
         desconto,
-        dados.get("observacao", ""),
-        dados.get("endereco", ""),
+        str(dados.get("observacao", "") or "").strip(),
+        str(dados.get("endereco", "") or "").strip(),
         total,
         comissao,
         id

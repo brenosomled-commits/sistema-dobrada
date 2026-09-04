@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financeiro - SOMLED</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=10">
+<style>
+.fin-hero{background:linear-gradient(135deg,#0f172a,#1e3a5f 60%,#047857);color:#fff;border-radius:16px;padding:22px 24px;display:flex;justify-content:space-between;gap:16px;align-items:center}
+.fin-hero h1{font-size:1.35rem;margin:0}.fin-hero p{margin:5px 0 0;opacity:.85;font-size:.86rem}
+.fin-filtros{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.fin-filtros .form-group{margin:0}
+.fin-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:16px}
+.fin-card{background:#fff;border:1px solid var(--cor-borda);border-top:4px solid var(--cor-primaria);border-radius:12px;padding:16px;box-shadow:var(--sombra-sm)}
+.fin-card h3{font-size:.75rem;text-transform:uppercase;color:var(--cor-texto-secundario);margin:0 0 8px}.fin-valor{font-size:1.35rem;font-weight:800}
+.fin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 12px}.fin-tabs button.ativo{background:var(--cor-primaria);color:#fff}
+.fin-acoes{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+@media(max-width:900px){.fin-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.fin-hero{align-items:flex-start;flex-direction:column;padding:18px}.fin-grid{grid-template-columns:1fr}.fin-filtros,.fin-filtros>*{width:100%}.fin-filtros .btn{width:100%}.fin-acoes{align-items:stretch;flex-direction:column}.fin-acoes .btn{width:100%}}
+</style>
+</head>
+<body>
+<div class="layout">
+<button class="mobile-toggle" aria-label="Abrir menu">☰</button>
+<div class="sidebar-overlay"></div>
+<aside class="sidebar">
+    <div class="sidebar-logo"><img src="{{ url_for('static', filename='logo.png') }}" alt=""></div>
+    <nav class="sidebar-nav">
+        <div class="sidebar-section"><div class="sidebar-section-label">Financeiro</div>
+            <a class="sidebar-link ativa" href="/financeiro"><span class="link-icon">💼</span> Visão financeira</a>
+            <a class="sidebar-link" href="/"><span class="link-icon">↩️</span> Voltar ao sistema</a>
+        </div>
+    </nav>
+    <div class="sidebar-footer"><div class="sidebar-user"><div class="user-avatar">{{ usuario[:1].upper() }}</div><div class="user-info"><div class="user-name">{{ usuario }}</div><div class="user-role">FINANCEIRO</div></div></div><a class="btn btn-outline w-full mt-2" href="/logout" style="background:var(--cor-fundo)">Sair</a></div>
+</aside>
+<main class="conteudo">
+    <div class="fin-hero"><div><h1>💼 Controle Financeiro</h1><p>Contas a receber, contas a pagar e fluxo de caixa.</p></div><div class="fin-filtros"><div class="form-group"><label class="form-label" style="color:#fff">Status</label><select id="filtroStatus" class="form-select"><option value="">Todos</option><option value="PENDENTE">Pendentes</option><option value="PAGO">Pagos</option></select></div><button class="btn btn-outline" style="background:#fff" onclick="carregar()">Atualizar</button></div></div>
+    <div class="fin-grid">
+        <div class="fin-card" style="border-top-color:#059669"><h3>Entradas pagas</h3><div class="fin-valor" id="entradas">R$ 0,00</div></div>
+        <div class="fin-card" style="border-top-color:#dc2626"><h3>Saídas pagas</h3><div class="fin-valor" id="saidas">R$ 0,00</div></div>
+        <div class="fin-card" style="border-top-color:#2563eb"><h3>Saldo atual</h3><div class="fin-valor" id="saldo">R$ 0,00</div></div>
+        <div class="fin-card" style="border-top-color:#f59e0b"><h3>A receber</h3><div class="fin-valor" id="receber">R$ 0,00</div></div>
+        <div class="fin-card" style="border-top-color:#9333ea"><h3>A pagar</h3><div class="fin-valor" id="pagar">R$ 0,00</div></div>
+    </div>
+    <div class="card mt-3">
+        <div class="fin-acoes"><div><h2 class="card-title">Lançamentos financeiros</h2><p class="text-muted" style="font-size:.84rem">As vendas a prazo aparecem automaticamente em contas a receber.</p></div><button class="btn btn-primary" onclick="abrirFormulario()">+ Novo lançamento</button></div>
+        <div class="fin-tabs"><button class="btn btn-outline btn-sm ativo" data-tipo="" onclick="filtrarTipo(this,'')">Todos</button><button class="btn btn-outline btn-sm" data-tipo="ENTRADA" onclick="filtrarTipo(this,'ENTRADA')">Entradas</button><button class="btn btn-outline btn-sm" data-tipo="SAIDA" onclick="filtrarTipo(this,'SAIDA')">Saídas</button></div>
+        <div class="tabela-container"><table class="tabela"><thead><tr><th>Tipo</th><th>Descrição</th><th>Categoria</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead><tbody id="lista"></tbody></table></div>
+        <div id="vazio" class="empty-state" style="display:none"><div class="empty-icon">📭</div><h3>Nenhum lançamento</h3></div>
+    </div>
+</main>
+</div>
+<div id="modal" class="modal-overlay" style="display:none"><div class="modal"><div class="modal-header"><h3>Novo lançamento</h3></div><div class="modal-body"><div class="form-row"><div class="form-group"><label class="form-label">Tipo</label><select id="tipo" class="form-select"><option value="SAIDA">Saída</option><option value="ENTRADA">Entrada</option></select></div><div class="form-group"><label class="form-label">Categoria</label><input id="categoria" class="form-input" placeholder="Ex.: aluguel"></div></div><div class="form-group"><label class="form-label">Descrição</label><input id="descricao" class="form-input" required></div><div class="form-row"><div class="form-group"><label class="form-label">Valor</label><input id="valor" class="form-input" type="number" min="0.01" step="0.01"></div><div class="form-group"><label class="form-label">Vencimento</label><input id="vencimento" class="form-input" type="date"></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="fecharFormulario()">Cancelar</button><button class="btn btn-primary" onclick="salvarLancamento()">Salvar</button></div></div></div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=10"></script>
+<script>
+const S=window.SistemaUtil; S.initSidebar(); let tipoAtual="";
+const moeda=v=>Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const dataBR=v=>v?String(v).slice(0,10).split("-").reverse().join("/"):"-";
+async function carregar(){
+    const resumo=await S.fetchComTimeout("/api/financeiro/resumo",{},10000).then(r=>r.json());
+    ["entradas","saidas","saldo","receber","pagar"].forEach(k=>document.getElementById(k).innerText=moeda(resumo[k]));
+    const status=document.getElementById("filtroStatus").value;
+    const itens=await S.fetchComTimeout("/api/financeiro/lancamentos?status="+encodeURIComponent(status),{},10000).then(r=>r.json());
+    const lista=document.getElementById("lista"); lista.innerHTML="";
+    const filtrados=tipoAtual?itens.filter(x=>x.tipo===tipoAtual):itens;
+    document.getElementById("vazio").style.display=filtrados.length?"none":"block";
+    filtrados.forEach(x=>{const tr=document.createElement("tr"); const acao=x.status==="PENDENTE"?`<button class="btn btn-success btn-sm" onclick="marcarPago(${x.id})">Marcar pago</button>`:""; tr.innerHTML=`<td>${x.tipo}</td><td>${x.descricao}</td><td>${x.categoria}</td><td>${dataBR(x.vencimento)}</td><td>${moeda(x.valor)}</td><td>${x.status}</td><td>${acao}</td>`; lista.appendChild(tr);});
+}
+function filtrarTipo(btn,tipo){tipoAtual=tipo;document.querySelectorAll(".fin-tabs button").forEach(x=>x.classList.remove("ativo"));btn.classList.add("ativo");carregar();}
+function abrirFormulario(){document.getElementById("modal").style.display="flex";}
+function fecharFormulario(){document.getElementById("modal").style.display="none";}
+async function salvarLancamento(){const d={tipo:tipo.value,categoria:categoria.value,descricao:descricao.value,valor:valor.value,vencimento:vencimento.value};const r=await S.fetchComTimeout("/api/financeiro/lancamentos",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)},10000);const j=await r.json();if(!r.ok){S.Toast.erro(j.erro||"Não foi possível salvar.");return;}fecharFormulario();S.Toast.sucesso("Lançamento salvo.");carregar();}
+async function marcarPago(id){const r=await S.fetchComTimeout("/api/financeiro/lancamentos/"+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"PAGO"})},10000);if(!r.ok){S.Toast.erro("Não foi possível atualizar.");return;}carregar();}
+document.getElementById("filtroStatus").addEventListener("change",carregar);carregar();
+</script>
+</body>
+</html>
