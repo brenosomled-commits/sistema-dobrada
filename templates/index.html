@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
 <title>Sistema de Ordem de Serviço</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=10">
 <style>
 
 /* ===== TELA NOVA OS — documento profissional ===== */
@@ -27,9 +27,9 @@
 
 .os-doc {
     background: #fff;
-    border: 1px solid var(--cor-borda);
+    border: 1px solid rgba(20, 66, 176, 0.16);
     border-radius: var(--raio-lg);
-    box-shadow: var(--sombra-sm);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -163,12 +163,13 @@
 }
 
 .os-secao-titulo {
-    font-size: 0.95rem;
-    font-weight: 800;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     color: #fff;
-    background: var(--cor-primaria);
+    background: linear-gradient(135deg, var(--cor-primaria), #1d4ed8);
     border-radius: 8px;
-    padding: 8px 14px;
+    padding: 9px 14px;
 }
 
 /* Caixa leve para problema/solução */
@@ -1146,7 +1147,7 @@ function mostrarConsulta() {
 
 async function carregarDashboard() {
     try {
-        const resposta = await fetch("/ordens");
+        const resposta = await S.fetchComTimeout("/ordens", {}, 10000);
         const ordens = await resposta.json();
 
         document.getElementById("totalOS").innerText = ordens.length;
@@ -1183,7 +1184,11 @@ async function carregarDashboard() {
     // Vendas e Entregas do dia — só o mais importante
     try{
         const hoje = new Date().toISOString().split("T")[0];
-        const [rv, re, ro] = await Promise.all([fetch("/api/vendas").then(r=>r.ok?r.json():[]).catch(()=>[]), fetch("/api/entregas").then(r=>r.ok?r.json():[]).catch(()=>[]), fetch("/api/orcamentos").then(r=>r.ok?r.json():[]).catch(()=>[])]);
+        const [rv, re, ro] = await Promise.all([
+            S.fetchComTimeout("/api/vendas", {}, 10000).then(r=>r.ok?r.json():[]).catch(()=>[]),
+            S.fetchComTimeout("/api/entregas", {}, 10000).then(r=>r.ok?r.json():[]).catch(()=>[]),
+            S.fetchComTimeout("/api/orcamentos", {}, 10000).then(r=>r.ok?r.json():[]).catch(()=>[])
+        ]);
         const vendasHoje = (rv||[]).filter(v=> (v.data||"").slice(0,10)===hoje);
         const faturamentoHoje = vendasHoje.reduce((s,v)=> s + (Number(v.total)||0), 0);
         const elVendas = document.getElementById("vendasHoje");
@@ -1279,7 +1284,7 @@ function calcularTotal() {
 /* ===================== NÚMERO ===================== */
 
 async function carregarNumero() {
-    const resposta = await fetch("/proximo_numero");
+    const resposta = await S.fetchComTimeout("/proximo_numero", {}, 10000);
     const dados = await resposta.json();
     document.getElementById("numero").value = String(dados.numero).padStart(5, "0");
 }
@@ -1343,7 +1348,7 @@ async function salvarOS() {
     S.mostrarLoading("Salvando OS...");
 
     try {
-        const resposta = await fetch("/salvar_os", {
+        const resposta = await S.fetchComTimeout("/salvar_os", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(dados)
@@ -1378,7 +1383,7 @@ async function atualizarOS() {
     S.mostrarLoading("Atualizando OS...");
 
     try {
-        const resposta = await fetch("/atualizar_os/" + ordemEditando, {
+        const resposta = await S.fetchComTimeout("/atualizar_os/" + ordemEditando, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(dados)
@@ -1411,18 +1416,18 @@ async function salvarEImprimirOS(){
     if(!ordemEditando){
         S.mostrarLoading("Salvando e imprimindo...");
         try{
-            const r=await fetch("/salvar_os",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
+            const r=await S.fetchComTimeout("/salvar_os",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)},15000);
             const res=await r.json(); if(!r.ok) throw new Error(res.erro||"Erro ao salvar");
             S.Toast.sucesso("OS #"+String(res.numero).padStart(5,"0")+" salva!");
-            const ordens=await fetch("/ordens").then(x=>x.json());
+            const ordens=await S.fetchComTimeout("/ordens", {}, 10000).then(x=>x.json());
             const nova=ordens.find(o=>o.numero===res.numero);
-            if(nova && S.imprimirOS){ const ordem=await fetch("/ordem/"+nova.id).then(x=>x.json()); S.imprimirOS(ordem); }
+            if(nova && S.imprimirOS){ const ordem=await S.fetchComTimeout("/ordem/"+nova.id, {}, 10000).then(x=>x.json()); S.imprimirOS(ordem); }
             novaOS();
         }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
     } else {
         S.mostrarLoading("Atualizando e imprimindo...");
         try{
-            const r=await fetch("/atualizar_os/"+ordemEditando,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)});
+            const r=await S.fetchComTimeout("/atualizar_os/"+ordemEditando,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)},15000);
             const res=await r.json(); if(!r.ok) throw new Error(res.erro||"Erro");
             S.Toast.sucesso("OS atualizada!");
             await verDetalhes(ordemEditando);
@@ -1434,7 +1439,7 @@ async function salvarEImprimirOS(){
 /* ===================== CONSULTA ===================== */
 
 async function carregarOrdens() {
-    const resposta = await fetch("/ordens");
+    const resposta = await S.fetchComTimeout("/ordens", {}, 10000);
     todasOrdens = await resposta.json();
     paginaAtual = 1;
     filtrarOrdens();
@@ -1568,7 +1573,7 @@ function filtrarOrdens() {
 async function verDetalhes(id) {
     S.mostrarLoading("Carregando OS...");
     try {
-        const resposta = await fetch("/ordem/" + id);
+        const resposta = await S.fetchComTimeout("/ordem/" + id, {}, 10000);
         const ordem = await resposta.json();
 
         if (!resposta.ok) throw new Error(ordem.erro);
@@ -1622,7 +1627,7 @@ async function verDetalhes(id) {
 async function editarOS(id) {
     S.mostrarLoading("Carregando OS...");
     try {
-        const resposta = await fetch("/ordem/" + id);
+        const resposta = await S.fetchComTimeout("/ordem/" + id, {}, 10000);
         const ordem = await resposta.json();
 
         if (!resposta.ok) throw new Error(ordem.erro);
@@ -1665,7 +1670,7 @@ async function editarOS(id) {
 
 async function alterarStatus(id, status) {
     try {
-        const resposta = await fetch("/alterar_status/" + id, {
+        const resposta = await S.fetchComTimeout("/alterar_status/" + id, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: status })
@@ -1698,7 +1703,7 @@ async function excluirOS(id) {
     if (!confirmar) return;
 
     try {
-        const resposta = await fetch("/excluir_os/" + id, { method: "DELETE" });
+        const resposta = await S.fetchComTimeout("/excluir_os/" + id, { method: "DELETE" }, 15000);
         const resultado = await resposta.json();
 
         if (!resposta.ok) {
@@ -1720,7 +1725,7 @@ async function carregarUsuariosResponsavel(responsavelSelecionado = "") {
     const select = document.getElementById("responsavel");
 
     try {
-        const resposta = await fetch("/api/vendedores");
+        const resposta = await S.fetchComTimeout("/api/vendedores", {}, 10000);
         const dados = await resposta.json();
         // /api/vendedores retorna objetos {usuario, papel}, já filtra admin e FINANCEIRO
         const usuarios = dados.map(u => typeof u === 'string' ? u : (u.usuario || u.nome || '')).filter(Boolean);
@@ -1756,8 +1761,7 @@ document.addEventListener("keydown", function(event) {
 /* ===================== INICIALIZAÇÃO ===================== */
 
 async function iniciarSistema() {
-    await carregarUsuariosResponsavel();
-    await mostrarDashboard();
+    await Promise.all([carregarUsuariosResponsavel(), mostrarDashboard()]);
     S.initSidebar();
     if (window.SistemaUtil.adicionarMascaraTelefone) {
         document.querySelectorAll('#telefone').forEach(el => {
@@ -1805,7 +1809,7 @@ iniciarSistema();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=7").catch(function(e){ console.warn("SW:", e); });
+    navigator.serviceWorker.register("/sw.js?v=10").catch(function(e){ console.warn("SW:", e); });
 }
 </script>
 </body>
