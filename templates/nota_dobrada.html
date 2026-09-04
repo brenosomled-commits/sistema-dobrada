@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
 <title>Nota Dobrada </title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=9">
 <style>
 /* ===== NOTA DOBRADA - VISUAL PREMIUM ===== */
 .nota-wrap{ max-width: 960px; margin: 0 auto; }
@@ -46,6 +46,8 @@
 }
 .nota-secao-titulo::after{ content:""; flex:1; height:1px; background:var(--cor-borda); }
 .nota-grid-4{ display:grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap:12px; }
+.nota-dados-cliente, .nota-dados-adicionais{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.nota-dados-adicionais{ margin-top:12px; margin-bottom:0; }
 @media(max-width:900px){ .nota-grid-4{ grid-template-columns:1fr 1fr; } }
 .campo-nota{ display:flex; flex-direction:column; gap:6px; }
 .campo-nota label{ font-size:.70rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--cor-texto-secundario); }
@@ -122,6 +124,7 @@
     .nota-item-editor .valor{ grid-column: 1 / span 2; }
     .nota-item-editor .subtotal{ display:none; }
     .nota-grid-4{ grid-template-columns:1fr; }
+    .nota-dados-cliente, .nota-dados-adicionais{ grid-template-columns:1fr; gap:10px; }
     .nota-corpo{ padding:16px; }
 }
 
@@ -139,15 +142,15 @@
 .entrega-impressao{ margin-top:6px; display:flex; gap:16px; justify-content:center; font-size:10px; font-weight:700; }
 .marcador-caixa{ width:11px; height:11px; border:1px solid #000; display:inline-flex; align-items:center; justify-content:center; font-size:9px; line-height:1; }
 @media print{
-    /* usa o padrão global de A4 (margens pequenas e seguras) */
-    @page{ size:A4 portrait; margin:6mm 5mm 6mm 5mm; }
-    body{ background:#fff; }
+    @page{ size:A4 portrait; margin:8mm 10mm 8mm 10mm; }
+    body{ background:#fff; margin:0; }
     body > .layout{ display:none!important; }
     #areaImpressao{ display:block!important; }
-    .pagina-impressao{ width:auto; max-width:200mm; height:auto; page-break-after:always; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
+    .pagina-impressao{ width:100%; max-width:176mm; min-height:0; height:auto; margin:0 auto; page-break-after:avoid; page-break-inside:avoid; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.8mm; }
     .pagina-impressao:last-child{ page-break-after:auto; }
-    /* via ocupa a largura útil da A4 e a metade superior/inferior */
-    .via-impressao{ width:190mm; height:auto; min-height:133mm; max-height:141mm; padding:4mm; margin:0; overflow:visible; page-break-inside:avoid; box-sizing:border-box; font-size:8.5pt; display:flex; flex-direction:column; border:1px solid #000; }
+    .recorte-linha{ width:170mm; margin:0 auto; display:flex; align-items:center; justify-content:center; padding:1mm 0; page-break-inside:avoid; }
+    .recorte-linha > span{ display:flex; align-items:center; justify-content:center; gap:5px; font-size:7.5px; font-weight:800; color:#111827; letter-spacing:.07em; text-transform:uppercase; white-space:nowrap; }
+    .via-impressao{ width:170mm; min-height:120mm; max-height:126mm; padding:3mm 4mm; margin:0 auto; overflow:hidden; page-break-inside:avoid; box-sizing:border-box; font-size:8pt; display:flex; flex-direction:column; border:1px solid #000; }
     .via-impressao .resumo-financeiro{ width:88mm; margin:6px 0 0 auto; }
     .nota-tabela-cabecalho *{ text-transform:uppercase; }
     .nota-item-impressao *{ text-transform:uppercase; }
@@ -200,7 +203,7 @@
 
             <div class="nota-corpo">
                 <div class="nota-secao-titulo">Dados do cliente</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px">
+                <div class="nota-dados-cliente">
                     <div class="campo-nota"><label for="cliente">Cliente *</label><input type="text" id="cliente" placeholder="CONSUMIDOR FINAL" value="CONSUMIDOR FINAL"></div>
                     <div class="campo-nota"><label for="telefone">Telefone</label><input type="text" id="telefone" placeholder="(00) 00000-0000" maxlength="15"></div>
                 </div>
@@ -223,7 +226,7 @@
 
                 <div id="campoVencimento" style="display:none; margin-top:12px" class="campo-nota"><label for="vencimento">Vencimento (30 dias)</label><input type="date" id="vencimento" readonly></div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px">
+                <div class="nota-dados-adicionais">
                     <div class="campo-nota"><label for="obs">Observação</label><input type="text" id="obs" placeholder="Ex.: instalação incluída"></div>
                     <div class="campo-nota"><label for="endereco">Endereço de entrega</label><input type="text" id="endereco" placeholder="Rua, número, bairro"></div>
                 </div>
@@ -318,7 +321,7 @@ function definirDataHoje(){
 function fmtVenda(n){ return "SL" + String(n||0).padStart(4,"0"); }
 function fmtData(d){ if(!d) return ""; const soData=String(d).split(" ")[0]; const p=soData.split("-"); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(d); }
 async function gerarNumeroVenda(){
-    try{ const r = await fetch("/api/proxima_venda"); const j = await r.json(); document.getElementById("venda").value = fmtVenda(j.numero); syncBadge(); }
+    try{ const r = await S.fetchComTimeout("/api/proxima_venda", {}, 8000); if(!r.ok) throw new Error("Não foi possível gerar o número da venda."); const j = await r.json(); document.getElementById("venda").value = fmtVenda(j.numero); syncBadge(); }
     catch(erro){ console.error(erro); document.getElementById("venda").value = ""; }
 }
 function calcularTroco(){
@@ -424,7 +427,7 @@ async function salvarVendaNota(){
         total: total, itens: itens
     };
     try{
-        const resposta = await fetch("/api/vendas", { method: "POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(dadosVenda) });
+        const resposta = await S.fetchComTimeout("/api/vendas", { method: "POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(dadosVenda) }, 15000);
         const resultado = await resposta.json();
         if(!resposta.ok) throw new Error(resultado.erro || "Erro ao salvar venda");
         vendaSalva = true; localStorage.removeItem(chaveRascunho);
@@ -561,15 +564,15 @@ function recorteVia(){
     return el;
 }
 async function carregarVendedores(){
-    try{ const r = await fetch("/api/vendedores"); const usuarios = await r.json();
+    try{ const r = await S.fetchComTimeout("/api/vendedores", {}, 8000); if(!r.ok) throw new Error("Não foi possível carregar os vendedores."); const usuarios = await r.json();
         const sel = document.getElementById("vendedor"); sel.innerHTML = '<option value="">Selecione</option>';
         usuarios.forEach(function(u){ const nome = u.usuario || u.nome || ""; if(nome){ const o=document.createElement("option"); o.value=nome; o.textContent=nome; sel.appendChild(o);} });
     }catch(erro){ console.error(erro); }
 }
 async function iniciar(){
-    definirDataHoje(); await carregarVendedores();
+    definirDataHoje(); adicionarItem(); carregarVendedores();
     const restaurado = restaurarRascunho();
-    if(!restaurado){ await gerarNumeroVenda(); adicionarItem(); }
+    if(!restaurado){ gerarNumeroVenda(); }
     calcularTotal(); syncBadge();
     var campoTel = document.getElementById("telefone");
     if(campoTel){ campoTel.addEventListener("input", function(){ if(S.mascaraTelefone){ S.mascaraTelefone(campoTel); } }); }
@@ -582,7 +585,7 @@ iniciar();
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js?v=7").catch(function(e){ console.warn("SW:", e); });
+    navigator.serviceWorker.register("/sw.js?v=9").catch(function(e){ console.warn("SW:", e); });
 }
 </script>
 </body>

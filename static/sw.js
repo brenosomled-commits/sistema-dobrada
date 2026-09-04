@@ -1,4 +1,4 @@
-const CACHE = "somled-v8";
+const CACHE = "somled-v9";
 const CORE = [
   "/static/manifest.webmanifest?v=8",
   "/static/icon-192.png?v=8",
@@ -30,6 +30,20 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
   if (url.pathname === "/login" || url.pathname === "/logout") return;
+
+  // Sempre busca as páginas no servidor para não manter uma tela HTML antiga.
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("/")))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {

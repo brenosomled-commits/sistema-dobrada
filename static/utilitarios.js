@@ -134,6 +134,13 @@
         if (overlay) overlay.remove();
     }
 
+    function fetchComTimeout(url, opcoes, tempo) {
+        const controller = new AbortController();
+        const timeout = setTimeout(function () { controller.abort(); }, tempo || 10000);
+        const configuracao = Object.assign({}, opcoes || {}, { signal: controller.signal });
+        return fetch(url, configuracao).finally(function () { clearTimeout(timeout); });
+    }
+
     // ===================== MODAL DE CONFIRMAÇÃO =====================
 
     function confirmacao(opcoes) {
@@ -261,7 +268,7 @@
         document.addEventListener("click", function prim(){ if(!audioCtx) try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} document.removeEventListener("click", prim); }, {once:true});
         async function verificar(){
             try{
-                const r=await fetch("/api/entregas",{credentials:"same-origin"});
+                const r=await fetchComTimeout("/api/entregas",{credentials:"same-origin"},8000);
                 if(!r.ok) return;
                 const ct=r.headers.get("content-type")||"";
                 if(!ct.includes("application/json")) return;
@@ -280,7 +287,7 @@
             }catch(e){}
         }
         setTimeout(verificar, 4000);
-        setInterval(verificar, 15000);
+        setInterval(function(){ if(!document.hidden) verificar(); }, 15000);
         window.addEventListener("storage", function(e){ if(e.key==="entregas_ids") try{ ultimoIds=new Set(JSON.parse(e.newValue||"[]")); }catch(_){} });
     })();
 
@@ -570,6 +577,7 @@
         adicionarMascaraTelefone: adicionarMascaraTelefone,
         mostrarLoading: mostrarLoading,
         esconderLoading: esconderLoading,
+        fetchComTimeout: fetchComTimeout,
         confirmacao: confirmacao,
         initSidebar: initSidebar,
         imprimirOS: imprimirOS,

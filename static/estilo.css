@@ -3,25 +3,28 @@
    ============================================ */
 
 :root {
-    --cor-primaria: #1442b0;
-    --cor-primaria-hover: #0f337f;
-    --cor-primaria-light: #b3c4f0;
-    --cor-sucesso: #047a5c;
-    --cor-sucesso-light: #7fe0b8;
-    --cor-aviso: #8f4f00;
-    --cor-aviso-light: #f9c74f;
-    --cor-perigo: #b91c1c;
-    --cor-perigo-light: #fca5a5;
-    --cor-info: #1450c8;
-    --cor-info-light: #a8bff5;
+    --cor-primaria: #1e5fe6;
+    --cor-primaria-hover: #1747bc;
+    --cor-primaria-light: #dbeafe;
+    --cor-sucesso: #0d8f63;
+    --cor-sucesso-light: #d8f5ea;
+    --cor-aviso: #b76d00;
+    --cor-aviso-light: #fbeec7;
+    --cor-perigo: #d73c3c;
+    --cor-perigo-light: #fde1e1;
+    --cor-info: #2563eb;
+    --cor-info-light: #dfe9ff;
 
-    --cor-fundo: #d5deeb;
+    --cor-fundo: #dfe6f2;
     --cor-painel: #ffffff;
-    --cor-borda: #94a3b8;
-    --cor-borda-forte: #55637a;
-    --cor-texto: #000000;
-    --cor-texto-secundario: #111827;
-    --cor-texto-muted: #1f2937;
+    --cor-borda: #c9d4e4;
+    --cor-borda-forte: #6b7d96;
+    --cor-texto: #0f172a;
+    --cor-texto-secundario: #1e293b;
+    --cor-texto-muted: #475569;
+
+    --cor-sidebar: #243b5f;
+    --cor-sidebar-2: #1d3155;
 
     --sombra-sm: 0 1px 3px rgba(15,23,42,.12);
     --sombra: 0 1px 3px rgba(15,23,42,.14), 0 1px 2px rgba(15,23,42,.10);
@@ -52,11 +55,12 @@ body {
     color: var(--cor-texto);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    text-transform: uppercase;
+    text-transform: none;
 }
 
 input, select, textarea, button, .btn {
-    text-transform: uppercase;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 /* TIPOGRAFIA */
@@ -265,6 +269,7 @@ a:hover {
     border: 1px solid var(--cor-borda);
     border-radius: var(--raio-lg);
     padding: 18px;
+    box-shadow: 0 8px 18px rgba(15,23,42,.05);
 }
 
 .card-header {
@@ -296,7 +301,7 @@ a:hover {
     border-radius: var(--raio-lg);
     padding: 20px;
     text-align: center;
-    box-shadow: var(--sombra);
+    box-shadow: 0 10px 18px rgba(15,23,42,.06);
     border-top: 3px solid var(--cor-borda-forte);
     transition: transform var(--transicao), box-shadow var(--transicao);
 }
@@ -466,8 +471,8 @@ a:hover {
 
 .sidebar {
     width: 260px;
-    background: var(--cor-painel);
-    border-right: 1px solid var(--cor-borda);
+    background: linear-gradient(180deg, var(--cor-sidebar) 0%, var(--cor-sidebar-2) 100%);
+    border-right: 1px solid rgba(255,255,255,0.08);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -475,21 +480,23 @@ a:hover {
     left: 0;
     bottom: 0;
     z-index: 100;
-    box-shadow: 1px 0 8px rgba(15,23,42,.06);
+    box-shadow: 8px 0 20px rgba(15,23,42,.12);
     transition: transform 0.3s ease;
 }
 
 .sidebar-logo {
-    padding: 24px 20px;
-    border-bottom: 1px solid var(--cor-borda);
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    min-height: 82px;
 }
 
 .sidebar-logo img {
-    height: 40px;
+    height: 42px;
     object-fit: contain;
+    filter: brightness(0) invert(1) drop-shadow(0 2px 2px rgba(255,255,255,0.12));
 }
 
 .sidebar-logo .logo-text {
@@ -516,12 +523,12 @@ a:hover {
 }
 
 .sidebar-section-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--cor-texto-secundario);
-    padding: 10px 12px 4px;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.65);
+    padding: 10px 12px 6px;
 }
 
 .sidebar-link {
@@ -530,29 +537,30 @@ a:hover {
     gap: 10px;
     padding: 10px 12px;
     border-radius: var(--raio);
-    color: var(--cor-texto-secundario);
+    color: rgba(255,255,255,0.82);
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transicao);
     text-decoration: none;
     border: none;
-    background: none;
+    background: rgba(255,255,255,0.02);
     width: 100%;
     text-align: left;
     font-family: var(--fonte);
 }
 
 .sidebar-link:hover {
-    background: #e9eef6;
-    color: var(--cor-texto);
+    background: rgba(255,255,255,0.07);
+    color: #fff;
+    transform: translateX(2px);
 }
 
 .sidebar-link.ativa {
-    background: var(--cor-primaria);
+    background: linear-gradient(135deg, #2f75ff, var(--cor-primaria-hover));
     color: #fff;
     font-weight: 700;
-    box-shadow: var(--sombra-sm);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16), 0 4px 10px rgba(15,23,42,.18);
 }
 
 .sidebar-link .link-icon {
@@ -563,16 +571,18 @@ a:hover {
 
 .sidebar-footer {
     padding: 16px;
-    border-top: 1px solid var(--cor-borda);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.06);
 }
 
 .sidebar-user {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px;
+    padding: 10px 12px;
     border-radius: var(--raio);
-    background: var(--cor-fundo);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
 }
 
 .sidebar-user .user-avatar {
@@ -596,7 +606,7 @@ a:hover {
 .sidebar-user .user-name {
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--cor-texto);
+    color: #fff;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -605,7 +615,7 @@ a:hover {
 .sidebar-user .user-role {
     font-size: 0.7rem;
     font-weight: 600;
-    color: var(--cor-texto-secundario);
+    color: rgba(255,255,255,0.7);
     text-transform: uppercase;
 }
 
@@ -616,6 +626,7 @@ a:hover {
     margin-left: 260px;
     padding: 32px;
     min-height: 100vh;
+    background: rgba(255,255,255,0.14);
 }
 
 .pagina-titulo {
@@ -624,10 +635,13 @@ a:hover {
 
 .pagina-titulo h1 {
     margin-bottom: 4px;
+    font-size: clamp(1.8rem, 2vw, 2.3rem);
+    letter-spacing: -0.04em;
+    color: var(--cor-texto);
 }
 
 .pagina-titulo .pagina-sub {
-    color: var(--cor-texto-secundario);
+    color: var(--cor-texto-muted);
     font-size: 0.9rem;
 }
 
@@ -1213,10 +1227,12 @@ a:hover {
 html {
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
 }
 
 body {
     overscroll-behavior: none;
+    overflow-x: hidden;
 }
 
 input, select, textarea, button {
@@ -1278,6 +1294,10 @@ input, select, textarea, button {
 
     .form-input, .form-select, .form-textarea {
         padding: 12px 14px;
+    }
+
+    .nota-wrap {
+        width: 100%;
     }
 
     .toast {
