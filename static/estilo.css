@@ -1228,11 +1228,15 @@ html {
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     overflow-x: hidden;
+    overflow-y: auto;
 }
 
 body {
-    overscroll-behavior: none;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: auto;
     overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100vh;
 }
 
 input, select, textarea, button {
