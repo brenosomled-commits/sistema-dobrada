@@ -625,7 +625,7 @@ a:hover {
 .conteudo {
     flex: 1;
     margin-left: 260px;
-    padding: 32px;
+    padding: clamp(24px, 3vw, 40px);
     min-height: 100vh;
     min-width: 0;
     background: rgba(255,255,255,0.14);
@@ -715,6 +715,16 @@ a:hover {
 .item-card:hover {
     border-color: var(--cor-primaria);
     box-shadow: var(--sombra);
+}
+
+button, a, input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+    outline: 3px solid var(--cor-primaria-light);
+    outline-offset: 2px;
 }
 
 .item-card .item-info {
@@ -1003,7 +1013,7 @@ a:hover {
 
     .conteudo {
         margin-left: 0;
-        padding: 20px;
+        padding: 76px 20px 28px;
     }
 
     .mobile-toggle {
@@ -1033,6 +1043,18 @@ a:hover {
     .item-card .item-acoes {
         width: 100%;
         justify-content: flex-end;
+    }
+
+    .pagina-titulo {
+        margin-bottom: 18px;
+    }
+
+    .pagina-titulo .pagina-sub {
+        line-height: 1.45;
+    }
+
+    .area-acoes, .area-acoes-venda {
+        width: 100%;
     }
 }
 
@@ -1248,8 +1270,7 @@ input, select, textarea, button {
 @media (max-width: 1024px) {
 
     .conteudo {
-        padding: 16px 14px;
-        padding-bottom: calc(76px + env(safe-area-inset-bottom));
+        padding: 72px 12px calc(76px + env(safe-area-inset-bottom));
         width: 100%;
     }
 
@@ -1319,6 +1340,24 @@ input, select, textarea, button {
 
     .btn {
         white-space: normal;
+    }
+
+    .mobile-toggle {
+        top: max(12px, env(safe-area-inset-top));
+        left: 12px;
+    }
+
+    .item-card {
+        padding: 14px;
+        gap: 10px;
+    }
+
+    .item-card .item-titulo {
+        overflow-wrap: anywhere;
+    }
+
+    .form-row, .form-inline {
+        gap: 10px;
     }
 
     .toast {
