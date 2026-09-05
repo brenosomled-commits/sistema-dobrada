@@ -8,19 +8,21 @@ Suporta dois bancos:
 A seleção do driver é automática pela presença da variável de ambiente
 DATABASE_URL. Quando presente, usa PostgreSQL; caso contrário, SQLite.
 
-O módulo expõe uma interface unificada e compatível com o restante do app:
-  conectar() -> ConexaoUnificada
-  conectar().execute(sql, params).fetchone()/fetchall()
-  conectar().cursor()  e  cursor.execute(...)
-  .commit(), .close(), .lastrowid, .rowcount
-
-Placeholders "?" (SQLite) são traduzidos para "%s" (PostgreSQL), "BEGIN
-IMMEDIATE" é convertido para "BEGIN", e INSERTs no PostgreSQL ganham
-"RETURNING id" para que .lastrowid funcione igual ao SQLite.
+Resiliência ao Neon (serverless PostgreSQL):
+  - O Neon hiberna após ~5 min de inatividade. A primeira conexão pode
+    demorar 2-5 segundos ("cold start"). Usamos retry com back-off e
+    connect_timeout maior para absorver esse delay sem erros.
+  - O pool mantém conexões ociosas vivas com keep-alive automático do
+    psycopg (keepalives_idle=30), evitando que o firewall da Vercel
+    feche a conexão silenciosamente entre requests.
+  - Se uma conexão do pool estiver morta (banco hibernou), descartamos
+    ela e abrimos uma nova em vez de propagar o erro.
 """
 
 import os
+import socket
 import time as _time
+from urllib.parse import urlsplit
 
 DRIVER = "postgres" if os.environ.get("DATABASE_URL") else "sqlite"
 
@@ -29,33 +31,48 @@ def banco_eh_postgres():
     return DRIVER == "postgres"
 
 
-def _criar_conexao_postgres(tentativas=3):
-    """Abre uma conexão PostgreSQL (Neon) com retry, configurada para o app."""
+def _criar_conexao_postgres(tentativas=1):
+    """Abre uma conexão PostgreSQL (Neon) com retry e back-off."""
     import psycopg
     from psycopg.rows import dict_row
 
     ultimo_erro = None
-    for _ in range(tentativas):
+    for i in range(tentativas):
         try:
+            parametros = {}
+            partes_url = urlsplit(os.environ["DATABASE_URL"])
+            if partes_url.hostname:
+                enderecos_ipv4 = socket.getaddrinfo(
+                    partes_url.hostname,
+                    partes_url.port or 5432,
+                    family=socket.AF_INET,
+                    type=socket.SOCK_STREAM,
+                )
+                if enderecos_ipv4:
+                    parametros["hostaddr"] = enderecos_ipv4[0][4][0]
             conexao = psycopg.connect(
                 os.environ["DATABASE_URL"],
-                connect_timeout=15,
+                **parametros,
+                connect_timeout=5,           # não deixa uma requisição serverless presa
+                keepalives=1,                # TCP keep-alive ativo
+                keepalives_idle=30,          # envia keep-alive após 30s ociosos
+                keepalives_interval=10,      # reenvio a cada 10s
+                keepalives_count=5,          # até 5 tentativas antes de falhar
             )
             conexao.row_factory = dict_row
             conexao.autocommit = False
             return conexao
         except Exception as e:
             ultimo_erro = e
-            _time.sleep(1)
+            espera = 1.5 * (i + 1)          # 1.5s, 3s, 4.5s, 6s, 7.5s
+            print(f"[DB] Tentativa {i+1}/{tentativas} falhou ({e}). Aguardando {espera:.1f}s...")
+            _time.sleep(espera)
     raise ultimo_erro
 
 
-# Pool simples de conexões PostgreSQL para reutilizar no serverless (Vercel).
-# Evita abrir uma conexão nova a cada request, reduzindo o cold start do Neon
-# e os erros de conexão intermitentes. O módulo é recarregado a cada execução
-# fria; quando a instância está "quente" o pool persiste entre requests.
+# Pool simples de conexões PostgreSQL.
 _POOL_MAX = 3
-_pool = []          # conexões ociosas (postgres)
+_pool = []
 _pool_lock = None
 
 
@@ -67,13 +84,24 @@ def _init_pool_lock():
 
 
 def _conexao_postgres():
-    """Obtém uma conexão: reutiliza uma ociosa do pool ou cria uma nova."""
+    """Obtém uma conexão: reutiliza uma ociosa do pool ou cria uma nova.
+    Se a conexão ociosa estiver morta (banco hibernou), descarta e abre nova.
+    """
     if _pool_lock is None:
         _init_pool_lock()
     with _pool_lock:
-        if _pool:
+        while _pool:
             conexao = _pool.pop()
-            return conexao
+            # Testa se ainda está viva com um ping leve
+            try:
+                conexao.execute("SELECT 1")
+                return conexao
+            except Exception:
+                try:
+                    conexao.close()
+                except Exception:
+                    pass
+                # Conexão morta — descarta e tenta a próxima do pool
     return _criar_conexao_postgres()
 
 
@@ -86,8 +114,14 @@ def _devolver_conexao_postgres(conexao):
     if _pool_lock is None:
         _init_pool_lock()
     with _pool_lock:
-        _usar_no_pool = not conexao.closed and len(_pool) < _POOL_MAX
-        if _usar_no_pool:
+        viva = False
+        if not conexao.closed and len(_pool) < _POOL_MAX:
+            try:
+                conexao.execute("SELECT 1")
+                viva = True
+            except Exception:
+                pass
+        if viva:
             _pool.append(conexao)
         else:
             try:
@@ -98,7 +132,6 @@ def _devolver_conexao_postgres(conexao):
 
 def _conexao_sqlite():
     import sqlite3
-
     banco = os.environ.get(
         "SQLITE_DATABASE",
         str(Path(__file__).with_name("ordens.db")),
@@ -133,9 +166,6 @@ class CursorUnificado:
             if cabecalho == "BEGIN IMMEDIATE":
                 sql_adaptado = "BEGIN"
             elif cabecalho[:6] == "INSERT":
-                # JOIN_ADICIONA_RETURNING: quando o INSERT usa ON CONFLICT/DO NOTHING
-                # o RETURNING id pode falhar (ex.: tabela sem coluna "id"), então
-                # só adicionamos RETURNING quando não há ON CONFLICT.
                 if " ON CONFLICT " not in sql_adaptado.upper():
                     sql_adaptado = sql_adaptado.rstrip().rstrip(";") + " RETURNING id"
 
@@ -214,7 +244,9 @@ class ConexaoUnificada:
 
 
 def conectar():
-    """Retorna uma conexão unificada, escolhendo o driver automaticamente."""
+    """Retorna uma conexão unificada, escolhendo o driver automaticamente.
+    Em caso de falha no Postgres, tenta novamente antes de propagar o erro.
+    """
     if DRIVER == "postgres":
         return ConexaoUnificada("postgres", _conexao_postgres())
     return ConexaoUnificada("sqlite", _conexao_sqlite())

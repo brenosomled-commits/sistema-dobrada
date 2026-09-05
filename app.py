@@ -2,6 +2,9 @@ import os
 import json
 import threading
 import time
+import csv
+import io
+from datetime import date, timedelta
 from pathlib import Path
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, make_response
@@ -96,6 +99,36 @@ def json_body():
     if not isinstance(dados, dict):
         return None
     return dados
+
+
+def normalizar_pagamento_cliente(dados):
+    cliente = str(dados.get("cliente") or "").strip()
+    if not cliente or cliente.upper() == "CONSUMIDOR FINAL":
+        dados["cliente"] = "CONSUMIDOR FINAL"
+        dados["condicao"] = "avista"
+        dados["vencimento"] = ""
+    return dados
+
+
+def corrigir_promissorios_consumidor_final(cursor):
+    cursor.execute("""
+        UPDATE vendas
+        SET cliente = 'CONSUMIDOR FINAL', condicao = 'avista', vencimento = ''
+        WHERE UPPER(TRIM(COALESCE(cliente, ''))) = 'CONSUMIDOR FINAL'
+          AND LOWER(TRIM(COALESCE(condicao, ''))) = 'aprazo'
+    """)
+    cursor.execute("""
+        UPDATE financeiro_lancamentos
+        SET status = 'PAGO',
+            pagamento = COALESCE(pagamento, substr(criado_em, 1, 10), ?)
+        WHERE tipo = 'ENTRADA'
+          AND status = 'PENDENTE'
+          AND venda_id IN (
+              SELECT id FROM vendas
+              WHERE UPPER(TRIM(COALESCE(cliente, ''))) = 'CONSUMIDOR FINAL'
+                AND LOWER(TRIM(COALESCE(condicao, ''))) = 'avista'
+          )
+    """, (agora_sp().strftime("%Y-%m-%d"),))
 
 
 def agora_sp():
@@ -300,6 +333,10 @@ def cabecalhos_seguranca(resposta):
     resposta.headers["X-Content-Type-Options"] = "nosniff"
     resposta.headers["X-Frame-Options"] = "SAMEORIGIN"
     resposta.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if request.path == "/sw.js" or request.path.endswith(".html") or request.path.startswith("/api/"):
+        resposta.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        resposta.headers["Pragma"] = "no-cache"
+        resposta.headers["Expires"] = "0"
     return resposta
 
 
@@ -477,6 +514,7 @@ def _criar_banco_sqlite():
         CREATE TABLE IF NOT EXISTS vendas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero INTEGER UNIQUE NOT NULL,
+            codigo_externo TEXT,
             cliente TEXT,
             fantasia TEXT,
             telefone TEXT,
@@ -493,6 +531,11 @@ def _criar_banco_sqlite():
         )
     """)
 
+    try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN codigo_externo TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
     try:
         cursor.execute("ALTER TABLE vendas ADD COLUMN telefone TEXT")
     except sqlite3.OperationalError as erro:
@@ -543,6 +586,7 @@ def _criar_banco_sqlite():
         CREATE TABLE IF NOT EXISTS devolucoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             numero INTEGER UNIQUE NOT NULL,
+            codigo_externo TEXT,
             venda_id INTEGER,
             data TEXT,
             motivo TEXT,
@@ -652,6 +696,48 @@ def _criar_banco_sqlite():
         )
     """)
 
+    # Migrações aditivas de melhorias do sistema de entrega (não quebram dados existentes)
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN previsao TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN latitude REAL")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN longitude REAL")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN ordem_rota INTEGER DEFAULT 0")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN distancia_km REAL")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN atualizado_em TEXT")
+    except sqlite3.OperationalError as erro:
+        if not _erro_coluna_duplicada(erro):
+            raise
+    # Índices para acelerar filtros e listagens grandes
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_status ON entregas(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_data ON entregas(data_entrega)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_entregador ON entregas(entregador)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_bairro ON entregas(bairro)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_qr ON entregas(qr_token)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_historico_entrega ON entrega_historico(entrega_id)")
+    except Exception:
+        pass
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS configuracoes (
             chave TEXT PRIMARY KEY,
@@ -727,11 +813,62 @@ def _criar_banco_sqlite():
             venda_id INTEGER,
             criado_por TEXT,
             criado_em TEXT,
+            cliente TEXT,
+            vendedor TEXT,
+            telefone TEXT,
+            valor_pago REAL NOT NULL DEFAULT 0,
+            recorrencia TEXT,
+            parcela INTEGER DEFAULT 1,
+            total_parcelas INTEGER DEFAULT 1,
+            reconciliado INTEGER DEFAULT 0,
             FOREIGN KEY (venda_id) REFERENCES vendas(id)
         )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_status ON financeiro_lancamentos(status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_vencimento ON financeiro_lancamentos(vencimento)")
+    for coluna in (
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN cliente TEXT",
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN vendedor TEXT",
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN telefone TEXT",
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN valor_pago REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN recorrencia TEXT",
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN parcela INTEGER DEFAULT 1",
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN total_parcelas INTEGER DEFAULT 1",
+        "ALTER TABLE financeiro_lancamentos ADD COLUMN reconciliado INTEGER DEFAULT 0",
+    ):
+        try:
+            cursor.execute(coluna)
+        except Exception as erro:
+            if not _erro_coluna_duplicada(erro):
+                raise
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS financeiro_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lancamento_id INTEGER,
+            acao TEXT NOT NULL,
+            detalhes TEXT,
+            usuario TEXT,
+            criado_em TEXT
+        )
+    """)
+
+    # =========================
+    # CHECKLIST DE TAREFAS
+    # =========================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tarefas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            titulo TEXT NOT NULL,
+            descricao TEXT,
+            prioridade TEXT DEFAULT 'media',
+            categoria TEXT DEFAULT 'geral',
+            concluida INTEGER DEFAULT 0,
+            usuario_criacao TEXT,
+            data_criacao TEXT,
+            data_conclusao TEXT,
+            data_vencimento TEXT
+        )
+    """)
 
     conexao.commit()
     conexao.close()
@@ -913,6 +1050,10 @@ def _criar_banco_postgres():
         )
     """)
     try:
+        cursor.execute("ALTER TABLE vendas ADD COLUMN IF NOT EXISTS codigo_externo TEXT")
+    except Exception:
+        pass
+    try:
         cursor.execute("ALTER TABLE vendas ADD COLUMN IF NOT EXISTS telefone TEXT")
     except Exception:
         pass
@@ -1048,6 +1189,40 @@ def _criar_banco_postgres():
         cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS data_entregue TEXT")
     except Exception:
         pass
+    # Migrações aditivas de melhorias do sistema de entrega
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS previsao TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS ordem_rota INTEGER DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS distancia_km DOUBLE PRECISION")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE entregas ADD COLUMN IF NOT EXISTS atualizado_em TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_status ON entregas(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_data ON entregas(data_entrega)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_entregador ON entregas(entregador)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_bairro ON entregas(bairro)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_entregas_qr ON entregas(qr_token)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_historico_entrega ON entrega_historico(entrega_id)")
+    except Exception:
+        pass
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS entrega_historico (
             id SERIAL PRIMARY KEY,
@@ -1136,11 +1311,36 @@ def _criar_banco_postgres():
                 venda_id INTEGER,
                 criado_por TEXT,
                 criado_em TEXT,
+                cliente TEXT,
+                vendedor TEXT,
+                recorrencia TEXT,
+                parcela INTEGER DEFAULT 1,
+                total_parcelas INTEGER DEFAULT 1,
+                reconciliado BOOLEAN DEFAULT FALSE,
                 FOREIGN KEY (venda_id) REFERENCES vendas(id)
             )
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_status ON financeiro_lancamentos(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_financeiro_vencimento ON financeiro_lancamentos(vencimento)")
+        for coluna in (
+            "ALTER TABLE financeiro_lancamentos ADD COLUMN IF NOT EXISTS cliente TEXT",
+            "ALTER TABLE financeiro_lancamentos ADD COLUMN IF NOT EXISTS vendedor TEXT",
+            "ALTER TABLE financeiro_lancamentos ADD COLUMN IF NOT EXISTS recorrencia TEXT",
+            "ALTER TABLE financeiro_lancamentos ADD COLUMN IF NOT EXISTS parcela INTEGER DEFAULT 1",
+            "ALTER TABLE financeiro_lancamentos ADD COLUMN IF NOT EXISTS total_parcelas INTEGER DEFAULT 1",
+            "ALTER TABLE financeiro_lancamentos ADD COLUMN IF NOT EXISTS reconciliado BOOLEAN DEFAULT FALSE",
+        ):
+            cursor.execute(coluna)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS financeiro_historico (
+                id SERIAL PRIMARY KEY,
+                lancamento_id INTEGER,
+                acao TEXT NOT NULL,
+                detalhes TEXT,
+                usuario TEXT,
+                criado_em TEXT
+            )
+        """)
     except Exception:
         conexao.rollback()
         conexao.close()
@@ -1150,7 +1350,8 @@ def _criar_banco_postgres():
     conexao.close()
 
 
-criar_banco()
+if not os.environ.get("VERCEL"):
+    criar_banco()
 
 
 # =========================
@@ -1241,8 +1442,8 @@ def financeiro_exclusivo(funcao):
         if "usuario" not in session:
             return redirect(url_for("login"))
         papel = obter_papel_usuario(session["usuario"])
-        if not papel or papel.upper() != "FINANCEIRO":
-            return jsonify({"erro": "Acesso permitido somente para o usuário Financeiro."}), 403
+        if not papel or papel.upper() not in PAPEIS_FINANCEIRO:
+            return jsonify({"erro": "Acesso permitido somente para Financeiro, Gerente ou Dono."}), 403
         return funcao(*args, **kwargs)
     return verificar
 
@@ -1843,7 +2044,7 @@ def listar_ordens():
     cursor = conexao.cursor()
 
     cursor.execute(
-        "SELECT * FROM ordens ORDER BY numero DESC"
+        "SELECT id, numero, data_entrada, cliente, telefone, problema, responsavel, total, status FROM ordens ORDER BY numero DESC"
     )
 
     ordens = cursor.fetchall()
@@ -1881,7 +2082,7 @@ def buscar_ordem(id):
     cursor = conexao.cursor()
 
     cursor.execute(
-        "SELECT * FROM ordens WHERE id = ?",
+        "SELECT id, numero, data_entrada, cliente, telefone, problema, solucao, responsavel, mao_obra, total, status FROM ordens WHERE id = ?",
         (id,)
     )
 
@@ -2098,13 +2299,14 @@ def pagina_financeiro():
     return render_template(
         "financeiro.html",
         usuario=session["usuario"],
-        papel="FINANCEIRO",
+        papel=obter_papel_usuario(session["usuario"]),
     )
 
 
 def _sincronizar_contas_receber(cursor):
+    corrigir_promissorios_consumidor_final(cursor)
     cursor.execute("""
-        SELECT v.id, v.numero, v.cliente, v.total, v.vencimento, v.data,
+        SELECT v.id, v.numero, v.cliente, v.telefone, v.vendedor, v.total, v.vencimento, v.data,
                v.condicao
         FROM vendas v
         LEFT JOIN financeiro_lancamentos f
@@ -2117,8 +2319,8 @@ def _sincronizar_contas_receber(cursor):
         cursor.execute("""
             INSERT INTO financeiro_lancamentos
             (tipo, categoria, descricao, valor, vencimento, pagamento, status,
-             venda_id, criado_por, criado_em)
-            VALUES (?, 'VENDAS', ?, ?, ?, ?, ?, ?, ?, ?)
+            venda_id, criado_por, criado_em, cliente, vendedor, telefone)
+            VALUES (?, 'VENDAS', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             "ENTRADA",
             "Venda SL" + str(venda["numero"]).zfill(4) + " - " + (venda["cliente"] or "CONSUMIDOR FINAL"),
@@ -2129,7 +2331,28 @@ def _sincronizar_contas_receber(cursor):
             venda["id"],
             "SISTEMA",
             agora,
+            venda["cliente"] or "CONSUMIDOR FINAL",
+            venda["vendedor"] or "",
+            venda["telefone"] or "",
         ))
+    cursor.execute("""
+        UPDATE financeiro_lancamentos
+        SET vendedor = (SELECT v.vendedor FROM vendas v WHERE v.id = financeiro_lancamentos.venda_id),
+            cliente = COALESCE(cliente, (SELECT v.cliente FROM vendas v WHERE v.id = financeiro_lancamentos.venda_id)),
+            telefone = COALESCE(telefone, (SELECT v.telefone FROM vendas v WHERE v.id = financeiro_lancamentos.venda_id))
+        WHERE venda_id IS NOT NULL AND (vendedor IS NULL OR vendedor = '')
+    """)
+
+
+def _registrar_historico_financeiro(cursor, lancamento_id, acao, detalhes=""):
+    cursor.execute("""
+        INSERT INTO financeiro_historico
+        (lancamento_id, acao, detalhes, usuario, criado_em)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        lancamento_id, acao, detalhes, session.get("usuario", "SISTEMA"),
+        agora_sp().strftime("%Y-%m-%d %H:%M:%S"),
+    ))
 
 
 @app.route("/api/financeiro/resumo")
@@ -2139,14 +2362,25 @@ def api_financeiro_resumo():
     cursor = conexao.cursor()
     _sincronizar_contas_receber(cursor)
     conexao.commit()
+    inicio = (request.args.get("inicio") or "").strip()
+    fim = (request.args.get("fim") or "").strip()
+    condicoes = []
+    parametros = []
+    if inicio:
+        condicoes.append("COALESCE(pagamento, vencimento, criado_em) >= ?")
+        parametros.append(inicio)
+    if fim:
+        condicoes.append("COALESCE(pagamento, vencimento, criado_em) <= ?")
+        parametros.append(fim + " 23:59:59")
+    filtro_periodo = (" WHERE " + " AND ".join(condicoes)) if condicoes else ""
     cursor.execute("""
         SELECT
             COALESCE(SUM(CASE WHEN tipo='ENTRADA' AND status='PAGO' THEN valor ELSE 0 END), 0) AS entradas,
             COALESCE(SUM(CASE WHEN tipo='SAIDA' AND status='PAGO' THEN valor ELSE 0 END), 0) AS saidas,
-            COALESCE(SUM(CASE WHEN tipo='ENTRADA' AND status='PENDENTE' THEN valor ELSE 0 END), 0) AS receber,
-            COALESCE(SUM(CASE WHEN tipo='SAIDA' AND status='PENDENTE' THEN valor ELSE 0 END), 0) AS pagar
+            COALESCE(SUM(CASE WHEN tipo='ENTRADA' AND status='PENDENTE' THEN valor - COALESCE(valor_pago, 0) ELSE 0 END), 0) AS receber,
+            COALESCE(SUM(CASE WHEN tipo='SAIDA' AND status='PENDENTE' THEN valor - COALESCE(valor_pago, 0) ELSE 0 END), 0) AS pagar
         FROM financeiro_lancamentos
-    """)
+    """ + filtro_periodo, parametros)
     resumo = cursor.fetchone()
     conexao.close()
     return jsonify({
@@ -2162,17 +2396,46 @@ def api_financeiro_resumo():
 @financeiro_exclusivo
 def api_financeiro_lancamentos():
     filtro = (request.args.get("status") or "").strip().upper()
+    tipo = (request.args.get("tipo") or "").strip().upper()
+    inicio = (request.args.get("inicio") or "").strip()
+    fim = (request.args.get("fim") or "").strip()
+    busca = (request.args.get("busca") or "").strip()
+    categoria = (request.args.get("categoria") or "").strip()
+    origem = (request.args.get("origem") or "").strip().upper()
     conexao = conectar()
     cursor = conexao.cursor()
     _sincronizar_contas_receber(cursor)
     conexao.commit()
+    condicoes = []
+    parametros = []
     if filtro in {"PENDENTE", "PAGO", "CANCELADO"}:
-        cursor.execute(
-            "SELECT * FROM financeiro_lancamentos WHERE status = ? ORDER BY vencimento ASC, id DESC",
-            (filtro,)
-        )
-    else:
-        cursor.execute("SELECT * FROM financeiro_lancamentos ORDER BY vencimento ASC, id DESC")
+        condicoes.append("status = ?")
+        parametros.append(filtro)
+    if tipo in {"ENTRADA", "SAIDA"}:
+        condicoes.append("tipo = ?")
+        parametros.append(tipo)
+    if inicio:
+        condicoes.append("COALESCE(vencimento, criado_em) >= ?")
+        parametros.append(inicio)
+    if fim:
+        condicoes.append("COALESCE(vencimento, criado_em) <= ?")
+        parametros.append(fim + " 23:59:59")
+    if busca:
+        condicoes.append("(LOWER(descricao) LIKE ? OR LOWER(COALESCE(cliente, '')) LIKE ?)")
+        parametros.extend(["%" + busca.lower() + "%"] * 2)
+    if categoria:
+        condicoes.append("categoria = ?")
+        parametros.append(categoria)
+    if origem == "PROMISSORIO":
+        condicoes.extend(["tipo = 'ENTRADA'", "venda_id IS NOT NULL", "status = 'PENDENTE'"])
+    elif origem == "VENDAS_PAGAS":
+        condicoes.extend(["tipo = 'ENTRADA'", "venda_id IS NOT NULL", "status = 'PAGO'"])
+    where = (" WHERE " + " AND ".join(condicoes)) if condicoes else ""
+    cursor.execute(
+        "SELECT * FROM financeiro_lancamentos" + where +
+        " ORDER BY CASE WHEN status = 'PENDENTE' THEN 0 ELSE 1 END, vencimento ASC, id DESC",
+        parametros
+    )
     registros = cursor.fetchall()
     conexao.close()
     return jsonify([dict(registro) for registro in registros])
@@ -2196,42 +2459,262 @@ def criar_lancamento_financeiro():
     status = str(dados.get("status", "PENDENTE")).strip().upper()
     if status not in {"PENDENTE", "PAGO"}:
         status = "PENDENTE"
+    vencimento = dados.get("vencimento") or agora_sp().strftime("%Y-%m-%d")
+    try:
+        parcelas = max(1, min(120, int(dados.get("parcelas", 1))))
+    except (TypeError, ValueError):
+        return jsonify({"erro": "Informe um número de parcelas válido."}), 400
+    recorrencia = str(dados.get("recorrencia", "")).strip().upper() or None
+    if recorrencia not in {None, "MENSAL", "SEMANAL", "ANUAL"}:
+        return jsonify({"erro": "Recorrência inválida."}), 400
+    try:
+        data_inicial = date.fromisoformat(str(vencimento)[:10])
+    except ValueError:
+        return jsonify({"erro": "Informe uma data de vencimento válida."}), 400
+    valor_parcela = round(valor / parcelas, 2)
+    valores = [valor_parcela] * parcelas
+    valores[-1] = round(valor - sum(valores[:-1]), 2)
     conexao = conectar()
     cursor = conexao.cursor()
-    cursor.execute("""
-        INSERT INTO financeiro_lancamentos
-        (tipo, categoria, descricao, valor, vencimento, pagamento, status, criado_por, criado_em)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        tipo, categoria, descricao, valor, dados.get("vencimento") or None,
-        dados.get("pagamento") or (agora_sp().strftime("%Y-%m-%d") if status == "PAGO" else None),
-        status, session["usuario"], agora_sp().strftime("%Y-%m-%d %H:%M:%S")
-    ))
-    novo_id = cursor.lastrowid
+    novo_id = None
+    for indice, valor_atual in enumerate(valores, 1):
+        vencimento_atual = data_inicial
+        if indice > 1:
+            if recorrencia == "SEMANAL":
+                vencimento_atual = data_inicial + timedelta(days=7 * (indice - 1))
+            elif recorrencia == "ANUAL":
+                try:
+                    vencimento_atual = data_inicial.replace(year=data_inicial.year + indice - 1)
+                except ValueError:
+                    vencimento_atual = data_inicial.replace(
+                        year=data_inicial.year + indice - 1, day=28
+                    )
+            else:
+                mes = data_inicial.month - 1 + indice - 1
+                ano = data_inicial.year + mes // 12
+                mes = mes % 12 + 1
+                vencimento_atual = date(ano, mes, min(data_inicial.day, 28))
+        status_atual = status if indice == 1 else "PENDENTE"
+        cursor.execute("""
+            INSERT INTO financeiro_lancamentos
+            (tipo, categoria, descricao, valor, vencimento, pagamento, status,
+            criado_por, criado_em, cliente, telefone, recorrencia, parcela, total_parcelas)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            tipo, categoria, descricao + (f" ({indice}/{parcelas})" if parcelas > 1 else ""),
+            valor_atual, vencimento_atual.isoformat(),
+            dados.get("pagamento") if status_atual == "PAGO" else None,
+            status_atual, session["usuario"], agora_sp().strftime("%Y-%m-%d %H:%M:%S"),
+            str(dados.get("cliente", "")).strip() or None,
+            str(dados.get("telefone", "")).strip() or None, recorrencia, indice, parcelas
+        ))
+        novo_id = cursor.lastrowid
+        _registrar_historico_financeiro(cursor, novo_id, "CRIADO", "Lançamento criado")
     conexao.commit()
     conexao.close()
-    return jsonify({"id": novo_id, "mensagem": "Lançamento financeiro criado."}), 201
+    return jsonify({"id": novo_id, "quantidade": parcelas, "mensagem": "Lançamento financeiro criado."}), 201
 
 
 @app.route("/api/financeiro/lancamentos/<int:id>", methods=["PUT"])
 @financeiro_exclusivo
 def atualizar_lancamento_financeiro(id):
     dados = json_body()
-    status = str((dados or {}).get("status", "")).strip().upper()
-    if status not in {"PENDENTE", "PAGO", "CANCELADO"}:
-        return jsonify({"erro": "Status financeiro inválido."}), 400
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
     conexao = conectar()
     cursor = conexao.cursor()
-    cursor.execute(
-        "UPDATE financeiro_lancamentos SET status = ?, pagamento = ? WHERE id = ?",
-        (status, agora_sp().strftime("%Y-%m-%d") if status == "PAGO" else None, id)
-    )
+    cursor.execute("SELECT venda_id FROM financeiro_lancamentos WHERE id = ?", (id,))
+    existente = cursor.fetchone()
+    if existente is None:
+        conexao.close()
+        return jsonify({"erro": "Lançamento não encontrado."}), 404
+    campos = []
+    valores = []
+    if "valor_pago" in dados or "pagamento_parcial" in dados:
+        try:
+            cursor.execute("SELECT tipo, valor, COALESCE(valor_pago, 0) AS valor_pago FROM financeiro_lancamentos WHERE id = ?", (id,))
+            atual = cursor.fetchone()
+            valor_pago = float(dados.get("valor_pago", dados.get("pagamento_parcial", 0)))
+            valor_pago += float(atual["valor_pago"] or 0)
+            if valor_pago < 0 or valor_pago > float(atual["valor"]):
+                raise ValueError
+        except (TypeError, ValueError):
+            conexao.close()
+            return jsonify({"erro": "O pagamento deve ficar entre zero e o valor restante."}), 400
+        campos.append("valor_pago = ?")
+        valores.append(round(valor_pago, 2))
+        if valor_pago >= float(atual["valor"]):
+            campos.extend(["status = ?", "pagamento = ?"])
+            valores.extend(["PAGO", agora_sp().strftime("%Y-%m-%d")])
+        else:
+            campos.extend(["status = ?", "pagamento = ?"])
+            valores.extend(["PENDENTE", None])
+    elif "status" in dados:
+        status = str(dados["status"]).strip().upper()
+        if status not in {"PENDENTE", "PAGO", "CANCELADO"}:
+            return jsonify({"erro": "Status financeiro inválido."}), 400
+        campos.extend(["status = ?", "pagamento = ?"])
+        valores.extend([status, agora_sp().strftime("%Y-%m-%d") if status == "PAGO" else None])
+        if status == "PAGO":
+            cursor.execute("SELECT valor FROM financeiro_lancamentos WHERE id = ?", (id,))
+            valor_total = cursor.fetchone()["valor"]
+            campos.append("valor_pago = ?")
+            valores.append(float(valor_total))
+    for campo in ("tipo", "categoria", "descricao", "vencimento", "cliente", "telefone"):
+        if campo in dados:
+            valor = str(dados[campo] or "").strip()
+            if campo == "tipo" and valor.upper() not in {"ENTRADA", "SAIDA"}:
+                return jsonify({"erro": "Tipo financeiro inválido."}), 400
+            if campo == "tipo":
+                valor = valor.upper()
+            if campo in {"categoria", "descricao"} and not valor:
+                return jsonify({"erro": "Categoria e descrição são obrigatórias."}), 400
+            campos.append(campo + " = ?")
+            valores.append(valor or None)
+    if "valor" in dados:
+        try:
+            valor = float(dados["valor"])
+        except (TypeError, ValueError):
+            return jsonify({"erro": "Informe um valor válido."}), 400
+        if valor <= 0:
+            return jsonify({"erro": "O valor deve ser maior que zero."}), 400
+        campos.append("valor = ?")
+        valores.append(valor)
+    if "recorrencia" in dados:
+        recorrencia = str(dados["recorrencia"] or "").strip().upper() or None
+        if recorrencia not in {None, "MENSAL", "SEMANAL", "ANUAL"}:
+            conexao.close()
+            return jsonify({"erro": "Recorrência inválida."}), 400
+        campos.append("recorrencia = ?")
+        valores.append(recorrencia)
+    if "parcelas" in dados or "total_parcelas" in dados:
+        try:
+            parcelas = int(dados.get("parcelas", dados.get("total_parcelas", 1)))
+        except (TypeError, ValueError):
+            conexao.close()
+            return jsonify({"erro": "Informe um número de parcelas válido."}), 400
+        if not 1 <= parcelas <= 120:
+            conexao.close()
+            return jsonify({"erro": "O número de parcelas deve estar entre 1 e 120."}), 400
+        campos.append("total_parcelas = ?")
+        valores.append(parcelas)
+    if "reconciliado" in dados:
+        campos.append("reconciliado = ?")
+        valores.append(1 if dados["reconciliado"] else 0)
+    if not campos:
+        return jsonify({"erro": "Nenhuma alteração informada."}), 400
+    valores.append(id)
+    cursor.execute("UPDATE financeiro_lancamentos SET " + ", ".join(campos) + " WHERE id = ?", valores)
     if cursor.rowcount == 0:
         conexao.close()
         return jsonify({"erro": "Lançamento não encontrado."}), 404
+    _registrar_historico_financeiro(cursor, id, "ATUALIZADO", json.dumps(dados, ensure_ascii=False))
     conexao.commit()
     conexao.close()
     return jsonify({"mensagem": "Lançamento atualizado."})
+
+
+@app.route("/api/financeiro/lancamentos/<int:id>", methods=["DELETE"])
+@financeiro_exclusivo
+def excluir_lancamento_financeiro(id):
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("SELECT venda_id FROM financeiro_lancamentos WHERE id = ?", (id,))
+    registro = cursor.fetchone()
+    if registro is None:
+        conexao.close()
+        return jsonify({"erro": "Lançamento não encontrado."}), 404
+    if registro["venda_id"]:
+        conexao.close()
+        return jsonify({"erro": "Contas originadas de vendas devem ser estornadas, não excluídas."}), 400
+    cursor.execute("DELETE FROM financeiro_lancamentos WHERE id = ?", (id,))
+    _registrar_historico_financeiro(cursor, id, "EXCLUIDO", "Lançamento excluído")
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Lançamento excluído."})
+
+
+@app.route("/api/financeiro/lancamentos/<int:id>/conciliar", methods=["PUT"])
+@financeiro_exclusivo
+def conciliar_lancamento_financeiro(id):
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("UPDATE financeiro_lancamentos SET reconciliado = ? WHERE id = ?", (1, id))
+    if cursor.rowcount == 0:
+        conexao.close()
+        return jsonify({"erro": "Lançamento não encontrado."}), 404
+    _registrar_historico_financeiro(cursor, id, "CONCILIADO", "Conciliação bancária confirmada")
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Lançamento conciliado."})
+
+
+@app.route("/api/financeiro/historico")
+@financeiro_exclusivo
+def historico_financeiro():
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("""
+        SELECT * FROM financeiro_historico
+        ORDER BY id DESC
+        LIMIT 200
+    """)
+    registros = [dict(item) for item in cursor.fetchall()]
+    conexao.close()
+    return jsonify(registros)
+
+
+@app.route("/api/financeiro/categorias")
+@financeiro_exclusivo
+def api_financeiro_categorias():
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("SELECT DISTINCT categoria FROM financeiro_lancamentos WHERE categoria IS NOT NULL ORDER BY categoria")
+    categorias = [linha["categoria"] for linha in cursor.fetchall()]
+    conexao.close()
+    return jsonify(categorias)
+
+
+@app.route("/api/financeiro/relatorio")
+@financeiro_exclusivo
+def api_financeiro_relatorio():
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("""
+        SELECT substr(COALESCE(pagamento, vencimento, criado_em), 1, 7) AS mes,
+               SUM(CASE WHEN tipo = 'ENTRADA' AND status = 'PAGO' THEN valor ELSE 0 END) AS entradas,
+               SUM(CASE WHEN tipo = 'SAIDA' AND status = 'PAGO' THEN valor ELSE 0 END) AS saidas
+        FROM financeiro_lancamentos
+        GROUP BY substr(COALESCE(pagamento, vencimento, criado_em), 1, 7)
+        ORDER BY mes
+    """)
+    resultado = [{"mes": x["mes"], "entradas": float(x["entradas"] or 0),
+                  "saidas": float(x["saidas"] or 0)} for x in cursor.fetchall()]
+    conexao.close()
+    return jsonify(resultado)
+
+
+@app.route("/api/financeiro/exportar")
+@financeiro_exclusivo
+def exportar_financeiro():
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("SELECT * FROM financeiro_lancamentos ORDER BY vencimento ASC, id DESC")
+    registros = cursor.fetchall()
+    conexao.close()
+    arquivo = io.StringIO()
+    escritor = csv.writer(arquivo, delimiter=";")
+    escritor.writerow(["ID", "Tipo", "Categoria", "Descrição", "Cliente", "Vendedor", "Valor",
+                       "Vencimento", "Pagamento", "Status", "Parcela", "Total parcelas"])
+    for item in registros:
+        escritor.writerow([item["id"], item["tipo"], item["categoria"], item["descricao"],
+                           item["cliente"], item["vendedor"], item["valor"], item["vencimento"],
+                           item["pagamento"], item["status"], item["parcela"],
+                           item["total_parcelas"]])
+    resposta = make_response("\ufeff" + arquivo.getvalue())
+    resposta.headers["Content-Type"] = "text/csv; charset=utf-8"
+    resposta.headers["Content-Disposition"] = "attachment; filename=relatorio-financeiro.csv"
+    return resposta
 
 
 @app.route("/editar_venda")
@@ -2252,7 +2735,8 @@ def pagina_acompanhamento_notas():
     return render_template(
         "acompanhamento_notas.html",
         usuario=session["usuario"],
-        pode_visualizar_comissao=usuario_tem_gestao(session["usuario"])
+        pode_visualizar_comissao=usuario_tem_gestao(session["usuario"]),
+        pode_excluir_venda=usuario_pode_ver_financeiro(session["usuario"])
     )
 
 
@@ -2298,6 +2782,7 @@ def salvar_venda():
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
+    normalizar_pagamento_cliente(dados)
     if not str(dados.get("vendedor", "")).strip():
         return jsonify({"erro": "Selecione o vendedor."}), 400
     if not str(dados.get("data", "")).strip():
@@ -2652,6 +3137,7 @@ def atualizar_venda(id):
     dados = json_body()
     if dados is None:
         return jsonify({"erro": "Envie um JSON válido."}), 400
+    normalizar_pagamento_cliente(dados)
     if not str(dados.get("vendedor", "")).strip():
         return jsonify({"erro": "Selecione o vendedor."}), 400
     if not str(dados.get("data", "")).strip():
@@ -2753,7 +3239,7 @@ def atualizar_venda(id):
 # =========================
 
 @app.route("/api/vendas/<int:id>", methods=["DELETE"])
-@admin_obrigatorio
+@financeiro_obrigatorio
 def excluir_venda(id):
 
     conexao = conectar()
@@ -3353,15 +3839,217 @@ def proximo_numero_entrega():
 @app.route("/api/entregas", methods=["GET"])
 @login_obrigatorio
 def listar_entregas():
+    """Lista entregas com filtros: status, data, entregador, bairro, busca (cliente/endereço), limit."""
     conexao = conectar()
     cur = conexao.cursor()
-    cur.execute("SELECT * FROM entregas ORDER BY numero DESC")
+    where=[]
+    params=[]
+    status_f=request.args.get("status")
+    if status_f:
+        st=[s.strip() for s in status_f.split(",") if s.strip()]
+        if len(st)==1:
+            where.append("status=?"); params.append(st[0])
+        elif st:
+            placeholders=",".join(["?"]*len(st))
+            where.append(f"status IN ({placeholders})"); params.extend(st)
+    data_f=request.args.get("data")
+    if data_f:
+        where.append("data_entrega=?"); params.append(data_f)
+    data_ini=request.args.get("data_ini")
+    data_fim=request.args.get("data_fim")
+    if data_ini:
+        where.append("data_entrega>=?"); params.append(data_ini)
+    if data_fim:
+        where.append("data_entrega<=?"); params.append(data_fim)
+    entregador_f=request.args.get("entregador")
+    if entregador_f:
+        where.append("entregador=?"); params.append(entregador_f)
+    bairro_f=request.args.get("bairro")
+    if bairro_f:
+        where.append("bairro=?"); params.append(bairro_f)
+    busca=request.args.get("q")
+    if busca:
+        b=f"%{busca}%"
+        if banco_eh_postgres():
+            where.append("(cliente ILIKE %s OR endereco ILIKE %s OR telefone ILIKE %s OR CAST(numero AS TEXT) LIKE %s)")
+        else:
+            where.append("(cliente LIKE ? OR endereco LIKE ? OR telefone LIKE ? OR CAST(numero AS TEXT) LIKE ?)")
+        params.extend([b,b,b,b])
+    sql="SELECT * FROM entregas"
+    if where:
+        sql+=" WHERE "+" AND ".join(where)
+    sql+=" ORDER BY numero DESC"
+    try:
+        limit=int(request.args.get("limit") or 0)
+    except: limit=0
+    if limit>0:
+        if banco_eh_postgres():
+            sql+=" LIMIT %s"
+            params.append(limit)
+        else:
+            sql+=" LIMIT ?"
+            params.append(limit)
+    cur.execute(sql, params)
     rows = cur.fetchall()
     conexao.close()
     out=[]
     for r in rows:
         out.append({k: r[k] for k in r.keys()} if hasattr(r,"keys") else dict(r))
     return jsonify(out)
+
+
+@app.route("/api/entregas/filtros")
+@login_obrigatorio
+def listar_filtros_entregas():
+    """Retorna listas distintas para popular os selects: entregadores, bairros, statuses."""
+    conexao=conectar()
+    cur=conexao.cursor()
+    out={"entregadores":[],"bairros":[],"statuses":STATUSES_ENTREGA}
+    try:
+        cur.execute("SELECT DISTINCT entregador FROM entregas WHERE entregador IS NOT NULL AND entregador<>'' ORDER BY entregador")
+        out["entregadores"]=[r["entregador"] if hasattr(r,"keys") else r[0] for r in cur.fetchall()]
+        cur.execute("SELECT DISTINCT bairro FROM entregas WHERE bairro IS NOT NULL AND bairro<>'' ORDER BY bairro")
+        out["bairros"]=[r["bairro"] if hasattr(r,"keys") else r[0] for r in cur.fetchall()]
+    except Exception as e:
+        print(f"[entregas/filtros] {e}")
+    conexao.close()
+    return jsonify(out)
+
+
+@app.route("/api/entregas/metricas")
+@login_obrigatorio
+def metricas_entregas():
+    """Resumo executivo: totais por status, taxa de sucesso, top entregadores, tempo médio."""
+    conexao=conectar()
+    cur=conexao.cursor()
+    iso_now=agora_sp().strftime("%Y-%m-%d %H:%M")
+    today=agora_sp().strftime("%Y-%m-%d")
+    iso_7d=agora_sp().strftime("%Y-%m-%d")
+    # totais por status
+    cur.execute("SELECT status, COUNT(*) AS qtd FROM entregas GROUP BY status")
+    por_status={}
+    for r in cur.fetchall():
+        d=r if hasattr(r,"keys") else None
+        k=d["status"] if d else r[0]
+        v=d["qtd"] if d else r[1]
+        por_status[k or "—"]=v
+    total_geral=sum(por_status.values())
+    entregues=por_status.get("Entregue",0)
+    falhas=por_status.get("Falha",0)
+    canceladas=por_status.get("Cancelada",0)
+    taxa_sucesso=round(entregues/total_geral*100,1) if total_geral else 0.0
+    # hoje
+    cur.execute("SELECT status, COUNT(*) AS qtd FROM entregas WHERE data_entrega=? GROUP BY status",(today,))
+    por_status_hoje={}
+    for r in cur.fetchall():
+        d=r if hasattr(r,"keys") else None
+        k=d["status"] if d else r[0]
+        v=d["qtd"] if d else r[1]
+        por_status_hoje[k or "—"]=v
+    pendentes_hoje=por_status_hoje.get("Pendente",0)+por_status_hoje.get("Reagendada",0)
+    # top entregadores
+    cur.execute("""SELECT entregador,
+                          COUNT(*) AS total,
+                          SUM(CASE WHEN status='Entregue' THEN 1 ELSE 0 END) AS ok,
+                          SUM(CASE WHEN status='Falha' THEN 1 ELSE 0 END) AS falhas
+                   FROM entregas
+                   WHERE entregador IS NOT NULL AND entregador<>''
+                   GROUP BY entregador
+                   ORDER BY total DESC LIMIT 5""")
+    top=[]
+    for r in cur.fetchall():
+        if hasattr(r,"keys"):
+            top.append({
+                "entregador": r.get("entregador") or "—",
+                "total": r.get("total") or 0,
+                "ok": r.get("ok") or 0,
+                "falhas": r.get("falhas") or 0,
+            })
+        else:
+            top.append({
+                "entregador": r[0] or "—",
+                "total": r[1] or 0,
+                "ok": r[2] or 0,
+                "falhas": r[3] or 0,
+            })
+    # tempo médio de entrega (em minutos) — entre data_saida e data_entregue
+    tempo_medio_min=None
+    try:
+        if banco_eh_postgres():
+            cur.execute("""SELECT AVG(EXTRACT(EPOCH FROM (to_timestamp(data_entregue,'YYYY-MM-DD HH24:MI') - to_timestamp(data_saida,'YYYY-MM-DD HH24:MI')))/60.0)
+                          FROM entregas WHERE status='Entregue' AND data_saida IS NOT NULL AND data_entregue IS NOT NULL""")
+        else:
+            cur.execute("""SELECT AVG((julianday(data_entregue) - julianday(data_saida)) * 24 * 60)
+                          FROM entregas WHERE status='Entregue' AND data_saida IS NOT NULL AND data_entregue IS NOT NULL""")
+        r=cur.fetchone()
+        if r:
+            v=(r["avg"] if hasattr(r,"keys") else r[0])
+            if v is not None:
+                tempo_medio_min=round(float(v),1)
+    except Exception:
+        tempo_medio_min=None
+    # próximos 7 dias - contagem por dia
+    cur.execute("""SELECT data_entrega, COUNT(*) AS qtd FROM entregas
+                   WHERE data_entrega>=? GROUP BY data_entrega ORDER BY data_entrega LIMIT 14""",(iso_7d,))
+    proximos=[]
+    for r in cur.fetchall():
+        d=r if hasattr(r,"keys") else None
+        proximos.append({
+            "data": d["data_entrega"] if d else r[0],
+            "qtd": d["qtd"] if d else r[1],
+        })
+    # total de taxas acumuladas (mês corrente)
+    ym=agora_sp().strftime("%Y-%m")
+    cur.execute("SELECT COALESCE(SUM(taxa),0) AS t FROM entregas WHERE substr(criacao,0,8)=? OR substr(data_entrega,0,8)=?", (ym, ym))
+    r=cur.fetchone()
+    taxas_mes=(r["t"] if hasattr(r,"keys") else r[0]) or 0
+    conexao.close()
+    return jsonify({
+        "total_geral": total_geral,
+        "por_status": por_status,
+        "entregues": entregues,
+        "falhas": falhas,
+        "canceladas": canceladas,
+        "taxa_sucesso": taxa_sucesso,
+        "hoje": {"por_status": por_status_hoje, "pendentes": pendentes_hoje, "total": sum(por_status_hoje.values())},
+        "top_entregadores": top,
+        "tempo_medio_min": tempo_medio_min,
+        "proximos_dias": proximos,
+        "taxas_mes": float(taxas_mes),
+        "atualizado_em": iso_now,
+    })
+
+
+@app.route("/api/entregas/rota-otimizada")
+@login_obrigatorio
+def rota_otimizada_entregas():
+    """Retorna entregas agrupadas por entregador e bairro para impressão de rota.
+    Aceita ?data=YYYY-MM-DD (default: hoje). Apenas status em rota/pendentes."""
+    data=(request.args.get("data") or agora_sp().strftime("%Y-%m-%d")).strip()
+    conexao=conectar()
+    cur=conexao.cursor()
+    cur.execute("""SELECT * FROM entregas
+                   WHERE data_entrega=? AND status IN ('Pendente','SAIU PARA ROTA','Em rota','Reagendada')
+                   ORDER BY entregador, bairro, endereco""",(data,))
+    rows=cur.fetchall()
+    conexao.close()
+    grupos={}
+    for r in rows:
+        d=r if hasattr(r,"keys") else dict(zip([c[0] for c in cur.description], r))
+        ent=(d.get("entregador") or "Sem entregador")
+        bai=(d.get("bairro") or "Sem bairro")
+        grupos.setdefault(ent,{}).setdefault(bai,[]).append(d)
+    saida=[]
+    for ent, bairros in grupos.items():
+        bairros_list=[]
+        total_ent=0
+        for bai, items in bairros.items():
+            items_sorted=sorted(items, key=lambda x:(x.get("endereco") or ""))
+            bairros_list.append({"bairro": bai, "qtd": len(items_sorted), "itens": items_sorted})
+            total_ent+=len(items_sorted)
+        saida.append({"entregador": ent, "total": total_ent, "bairros": bairros_list})
+    saida.sort(key=lambda x:-x["total"])
+    return jsonify({"data": data, "grupos": saida})
 
 @app.route("/api/entregas/<int:id>")
 @login_obrigatorio
@@ -3416,6 +4104,15 @@ def criar_entrega():
     try:
         taxa=float(dados.get("taxa") or 0)
     except: taxa=0
+    previsao=str(dados.get("previsao") or "").strip()
+    try:
+        latitude=dados.get("latitude")
+        latitude=float(latitude) if latitude not in (None,"") else None
+    except: latitude=None
+    try:
+        longitude=dados.get("longitude")
+        longitude=float(longitude) if longitude not in (None,"") else None
+    except: longitude=None
     conexao=conectar()
     cur=conexao.cursor()
     if venda_id:
@@ -3436,9 +4133,9 @@ def criar_entrega():
     import secrets
     criacao=agora_sp().strftime("%Y-%m-%d %H:%M")
     qr_token=secrets.token_hex(6)
-    cur.execute("""INSERT INTO entregas (numero, venda_id, ordem_id, cliente, telefone, endereco, bairro, entregador, data_entrega, horario, taxa, status, observacao, comprovante, criacao, qr_token)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (novo, venda_id, ordem_id, cliente, str(dados.get("telefone") or ""), endereco, str(dados.get("bairro") or ""), entregador, str(dados.get("data_entrega") or ""), str(dados.get("horario") or ""), taxa, status, str(dados.get("observacao") or ""), str(dados.get("comprovante") or ""), criacao, qr_token))
+    cur.execute("""INSERT INTO entregas (numero, venda_id, ordem_id, cliente, telefone, endereco, bairro, entregador, data_entrega, horario, taxa, status, observacao, comprovante, criacao, qr_token, previsao, latitude, longitude)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (novo, venda_id, ordem_id, cliente, str(dados.get("telefone") or ""), endereco, str(dados.get("bairro") or ""), entregador, str(dados.get("data_entrega") or ""), str(dados.get("horario") or ""), taxa, status, str(dados.get("observacao") or ""), str(dados.get("comprovante") or ""), criacao, qr_token, previsao, latitude, longitude))
     eid=cur.lastrowid
     cur.execute("INSERT INTO entrega_historico (entrega_id, status, data_hora, usuario) VALUES (?, ?, ?, ?)", (eid, status, criacao, session.get("usuario","")))
     cur.execute("UPDATE controle_entregas SET ultimo_numero=? WHERE id=1",(novo,))
@@ -3472,6 +4169,15 @@ def editar_entrega(id):
     if status not in STATUSES_ENTREGA: status="Pendente"
     try: taxa=float(dados.get("taxa") or 0)
     except: taxa=0
+    previsao=str(dados.get("previsao") or "").strip()
+    try:
+        latitude=dados.get("latitude")
+        latitude=float(latitude) if latitude not in (None,"") else None
+    except: latitude=None
+    try:
+        longitude=dados.get("longitude")
+        longitude=float(longitude) if longitude not in (None,"") else None
+    except: longitude=None
     if venda_id:
         cur.execute("SELECT id FROM vendas WHERE id=?",(venda_id,))
         if not cur.fetchone():
@@ -3482,8 +4188,9 @@ def editar_entrega(id):
         if not cur.fetchone():
             conexao.close()
             return jsonify({"erro":"Ordem não encontrada."}),404
-    cur.execute("""UPDATE entregas SET venda_id=?, ordem_id=?, cliente=?, telefone=?, endereco=?, bairro=?, entregador=?, data_entrega=?, horario=?, taxa=?, status=?, observacao=?, comprovante=? WHERE id=?""",
-        (venda_id, ordem_id, cliente, str(dados.get("telefone") or ""), endereco, str(dados.get("bairro") or ""), str(dados.get("entregador") or ""), str(dados.get("data_entrega") or ""), str(dados.get("horario") or ""), taxa, status, str(dados.get("observacao") or ""), str(dados.get("comprovante") or ""), id))
+    agora_str=agora_sp().strftime("%Y-%m-%d %H:%M")
+    cur.execute("""UPDATE entregas SET venda_id=?, ordem_id=?, cliente=?, telefone=?, endereco=?, bairro=?, entregador=?, data_entrega=?, horario=?, taxa=?, status=?, observacao=?, comprovante=?, previsao=?, latitude=?, longitude=?, atualizado_em=? WHERE id=?""",
+        (venda_id, ordem_id, cliente, str(dados.get("telefone") or ""), endereco, str(dados.get("bairro") or ""), str(dados.get("entregador") or ""), str(dados.get("data_entrega") or ""), str(dados.get("horario") or ""), taxa, status, str(dados.get("observacao") or ""), str(dados.get("comprovante") or ""), previsao, latitude, longitude, agora_str, id))
     conexao.commit()
     conexao.close()
     return jsonify({"mensagem":"Entrega atualizada!","id":id})
@@ -3499,11 +4206,20 @@ def atualizar_status_entrega(id):
         return jsonify({"erro":"Status inválido. Use: "+", ".join(STATUSES_ENTREGA)}),400
     conexao=conectar()
     cur=conexao.cursor()
-    cur.execute("SELECT id FROM entregas WHERE id=?",(id,))
-    if not cur.fetchone():
+    cur.execute("SELECT * FROM entregas WHERE id=?",(id,))
+    row=cur.fetchone()
+    if not row:
         conexao.close()
         return jsonify({"erro":"Entrega não encontrada."}),404
-    cur.execute("UPDATE entregas SET status=? WHERE id=?",(novo, id))
+    agora_str=agora_sp().strftime("%Y-%m-%d %H:%M")
+    if novo=="SAIU PARA ROTA":
+        cur.execute("UPDATE entregas SET status=?, data_saida=? WHERE id=?",(novo, agora_str, id))
+    elif novo=="Entregue":
+        cur.execute("UPDATE entregas SET status=?, data_entregue=? WHERE id=?",(novo, agora_str, id))
+    else:
+        cur.execute("UPDATE entregas SET status=? WHERE id=?",(novo, id))
+    cur.execute("INSERT INTO entrega_historico (entrega_id, status, data_hora, usuario) VALUES (?, ?, ?, ?)",
+                (id, novo, agora_str, session.get("usuario","")))
     conexao.commit()
     conexao.close()
     return jsonify({"mensagem":f"Status alterado para {novo}!"})
@@ -3642,6 +4358,202 @@ def atualizar_configuracao(chave):
     conexao.commit()
     conexao.close()
     return jsonify({"mensagem":"Configuração atualizada!", "chave": chave, "valor": valor})
+
+
+# =========================
+# API DE TAREFAS (CHECKLIST)
+# =========================
+
+@app.route("/api/tarefas", methods=["GET"])
+@login_obrigatorio
+def listar_tarefas():
+    conexao = conectar()
+    cursor = conexao.cursor()
+    
+    # Filtros
+    status = request.args.get("status", "")
+    categoria = request.args.get("categoria", "")
+    prioridade = request.args.get("prioridade", "")
+    
+    where_clauses = []
+    params = []
+    
+    if status == "concluidas":
+        where_clauses.append("concluida = 1")
+    elif status == "pendentes":
+        where_clauses.append("concluida = 0")
+    
+    if categoria:
+        where_clauses.append("categoria = ?")
+        params.append(categoria)
+    
+    if prioridade:
+        where_clauses.append("prioridade = ?")
+        params.append(prioridade)
+    
+    where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+    
+    cursor.execute(f"SELECT * FROM tarefas{where_sql} ORDER BY prioridade DESC, data_vencimento ASC, data_criacao DESC", params)
+    tarefas = cursor.fetchall()
+    conexao.close()
+    
+    return jsonify([{
+        "id": t["id"],
+        "titulo": t["titulo"],
+        "descricao": t["descricao"],
+        "prioridade": t["prioridade"],
+        "categoria": t["categoria"],
+        "concluida": bool(t["concluida"]),
+        "usuario_criacao": t["usuario_criacao"],
+        "data_criacao": t["data_criacao"],
+        "data_conclusao": t["data_conclusao"],
+        "data_vencimento": t["data_vencimento"]
+    } for t in tarefas])
+
+@app.route("/api/tarefas", methods=["POST"])
+@login_obrigatorio
+def criar_tarefa():
+    dados = json_body()
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
+    
+    titulo = str(dados.get("titulo", "")).strip()
+    if not titulo:
+        return jsonify({"erro": "O título da tarefa é obrigatório."}), 400
+    
+    from datetime import datetime
+    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    conexao = conectar()
+    cursor = conexao.cursor()
+    cursor.execute("""
+        INSERT INTO tarefas (titulo, descricao, prioridade, categoria, concluida, usuario_criacao, data_criacao, data_vencimento)
+        VALUES (?, ?, ?, ?, 0, ?, ?, ?)
+    """, (
+        titulo,
+        dados.get("descricao", ""),
+        dados.get("prioridade", "media"),
+        dados.get("categoria", "geral"),
+        session.get("usuario", ""),
+        agora,
+        dados.get("data_vencimento", "")
+    ))
+    
+    tarefa_id = cursor.lastrowid
+    conexao.commit()
+    conexao.close()
+    
+    return jsonify({"mensagem": "Tarefa criada com sucesso!", "id": tarefa_id}), 201
+
+@app.route("/api/tarefas/<int:id>", methods=["PUT"])
+@login_obrigatorio
+def atualizar_tarefa(id):
+    dados = json_body()
+    if dados is None:
+        return jsonify({"erro": "Envie um JSON válido."}), 400
+    
+    conexao = conectar()
+    cursor = conexao.cursor()
+    
+    # Verificar se tarefa existe
+    cursor.execute("SELECT * FROM tarefas WHERE id = ?", (id,))
+    tarefa = cursor.fetchone()
+    if not tarefa:
+        conexao.close()
+        return jsonify({"erro": "Tarefa não encontrada."}), 404
+    
+    # Campos atualizáveis
+    campos_permitidos = ["titulo", "descricao", "prioridade", "categoria", "data_vencimento"]
+    atualizacoes = []
+    valores = []
+    
+    for campo in campos_permitidos:
+        if campo in dados:
+            atualizacoes.append(f"{campo} = ?")
+            valores.append(dados[campo])
+    
+    # Tratar conclusão separadamente
+    if "concluida" in dados:
+        if dados["concluida"] and not tarefa["concluida"]:
+            from datetime import datetime
+            agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            atualizacoes.append("concluida = 1")
+            atualizacoes.append("data_conclusao = ?")
+            valores.extend([1, agora])
+        elif not dados["concluida"] and tarefa["concluida"]:
+            atualizacoes.append("concluida = 0")
+            atualizacoes.append("data_conclusao = NULL")
+            valores.extend([0, None])
+    
+    if atualizacoes:
+        valores.append(id)
+        cursor.execute(f"UPDATE tarefas SET {', '.join(atualizacoes)} WHERE id = ?", valores)
+        conexao.commit()
+    
+    conexao.close()
+    return jsonify({"mensagem": "Tarefa atualizada com sucesso!"})
+
+@app.route("/api/tarefas/<int:id>", methods=["DELETE"])
+@login_obrigatorio
+def excluir_tarefa(id):
+    conexao = conectar()
+    cursor = conexao.cursor()
+    
+    cursor.execute("DELETE FROM tarefas WHERE id = ?", (id,))
+    
+    if cursor.rowcount == 0:
+        conexao.close()
+        return jsonify({"erro": "Tarefa não encontrada."}), 404
+    
+    conexao.commit()
+    conexao.close()
+    return jsonify({"mensagem": "Tarefa excluída com sucesso!"})
+
+
+# =========================
+# RASTREAMENTO PÚBLICO DE ENTREGA (sem login)
+# Acessível pelo cliente via link / QR: /rastrear/<token>
+# =========================
+@app.route("/rastrear/<token>", methods=["GET"])
+def rastrear_publico(token):
+    return render_template("rastrear.html", token=token)
+
+@app.route("/api/publico/rastrear/<token>", methods=["GET"])
+def api_rastrear_publico(token):
+    """Retorna dados públicos da entrega para o cliente acompanhar (sem expor dados sensíveis)."""
+    conexao=conectar()
+    cur=conexao.cursor()
+    cur.execute("SELECT id, numero, cliente, endereco, bairro, entregador, data_entrega, horario, previsao, status, data_saida, data_entregue, criacao, latitude, longitude, qr_token FROM entregas WHERE qr_token=?",(token,))
+    row=cur.fetchone()
+    if not row:
+        conexao.close()
+        return jsonify({"erro":"Entrega não encontrada."}),404
+    d=dict(row) if hasattr(row,"keys") else dict(zip([c[0] for c in cur.description], row))
+    entrega_id=d.get("id")
+    cur.execute("SELECT status, data_hora FROM entrega_historico WHERE entrega_id=? ORDER BY id ASC", (entrega_id,))
+    hist=[]
+    for r in cur.fetchall():
+        rd=dict(r) if hasattr(r,"keys") else r
+        hist.append({"status": rd.get("status") if isinstance(rd,dict) else rd[0], "data_hora": rd.get("data_hora") if isinstance(rd,dict) else rd[1]})
+    conexao.close()
+    saida={
+        "numero": d.get("numero"),
+        "cliente": d.get("cliente"),
+        "endereco": d.get("endereco"),
+        "bairro": d.get("bairro"),
+        "entregador": d.get("entregador"),
+        "data_entrega": d.get("data_entrega"),
+        "horario": d.get("horario"),
+        "previsao": d.get("previsao"),
+        "status": d.get("status"),
+        "data_saida": d.get("data_saida"),
+        "data_entregue": d.get("data_entregue"),
+        "criacao": d.get("criacao"),
+        "latitude": d.get("latitude"),
+        "longitude": d.get("longitude"),
+        "historico": hist,
+    }
+    return jsonify(saida)
 
 
 # =========================

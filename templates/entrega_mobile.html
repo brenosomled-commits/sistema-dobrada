@@ -59,6 +59,16 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827;pad
 <div class="card" style="text-align:center"><div style="font-size:9pt">Status: <b>{{ entrega.status }}</b></div></div>
 {% endif %}
 
+<div class="card" style="text-align:center">
+<div style="font-weight:800;font-size:8pt;margin-bottom:6px">🔗 RASTREIO DO CLIENTE</div>
+<div style="font-size:7.5pt;color:#6b7280;margin-bottom:8px">Compartilhe este link para o cliente acompanhar</div>
+<div style="display:flex;gap:6px">
+<input id="linkMobile" readonly style="flex:1;padding:10px;border:1px solid #000;border-radius:8px;font-size:7.5pt;background:#f9fafb" value="">
+<button onclick="copiarLinkMobile()" style="padding:10px 14px;border:none;border-radius:8px;background:#000;color:#fff;font-weight:800;font-size:9pt">Copiar</button>
+</div>
+<button class="btn" style="background:#0ea5e9;color:#fff;margin-top:8px" onclick="compartilharEntrega()">📤 Compartilhar link</button>
+</div>
+
 <div class="card historico">
 <div style="font-weight:800;font-size:8pt;margin-bottom:6px">HISTÓRICO</div>
 {% for h in historico %}
@@ -71,6 +81,32 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;color:#111827;pad
 <div style="text-align:center;margin-top:8px"><a href="/entregas" style="font-size:8pt;color:#6b7280">← Voltar</a></div>
 
 <script>
+
+const _qrTokenMobile = "{{ entrega.qr_token or '' }}";
+const _entregaIdMobile = "{{ entrega.id }}";
+(function initLink(){
+  const inp=document.getElementById("linkMobile");
+  if(inp){
+    const tok=_qrTokenMobile.trim();
+    const url= tok ? (location.origin + "/rastrear/" + tok) : (location.origin + "/m/entrega/" + _entregaIdMobile);
+    inp.value=url;
+  }
+})();
+function copiarLinkMobile(){
+  const i=document.getElementById("linkMobile");
+  if(!i) return;
+  i.select();
+  try{ document.execCommand("copy"); }catch(_){}
+  if(navigator.clipboard) navigator.clipboard.writeText(i.value).catch(()=>{});
+  alert("Link copiado!");
+}
+async function compartilharEntrega(){
+  const url=document.getElementById("linkMobile")?.value || location.href;
+  if(navigator.share){
+    try{ await navigator.share({title:"Rastreio entrega ENT"+"{{ \"%04d\"|format(entrega.numero) }}", text:"Acompanhe sua entrega", url}); return; }catch(_){}
+  }
+  copiarLinkMobile();
+}
 async function avancar(){
     const btn=document.querySelector(".btn"); if(btn){ btn.disabled=true; btn.innerText="Processando..."; }
     try{

@@ -2,18 +2,20 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="/manifest.webmanifest?v=7">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="/manifest.webmanifest?v=9">
 <meta name="theme-color" content="#123a7a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SOMLED">
-<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=7">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=7">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=7">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=9">
+<link rel="apple-touch-icon" sizes="192x192" href="/static/icon-192.png?v=9">
+<link rel="apple-touch-icon" sizes="512x512" href="/static/icon-512.png?v=9">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=9">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=9">
 <title>Entregas</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=7">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}?v=17">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
@@ -52,7 +54,49 @@
 #areaImpressaoEntrega{display:none}
 .pagina-impressao{ width:204mm; height:293mm; display:flex; flex-direction:column; align-items:center; justify-content:space-between; }
 .via-impressao{ width:196mm; height:143.5mm; min-height:143.5mm; max-height:143.5mm; padding:2mm 3mm; border:1px solid #000; overflow:hidden; margin:0; background:#fff; display:flex; flex-direction:column; font-size:8.5pt; box-sizing:border-box; }
-/* ZEBRA 80mm — Elgin i9 — NEGRITO */
+/* === Melhorias v2 === */
+.metricas-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px; }
+.metrica-card{ background:var(--cor-painel); border:1px solid var(--cor-borda); border-radius:12px; padding:12px 14px; box-shadow:var(--sombra); position:relative; overflow:hidden; }
+.metrica-card .lbl{ font-size:.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--cor-texto-secundario); }
+.metrica-card .val{ font-size:1.55rem; font-weight:800; margin-top:4px; color:var(--cor-texto); }
+.metrica-card .sub{ font-size:.72rem; color:var(--cor-texto-secundario); margin-top:2px; }
+.metrica-card.ok{ border-color:#86efac; background:linear-gradient(135deg,#f0fdf4,#fff); }
+.metrica-card.warn{ border-color:#fcd34d; background:linear-gradient(135deg,#fffbeb,#fff); }
+.metrica-card.info{ border-color:#93c5fd; background:linear-gradient(135deg,#eff6ff,#fff); }
+.metrica-card.erro{ border-color:#fca5a5; background:linear-gradient(135deg,#fef2f2,#fff); }
+.metrica-card.azul{ background:linear-gradient(135deg,#0f172a 0%, #1e3a5f 60%, #0ea5e9 100%); color:#fff; border:none; }
+.metrica-card.azul .lbl, .metrica-card.azul .sub{ color:rgba(255,255,255,.85); }
+.metrica-card.azul .val{ color:#fff; }
+.top-entregadores{ background:var(--cor-painel); border:1px solid var(--cor-borda); border-radius:12px; padding:12px 16px; box-shadow:var(--sombra); margin-bottom:16px; }
+.top-entregadores h3{ margin:0 0 8px 0; font-size:.85rem; color:var(--cor-texto-secundario); }
+.top-row{ display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px dashed var(--cor-borda); font-size:.85rem; }
+.top-row:last-child{ border-bottom:none; }
+.top-row .nome{ flex:1; font-weight:600; }
+.top-row .mini{ font-size:.72rem; color:var(--cor-texto-secundario); }
+.bar{ height:6px; background:#e2e8f0; border-radius:99px; overflow:hidden; flex:1.5; }
+.bar-fill{ height:100%; background:linear-gradient(90deg,#10b981,#0ea5e9); }
+.btn-rastreio{ background:linear-gradient(135deg,#0ea5e9,#123a7a); color:#fff; border:none; }
+.btn-rastreio:hover{ filter:brightness(1.1); }
+.modal-rastreio-bg{ position:fixed; inset:0; background:rgba(15,23,42,.85); z-index:9500; display:flex; align-items:center; justify-content:center; padding:16px; }
+.modal-rastreio{ background:#fff; border-radius:14px; max-width:420px; width:100%; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+.modal-rastreio h3{ margin:0 0 8px 0; }
+.modal-rastreio .qr-box{ display:flex; justify-content:center; margin:12px 0; padding:12px; background:#f8fafc; border-radius:10px; }
+.modal-rastreio .link-box{ display:flex; gap:6px; }
+.modal-rastreio .link-box input{ flex:1; font-family:monospace; font-size:.78rem; padding:8px 10px; border:1px solid var(--cor-borda); border-radius:8px; }
+.modal-rota-bg{ position:fixed; inset:0; background:rgba(15,23,42,.85); z-index:9400; display:flex; align-items:center; justify-content:center; padding:16px; }
+.modal-rota{ background:#fff; border-radius:14px; max-width:760px; width:100%; max-height:90vh; overflow:auto; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+.modal-rota h3{ margin:0 0 10px 0; }
+.grupo-entregador{ margin-bottom:14px; border:1px solid var(--cor-borda); border-radius:12px; overflow:hidden; }
+.grupo-entregador .cab{ padding:10px 14px; background:linear-gradient(135deg,#0f172a,#1e3a5f); color:#fff; font-weight:700; display:flex; justify-content:space-between; }
+.grupo-bairro{ background:#f8fafc; padding:6px 14px; font-size:.78rem; font-weight:700; color:var(--cor-texto-secundario); border-top:1px solid var(--cor-borda); border-bottom:1px solid var(--cor-borda); }
+.grupo-item{ padding:8px 14px; border-top:1px solid #f1f5f9; font-size:.85rem; display:flex; gap:10px; align-items:center; }
+.grupo-item .ord{ font-family:monospace; font-weight:800; color:var(--cor-primaria); min-width:48px; }
+.filtros-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+.filtros-row .form-input, .filtros-row .form-select{ min-height:36px; padding:6px 10px; font-size:.82rem; }
+@media (max-width:600px){
+    .metricas-grid{ grid-template-columns:repeat(2,1fr); }
+    .metrica-card .val{ font-size:1.2rem; }
+}
 @media print{
     @page{ size:80mm auto; margin:1.5mm; }
     body{ background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
@@ -88,7 +132,10 @@
                     <h1 style="display:flex;align-items:center;gap:10px">🚚 Entregas <span class="badge badge-pronta" style="font-size:.65rem">Vinculada / Avulsa + Rota</span></h1>
                     <p class="pagina-sub">Cadastre entregas vinculadas à venda/OS ou avulsas — com taxa, entregador, horário e comprovante</p>
                 </div>
-                <button class="btn btn-primary" style="background:#000;border-color:#000" onclick="abrirScannerQR()">📷 Bipar QR</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn btn-primary" onclick="novaEntrega()">+ Nova entrega</button>
+                    <button class="btn btn-primary" style="background:#000;border-color:#000" onclick="abrirScannerQR()">📷 Bipar QR</button>
+                </div>
             </div>
             <div id="qrScanner" style="display:none;margin-top:12px;border:1px solid #000;border-radius:8px;overflow:hidden;background:#fff">
                 <div id="qr-reader" style="width:100%"></div>
@@ -99,6 +146,14 @@
             </div>
         </div>
 
+        <!-- Bloco métricas + top entregadores -->
+        <div id="blocoMetricas" class="metricas-grid" style="display:none"></div>
+        <div id="blocoTop" class="top-entregadores" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center"><h3>🏆 Top entregadores</h3><span id="metricasAtualizado" style="font-size:.70rem;color:var(--cor-texto-secundario)"></span></div>
+            <div id="topLista"></div>
+        </div>
+
+        <div id="editorEntrega" style="display:none">
         <div class="nota-via">
             <div class="nota-topo">
                 <div class="nota-topo-left">
@@ -163,9 +218,10 @@
             <button type="button" class="btn btn-primary" style="min-width:180px" id="btnSalvar" onclick="salvar()">💾 Salvar entrega</button>
             <button type="button" class="btn btn-primary" style="min-width:190px;background:var(--cor-texto);border-color:var(--cor-texto)" onclick="salvarEImprimir()">💾🖨 Salvar e Imprimir</button>
         </div>
+        </div>
 
         <div class="card mt-3">
-            <div class="card-header"><h2 class="card-title">Rota do dia</h2><div style="display:flex;gap:8px;align-items:center"><input type="date" id="dataRota" class="form-input" style="width:auto;min-height:36px" onchange="carregarRota()"><button class="btn btn-outline btn-sm" onclick="abrirRotaMapa()">🗺 Ver no Maps</button><button class="btn btn-ghost btn-sm" onclick="carregarRota()">↻</button></div></div>
+            <div class="card-header"><h2 class="card-title">Rota do dia</h2><div style="display:flex;gap:8px;align-items:center"><input type="date" id="dataRota" class="form-input" style="width:auto;min-height:36px" onchange="carregarRota()"><button class="btn btn-primary btn-sm" onclick="abrirRotaOtimizada()">✨ Rota otimizada</button><button class="btn btn-outline btn-sm" onclick="abrirRotaMapa()">🗺 Ver no Maps</button><button class="btn btn-ghost btn-sm" onclick="carregarRota()">↻</button></div></div>
             <div id="listaRota"><div class="empty-state" style="padding:16px"><p>Selecione a data</p></div></div>
         </div>
 
@@ -178,10 +234,50 @@
 <div style="text-align:center;font-size:6.5pt;color:#6b7280;margin-top:16px;padding:8px 4px;border-top:1px solid #e5e7eb;letter-spacing:.03em">Documento sem valor fiscal — Sistema de controle interno SOMLED — Não substitui Nota Fiscal eletrônica</div>
 </main>
 </div>
+<!-- Modal Rastreio -->
+<div id="modalRastreio" class="modal-rastreio-bg" style="display:none" onclick="if(event.target===this) fecharRastreio()">
+  <div class="modal-rastreio">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3 style="display:flex;align-items:center;gap:8px">🔗 Rastreio</h3>
+      <button class="btn btn-outline btn-sm" onclick="fecharRastreio()">✕</button>
+    </div>
+    <div id="rastreioInfo" style="font-size:.82rem;color:var(--cor-texto-secundario);margin-top:6px"></div>
+    <div class="qr-box" id="qrRastreio"></div>
+    <div class="link-box"><input id="linkRastreio" readonly onclick="this.select()"><button class="btn btn-primary btn-sm" onclick="copiarLinkRastreio()">Copiar</button></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <a id="btnAbrirRastreio" class="btn outline" style="flex:1;text-align:center;text-decoration:none" target="_blank" rel="noopener">🔍 Abrir</a>
+      <button class="btn btn-primary" style="flex:1" onclick="compartilharRastreio()">📤 Compartilhar</button>
+    </div>
+  </div>
+</div>
+<!-- Modal Rota Otimizada -->
+<div id="modalRota" class="modal-rota-bg" style="display:none" onclick="if(event.target===this) fecharRotaOtimizada()">
+  <div class="modal-rota">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3>🗺 Rota otimizada</h3>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="date" id="dataRotaModal" class="form-input" style="width:auto;min-height:36px" onchange="carregarRotaOtimizada()">
+        <button class="btn btn-outline btn-sm" onclick="fecharRotaOtimizada()">✕</button>
+      </div>
+    </div>
+    <div id="rotaOtimizadaConteudo" style="margin-top:12px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="imprimirRotaOtimizada()">🖨 Imprimir</button>
+      <button class="btn btn-primary" onclick="abrirRotaOtimizadaMaps()">🗺 Abrir rota geral no Maps</button>
+    </div>
+  </div>
+</div>
 <div id="areaImpressaoEntrega"></div>
-<script src="{{ url_for('static', filename='utilitarios.js') }}?v=8"></script>
+<div id="areaImpressaoRota" style="display:none"></div>
+<script src="{{ url_for('static', filename='utilitarios.js') }}?v=17"></script>
 <script>
-const S=window.SistemaUtil; S.initSidebar();
+const S=window.SistemaUtil; S.initSidebar(); S.initEditorModal("#editorEntrega");
+window.addEventListener("somled:editor:fechar", function(event){
+    if(event.detail && event.detail.seletor==="#editorEntrega"){
+        document.getElementById("editorEntrega").style.display="none";
+        limpar();
+    }
+});
 let listaVendas=[], listaOS=[], entregas=[], rotaAtual=[], editandoId=null;
 let ultimaQtd=-1, ultimoIds=new Set(), ultimoMapa=new Map(), audioCtx=null;
 function tocarAlerta(tipo="nova"){
@@ -189,29 +285,51 @@ function tocarAlerta(tipo="nova"){
     try{
         if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
         if(audioCtx.state==="suspended") audioCtx.resume();
-        const beep=(freq,dur,delay)=>{
+        const t0=audioCtx.currentTime+0.04;
+        const beep=(freq,dur,delay,vol=0.9, type="sine")=>{
             const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-            o.type="sine"; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination);
-            g.gain.setValueAtTime(0.85,audioCtx.currentTime+delay);
-            g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+delay+dur);
-            o.start(audioCtx.currentTime+delay); o.stop(audioCtx.currentTime+delay+dur);
+            o.type=type; o.frequency.setValueAtTime(freq,t0+delay);
+            g.gain.setValueAtTime(0,t0+delay);
+            g.gain.linearRampToValueAtTime(vol,t0+delay+0.015);
+            g.gain.exponentialRampToValueAtTime(0.01,t0+delay+dur);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(t0+delay); o.stop(t0+delay+dur+0.02);
         };
-        if(tipo==="nova"){ beep(880,0.18,0); beep(1200,0.18,0.2); beep(880,0.35,0.4); }
-        else { beep(900,0.15,0); beep(900,0.15,0.18); }
-        if("vibrate" in navigator) navigator.vibrate(tipo==="nova" ? [180,80,180] : [120,60,120]);
+        if(tipo==="nova"){
+            // Mercado Livre plim-plim: Sol - Mi (ascendente) + sustain
+            beep(987.77,0.14,0,0.9,"sine");   // B5
+            beep(1318.51,0.14,0.16,0.9,"sine"); // E6
+            beep(987.77,0.18,0.34,0.85,"sine");
+            beep(2637.02,0.08,0.36,0.22,"triangle"); // brilho
+            if("vibrate" in navigator) navigator.vibrate([90,40,90,40,160]);
+        } else {
+            // atualizada: plim único mais curto
+            beep(880,0.11,0,0.8,"sine");
+            beep(1108.73,0.16,0.13,0.85,"sine");
+            if("vibrate" in navigator) navigator.vibrate([90,50,90]);
+        }
     }catch(e){}
     try{
         if("speechSynthesis" in window){
-            const texto=tipo==="nova" ? "Nova entrega" : "Entrega atualizada";
-            const u=new SpeechSynthesisUtterance(texto); u.lang="pt-BR"; u.rate=1; u.volume=0.9;
-            speechSynthesis.cancel(); speechSynthesis.speak(u);
+            const texto=tipo==="nova" ? "Nova entrega!" : "Entrega atualizada!";
+            speechSynthesis.cancel();
+            setTimeout(()=>{
+                const u=new SpeechSynthesisUtterance(texto);
+                u.lang="pt-BR"; u.rate=0.95; u.pitch=1.05; u.volume=1;
+                // tenta voz feminina pt-BR se disponível
+                const vozes=speechSynthesis.getVoices();
+                const fb=vozes.find(v=>v.lang==="pt-BR" && /female|Luciana|Vitória/i.test(v.name));
+                if(fb) u.voice=fb;
+                speechSynthesis.speak(u);
+            }, tipo==="nova"? 650 : 320);
         }
     }catch(e){}
-    try{ if("Notification" in window && Notification.permission==="granted"){ const t=tipo==="nova"?"🚚 Nova entrega":"🔄 Entrega atualizada"; new Notification(t,{body: tipo==="nova" ? "Nova entrega registrada" : "Uma entrega foi atualizada"}); } }catch(e){}
+    try{ if("Notification" in window && Notification.permission==="granted"){ const t=tipo==="nova"?"🚚 NOVA ENTREGA":"🔄 ENTREGA ATUALIZADA"; new Notification(t,{body: tipo==="nova" ? "Nova entrega registrada" : "Uma entrega foi atualizada", icon:"/static/icon-192.png?v=9"}); } }catch(e){}
 }
 if("Notification" in window && Notification.permission==="default"){ try{ Notification.requestPermission(); }catch(e){} }
 document.addEventListener("click", function primeiraInteracao(){ if(!audioCtx) try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} document.removeEventListener("click", primeiraInteracao); }, {once:true});
 function definirDataHoje(){ const h=new Date(); document.getElementById("dataEntrega").value=h.toISOString().split("T")[0]; document.getElementById("dataRota").value=h.toISOString().split("T")[0]; }
+function novaEntrega(){ limpar(); document.getElementById("editorEntrega").style.display="block"; }
 function trocarModo(modo){
     document.getElementById("modoEntrega").value=modo;
     const bV=document.getElementById("btnModoVinculada"), bA=document.getElementById("btnModoAvulsa");
@@ -281,7 +399,7 @@ function filtrar(){
     cont.innerHTML="";
     lista.forEach(e=>{
         const div=document.createElement("div"); div.className="entrega-card";
-        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="SAIU PARA ROTA"?"selected":""}>SAIU PARA ROTA</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-success btn-sm" onclick="imprimirEntrega(${e.id})" title="Imprimir na impressora (padrão do Windows — universal, funciona via acesso remoto)">🖨 Imprimir</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
+        div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:10px"><strong style="font-family:monospace">ENT${String(e.numero).padStart(4,"0")}</strong>${statusBadge(e.status)}<span style="font-size:.82rem;color:var(--cor-texto-secundario)">${e.data_entrega?e.data_entrega.split("-").reverse().join("/"):""} ${e.horario||""}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:.78rem" onchange="alterarStatus(${e.id},this.value)"><option ${e.status==="Pendente"?"selected":""}>Pendente</option><option ${e.status==="SAIU PARA ROTA"?"selected":""}>SAIU PARA ROTA</option><option ${e.status==="Em rota"?"selected":""}>Em rota</option><option ${e.status==="Entregue"?"selected":""}>Entregue</option><option ${e.status==="Falha"?"selected":""}>Falha</option><option ${e.status==="Cancelada"?"selected":""}>Cancelada</option><option ${e.status==="Reagendada"?"selected":""}>Reagendada</option></select><button class="btn btn-success btn-sm" onclick="imprimirEntrega(${e.id})" title="Imprimir na impressora (padrão do Windows — universal, funciona via acesso remoto)">🖨 Imprimir</button><button class="btn btn-outline btn-sm" onclick="editarEntrega(${e.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="excluirEntrega(${e.id})">✕</button><button class="btn btn-rastreio btn-sm" onclick="abrirRastreio(${e.id})">🔗 Rastreio</button></div></div><div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem"><div><b>Cliente:</b> ${e.cliente||""} · ${e.telefone||""}</div><div><b>Entregador:</b> ${e.entregador||"-"}</div></div><div style="margin-top:4px;font-size:.85rem"><b>Endereço:</b> ${e.endereco||""} ${e.bairro?("· "+e.bairro):""} ${e.taxa?("· Taxa R$ "+Number(e.taxa).toFixed(2).replace(".",",")):""}</div><div style="margin-top:4px;font-size:.82rem;color:var(--cor-texto-secundario)">${e.observacao||""} ${e.comprovante?("· Comp.: "+e.comprovante):""}</div>`;
         cont.appendChild(div);
     });
 }
@@ -296,7 +414,7 @@ async function salvar(){
     const dados={ cliente, telefone:document.getElementById("telefone").value.trim(), endereco, bairro:document.getElementById("bairro").value.trim(), entregador:document.getElementById("entregador").value, data_entrega:document.getElementById("dataEntrega").value, horario:document.getElementById("horario").value.trim(), taxa:Number(document.getElementById("taxa").value)||0, status:document.getElementById("status").value, observacao:document.getElementById("observacao").value.trim(), comprovante:document.getElementById("comprovante").value.trim(), venda_id: modo==="vinculada"&&tipo==="venda"?Number(origemId):null, ordem_id: modo==="vinculada"&&tipo==="os"?Number(origemId):null };
     const url=editandoId?"/api/entregas/"+editandoId:"/api/entregas", method=editandoId?"PUT":"POST";
     S.mostrarLoading(editandoId?"Atualizando...":"Salvando...");
-    try{ const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)}); const j=await r.json(); if(!r.ok) throw new Error(j.erro); S.Toast.sucesso(j.mensagem); limpar(); carregar(); }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
+    try{ const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(dados)}); const j=await r.json(); if(!r.ok) throw new Error(j.erro); S.Toast.sucesso(j.mensagem); document.getElementById("editorEntrega").style.display="none"; limpar(); carregar(); }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
 }
 async function salvarEImprimir(){
     const modo=document.getElementById("modoEntrega").value;
@@ -315,12 +433,13 @@ async function salvarEImprimir(){
         const j=await r.json(); if(!r.ok) throw new Error(j.erro);
         S.Toast.sucesso(j.mensagem);
         const idParaImprimir = editandoId || j.id;
-        limpar(); await carregar();
+        document.getElementById("editorEntrega").style.display="none"; limpar(); await carregar();
         if(idParaImprimir) setTimeout(()=> imprimirEntrega(idParaImprimir), 600);
     }catch(e){ S.Toast.erro(e.message); }finally{ S.esconderLoading(); }
 }
 async function editarEntrega(id){
     try{ const r=await fetch("/api/entregas/"+id); const e=await r.json(); if(!r.ok) throw new Error(e.erro); editandoId=id;
+        document.getElementById("editorEntrega").style.display="block";
         if(e.venda_id){ trocarModo("vinculada"); document.getElementById("tipoOrigem").value="venda"; await carregarOrigens(); document.getElementById("origemSelect").value=String(e.venda_id); document.getElementById("origemCard").style.display="block"; } else if(e.ordem_id){ trocarModo("vinculada"); document.getElementById("tipoOrigem").value="os"; await carregarOrigens(); document.getElementById("origemSelect").value=String(e.ordem_id); document.getElementById("origemCard").style.display="block"; } else trocarModo("avulsa");
         document.getElementById("cliente").value=e.cliente||""; document.getElementById("telefone").value=e.telefone||""; document.getElementById("endereco").value=e.endereco||""; document.getElementById("bairro").value=e.bairro||""; document.getElementById("entregador").value=e.entregador||""; document.getElementById("dataEntrega").value=e.data_entrega||""; document.getElementById("horario").value=e.horario||""; document.getElementById("taxa").value=e.taxa||0; document.getElementById("status").value=e.status||"Pendente"; document.getElementById("observacao").value=e.observacao||""; document.getElementById("comprovante").value=e.comprovante||"";
         document.getElementById("badgeEntrega").innerText="ENT"+String(e.numero).padStart(4,"0"); document.getElementById("btnSalvar").innerText="💾 Salvar alterações"; window.scrollTo({top:0,behavior:"smooth"});
@@ -474,7 +593,114 @@ async function imprimirZebraDireto(id){
     // Funciona em todos os computadores, inclusive via acesso remoto.
     return imprimirEntrega(id);
 }
-document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); setInterval(carregar, 15000); });
+async function carregarMetricas(){
+    try{
+        const r=await _fetchJSONEntregas("/api/entregas/metricas");
+        const g=document.getElementById("blocoMetricas");
+        const topBox=document.getElementById("blocoTop");
+        if(!g) return;
+        g.style.display="grid";
+        g.innerHTML=`
+            <div class="metrica-card azul"><div class="lbl">Total geral</div><div class="val">${r.total_geral}</div><div class="sub">${r.entregues} entregues · ${r.falhas} falhas</div></div>
+            <div class="metrica-card ${r.taxa_sucesso>=85?"ok":r.taxa_sucesso>=60?"warn":"erro"}"><div class="lbl">Taxa de sucesso</div><div class="val">${r.taxa_sucesso}%</div><div class="sub">${r.entregues}/${r.total_geral} entregues</div></div>
+            <div class="metrica-card info"><div class="lbl">Pendentes hoje</div><div class="val">${r.hoje.pendentes}</div><div class="sub">${r.hoje.total} no dia</div></div>
+            <div class="metrica-card ${r.tempo_medio_min!=null?"":"warn"}"><div class="lbl">Tempo médio</div><div class="val">${r.tempo_medio_min!=null?r.tempo_medio_min+" min":"—"}</div><div class="sub">saída → entrega</div></div>
+            <div class="metrica-card"><div class="lbl">Taxas do mês</div><div class="val">R$ ${Number(r.taxas_mes||0).toFixed(2).replace(".",",")}</div><div class="sub">acumulado</div></div>
+        `;
+        const atua=document.getElementById("metricasAtualizado");
+        if(atua) atua.textContent=r.atualizado_em||"";
+        // top
+        const lista=(r.top_entregadores||[]);
+        if(lista.length>0 && topBox){
+            topBox.style.display="block";
+            const max=Math.max(...lista.map(x=>x.total),1);
+            document.getElementById("topLista").innerHTML=lista.map(x=>`
+                <div class="top-row">
+                    <span class="nome">${x.entregador}</span>
+                    <div class="bar"><div class="bar-fill" style="width:${Math.round(x.total/max*100)}%"></div></div>
+                    <span style="font-weight:700">${x.total}</span>
+                    <span class="mini">✓${x.ok} ✕${x.falhas}</span>
+                </div>
+            `).join("");
+        }
+    }catch(e){ console.warn("metricas",e); }
+}
+let _grupoRotaOtimizada=[];
+let _linkRastreioAtual="";
+async function abrirRastreio(id){
+    try{
+        const e=await _fetchJSONEntregas("/api/entregas/"+id);
+        const token=e.qr_token||"";
+        const url= token ? (location.origin+"/rastrear/"+token) : (location.origin+"/m/entrega/"+id);
+        _linkRastreioAtual=url;
+        document.getElementById("rastreioInfo").textContent=`ENT${String(e.numero).padStart(4,"0")} · ${e.cliente||""} · ${e.status||""}`;
+        document.getElementById("linkRastreio").value=url;
+        document.getElementById("btnAbrirRastreio").href=url;
+        const qrBox=document.getElementById("qrRastreio");
+        qrBox.innerHTML="";
+        if(window.QRCode){ new QRCode(qrBox,{text:url,width:160,height:160, correctLevel: QRCode.CorrectLevel.M}); }
+        document.getElementById("modalRastreio").style.display="flex";
+    }catch(e){ S.Toast.erro(e.message); }
+}
+function fecharRastreio(){ document.getElementById("modalRastreio").style.display="none"; document.getElementById("qrRastreio").innerHTML=""; }
+function copiarLinkRastreio(){ const i=document.getElementById("linkRastreio"); i.select(); try{ document.execCommand("copy"); }catch(_){} if(navigator.clipboard) navigator.clipboard.writeText(i.value).catch(()=>{}); S.Toast.sucesso("Link copiado!"); }
+async function compartilharRastreio(){
+    const url=_linkRastreioAtual||document.getElementById("linkRastreio").value;
+    if(navigator.share){ try{ await navigator.share({title:"Rastreio entrega", text:"Acompanhe sua entrega", url}); return; }catch(_){} }
+    copiarLinkRastreio();
+}
+async function abrirRotaOtimizada(){
+    const inp=document.getElementById("dataRotaModal");
+    if(inp) inp.value=document.getElementById("dataRota")?.value || new Date().toISOString().split("T")[0];
+    document.getElementById("modalRota").style.display="flex";
+    await carregarRotaOtimizada();
+}
+function fecharRotaOtimizada(){ document.getElementById("modalRota").style.display="none"; }
+async function carregarRotaOtimizada(){
+    const data=document.getElementById("dataRotaModal")?.value || document.getElementById("dataRota")?.value || new Date().toISOString().split("T")[0];
+    const box=document.getElementById("rotaOtimizadaConteudo");
+    box.innerHTML='<div class="empty-state" style="padding:12px"><p>Carregando...</p></div>';
+    try{
+        const r=await _fetchJSONEntregas("/api/entregas/rota-otimizada?data="+encodeURIComponent(data));
+        const grupos=r.grupos||[];
+        _grupoRotaOtimizada=grupos;
+        if(grupos.length===0){ box.innerHTML=`<div class="empty-state" style="padding:16px"><p>Nenhuma entrega pendente para ${data.split("-").reverse().join("/")}</p></div>`; return; }
+        let html=`<div style="font-size:.82rem;color:var(--cor-texto-secundario);margin-bottom:8px">${grupos.reduce((s,g)=>s+g.total,0)} paradas em ${grupos.length} entregador(es) — ${data.split("-").reverse().join("/")}</div>`;
+        grupos.forEach(g=>{
+            html+=`<div class="grupo-entregador"><div class="cab"><span>🚚 ${g.entregador}</span><span>${g.total} paradas</span></div>`;
+            g.bairros.forEach(b=>{
+                html+=`<div class="grupo-bairro">📍 ${b.bairro} — ${b.qtd} parada(s)</div>`;
+                b.itens.forEach((it,idx)=>{
+                    html+=`<div class="grupo-item"><span class="ord">#${idx+1}</span><div style="flex:1;min-width:0"><div style="font-weight:700">${it.cliente||""} — ENT${String(it.numero).padStart(4,"0")}</div><div style="font-size:.78rem;color:var(--cor-texto-secundario)">${it.endereco||""} ${it.bairro?"· "+it.bairro:""} ${it.horario?"· "+it.horario:""}</div></div><a class="btn btn-outline btn-sm" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((it.endereco||"")+" "+(it.bairro||""))}" target="_blank">📍</a></div>`;
+                });
+            });
+            html+=`</div>`;
+        });
+        box.innerHTML=html;
+    }catch(e){ box.innerHTML=`<div class="empty-state" style="padding:16px;color:#b91c1c">${e.message}</div>`; }
+}
+function imprimirRotaOtimizada(){
+    const box=document.getElementById("rotaOtimizadaConteudo");
+    const area=document.getElementById("areaImpressaoRota");
+    if(!box||!area) return;
+    area.innerHTML=`<div style="padding:10mm;font-family:Arial;color:#000">${box.innerHTML}</div>`;
+    const prev=area.style.display; area.style.display="block";
+    window.print();
+    setTimeout(()=>{ area.style.display="none"; if(prev) area.style.display=prev; }, 500);
+}
+function abrirRotaOtimizadaMaps(){
+    if(!_grupoRotaOtimizada || _grupoRotaOtimizada.length===0){ S.Toast.aviso("Nenhuma rota carregada"); return; }
+    // pega todos os endereços em ordem de entregador/bairro
+    const all=[];
+    _grupoRotaOtimizada.forEach(g=> g.bairros.forEach(b=> b.itens.forEach(it=> all.push(it))));
+    if(all.length===0) return;
+    const dest=encodeURIComponent((all[all.length-1].endereco||"")+" "+(all[all.length-1].bairro||""));
+    const waypoints=all.slice(0,-1).map(e=>encodeURIComponent((e.endereco||"")+" "+(e.bairro||""))).join("|");
+    let url=`https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+    if(waypoints) url+=`&waypoints=${waypoints}`;
+    window.open(url,"_blank");
+}
+document.addEventListener("DOMContentLoaded", ()=>{ definirDataHoje(); carregarVendedores(); carregarOrigens(); carregar(); carregarMetricas(); setInterval(carregar, 15000); setInterval(carregarMetricas, 30000); });
 </script>
 <script>
 if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js?v=8").catch(()=>{}); }); }
