@@ -3870,7 +3870,7 @@ def listar_entregas():
     busca=request.args.get("q")
     if busca:
         b=f"%{busca}%"
-        if banco_eh_postgres():
+        if db.banco_eh_postgres():
             where.append("(cliente ILIKE %s OR endereco ILIKE %s OR telefone ILIKE %s OR CAST(numero AS TEXT) LIKE %s)")
         else:
             where.append("(cliente LIKE ? OR endereco LIKE ? OR telefone LIKE ? OR CAST(numero AS TEXT) LIKE ?)")
@@ -3883,7 +3883,7 @@ def listar_entregas():
         limit=int(request.args.get("limit") or 0)
     except: limit=0
     if limit>0:
-        if banco_eh_postgres():
+        if db.banco_eh_postgres():
             sql+=" LIMIT %s"
             params.append(limit)
         else:
@@ -3975,7 +3975,7 @@ def metricas_entregas():
     # tempo médio de entrega (em minutos) — entre data_saida e data_entregue
     tempo_medio_min=None
     try:
-        if banco_eh_postgres():
+        if db.banco_eh_postgres():
             cur.execute("""SELECT AVG(EXTRACT(EPOCH FROM (to_timestamp(data_entregue,'YYYY-MM-DD HH24:MI') - to_timestamp(data_saida,'YYYY-MM-DD HH24:MI')))/60.0)
                           FROM entregas WHERE status='Entregue' AND data_saida IS NOT NULL AND data_entregue IS NOT NULL""")
         else:
